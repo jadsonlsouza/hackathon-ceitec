@@ -82,6 +82,505 @@ export type Database = {
           },
         ]
       }
+      canvas_activities: {
+        Row: {
+          allow_resubmission: boolean
+          categories: Database["public"]["Enums"]["team_category"][]
+          created_at: string
+          created_by: string
+          due_at: string
+          event_id: string
+          id: string
+          instructions: string
+          is_primary: boolean
+          opens_at: string
+          published: boolean
+          template_id: string | null
+          title: string
+        }
+        Insert: {
+          allow_resubmission?: boolean
+          categories: Database["public"]["Enums"]["team_category"][]
+          created_at?: string
+          created_by: string
+          due_at: string
+          event_id: string
+          id?: string
+          instructions?: string
+          is_primary?: boolean
+          opens_at: string
+          published?: boolean
+          template_id?: string | null
+          title: string
+        }
+        Update: {
+          allow_resubmission?: boolean
+          categories?: Database["public"]["Enums"]["team_category"][]
+          created_at?: string
+          created_by?: string
+          due_at?: string
+          event_id?: string
+          id?: string
+          instructions?: string
+          is_primary?: boolean
+          opens_at?: string
+          published?: boolean
+          template_id?: string | null
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "canvas_activities_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "canvas_activities_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "canvas_activities_template_event_fkey"
+            columns: ["template_id", "event_id"]
+            isOneToOne: false
+            referencedRelation: "canvas_templates"
+            referencedColumns: ["id", "event_id"]
+          },
+        ]
+      }
+      canvas_blocks: {
+        Row: {
+          activity_id: string
+          id: string
+          key: string
+          max_items: number | null
+          position: number
+          prompt: string
+          title: string
+        }
+        Insert: {
+          activity_id: string
+          id?: string
+          key: string
+          max_items?: number | null
+          position: number
+          prompt: string
+          title: string
+        }
+        Update: {
+          activity_id?: string
+          id?: string
+          key?: string
+          max_items?: number | null
+          position?: number
+          prompt?: string
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "canvas_blocks_activity_id_fkey"
+            columns: ["activity_id"]
+            isOneToOne: false
+            referencedRelation: "canvas_activities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      canvas_template_blocks: {
+        Row: {
+          id: string
+          key: string
+          max_items: number | null
+          position: number
+          prompt: string
+          template_id: string
+          title: string
+        }
+        Insert: {
+          id?: string
+          key: string
+          max_items?: number | null
+          position: number
+          prompt: string
+          template_id: string
+          title: string
+        }
+        Update: {
+          id?: string
+          key?: string
+          max_items?: number | null
+          position?: number
+          prompt?: string
+          template_id?: string
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "canvas_template_blocks_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "canvas_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      canvas_templates: {
+        Row: {
+          created_at: string
+          created_by: string
+          event_id: string
+          id: string
+          instructions: string
+          name: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          event_id: string
+          id?: string
+          instructions?: string
+          name: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          event_id?: string
+          id?: string
+          instructions?: string
+          name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "canvas_templates_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "canvas_templates_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      criterion_weights: {
+        Row: {
+          category: Database["public"]["Enums"]["team_category"]
+          criterion_id: string
+          event_id: string
+          weight: number
+        }
+        Insert: {
+          category: Database["public"]["Enums"]["team_category"]
+          criterion_id: string
+          event_id: string
+          weight?: number
+        }
+        Update: {
+          category?: Database["public"]["Enums"]["team_category"]
+          criterion_id?: string
+          event_id?: string
+          weight?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "criterion_weights_criterion_event_fkey"
+            columns: ["criterion_id", "event_id"]
+            isOneToOne: false
+            referencedRelation: "evaluation_criteria"
+            referencedColumns: ["id", "event_id"]
+          },
+          {
+            foreignKeyName: "criterion_weights_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      evaluation_criteria: {
+        Row: {
+          active: boolean
+          description: string
+          event_id: string
+          id: string
+          name: string
+          position: number
+        }
+        Insert: {
+          active?: boolean
+          description?: string
+          event_id: string
+          id?: string
+          name: string
+          position: number
+        }
+        Update: {
+          active?: boolean
+          description?: string
+          event_id?: string
+          id?: string
+          name?: string
+          position?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "evaluation_criteria_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      evaluation_freezes: {
+        Row: {
+          category: Database["public"]["Enums"]["team_category"]
+          criteria_snapshot: Json
+          evaluator_snapshot: Json
+          event_id: string
+          frozen_at: string
+          frozen_by: string
+          team_snapshot: Json
+        }
+        Insert: {
+          category: Database["public"]["Enums"]["team_category"]
+          criteria_snapshot: Json
+          evaluator_snapshot: Json
+          event_id: string
+          frozen_at?: string
+          frozen_by: string
+          team_snapshot: Json
+        }
+        Update: {
+          category?: Database["public"]["Enums"]["team_category"]
+          criteria_snapshot?: Json
+          evaluator_snapshot?: Json
+          event_id?: string
+          frozen_at?: string
+          frozen_by?: string
+          team_snapshot?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "evaluation_freezes_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "evaluation_freezes_frozen_by_fkey"
+            columns: ["frozen_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      evaluation_scores: {
+        Row: {
+          criterion_id: string
+          evaluation_id: string
+          event_id: string
+          score: number
+        }
+        Insert: {
+          criterion_id: string
+          evaluation_id: string
+          event_id: string
+          score: number
+        }
+        Update: {
+          criterion_id?: string
+          evaluation_id?: string
+          event_id?: string
+          score?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "evaluation_scores_criterion_event_fkey"
+            columns: ["criterion_id", "event_id"]
+            isOneToOne: false
+            referencedRelation: "evaluation_criteria"
+            referencedColumns: ["id", "event_id"]
+          },
+          {
+            foreignKeyName: "evaluation_scores_evaluation_event_fkey"
+            columns: ["evaluation_id", "event_id"]
+            isOneToOne: false
+            referencedRelation: "evaluations"
+            referencedColumns: ["id", "event_id"]
+          },
+        ]
+      }
+      evaluations: {
+        Row: {
+          category: Database["public"]["Enums"]["team_category"]
+          comment: string | null
+          evaluator_id: string
+          event_id: string
+          id: string
+          submitted_at: string
+          team_id: string
+          updated_at: string
+        }
+        Insert: {
+          category: Database["public"]["Enums"]["team_category"]
+          comment?: string | null
+          evaluator_id: string
+          event_id: string
+          id?: string
+          submitted_at?: string
+          team_id: string
+          updated_at?: string
+        }
+        Update: {
+          category?: Database["public"]["Enums"]["team_category"]
+          comment?: string | null
+          evaluator_id?: string
+          event_id?: string
+          id?: string
+          submitted_at?: string
+          team_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "evaluations_assignment_fkey"
+            columns: ["event_id", "evaluator_id", "category"]
+            isOneToOne: false
+            referencedRelation: "evaluator_assignments"
+            referencedColumns: ["event_id", "evaluator_id", "category"]
+          },
+          {
+            foreignKeyName: "evaluations_evaluator_id_fkey"
+            columns: ["evaluator_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "evaluations_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "evaluations_team_event_fkey"
+            columns: ["team_id", "event_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id", "event_id"]
+          },
+        ]
+      }
+      evaluator_assignments: {
+        Row: {
+          assigned_at: string
+          assigned_by: string
+          category: Database["public"]["Enums"]["team_category"]
+          evaluator_id: string
+          event_id: string
+        }
+        Insert: {
+          assigned_at?: string
+          assigned_by?: string
+          category: Database["public"]["Enums"]["team_category"]
+          evaluator_id: string
+          event_id: string
+        }
+        Update: {
+          assigned_at?: string
+          assigned_by?: string
+          category?: Database["public"]["Enums"]["team_category"]
+          evaluator_id?: string
+          event_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "evaluator_assignments_assigned_by_fkey"
+            columns: ["assigned_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "evaluator_assignments_evaluator_id_fkey"
+            columns: ["evaluator_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "evaluator_assignments_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      event_public_content: {
+        Row: {
+          date_label: string
+          event_id: string
+          objectives: Json
+          presentation: string
+          registration_open: boolean
+          tagline: string
+          updated_at: string
+          updated_by: string | null
+          venue: string
+        }
+        Insert: {
+          date_label: string
+          event_id: string
+          objectives: Json
+          presentation: string
+          registration_open?: boolean
+          tagline: string
+          updated_at?: string
+          updated_by?: string | null
+          venue: string
+        }
+        Update: {
+          date_label?: string
+          event_id?: string
+          objectives?: Json
+          presentation?: string
+          registration_open?: boolean
+          tagline?: string
+          updated_at?: string
+          updated_by?: string | null
+          venue?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "event_public_content_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: true
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_public_content_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       event_roles: {
         Row: {
           approved_at: string
@@ -127,6 +626,41 @@ export type Database = {
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      event_schedule_items: {
+        Row: {
+          activity: string
+          day_number: number
+          event_id: string
+          id: string
+          position: number
+          starts_at: string
+        }
+        Insert: {
+          activity: string
+          day_number: number
+          event_id: string
+          id?: string
+          position: number
+          starts_at: string
+        }
+        Update: {
+          activity?: string
+          day_number?: number
+          event_id?: string
+          id?: string
+          position?: number
+          starts_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "event_schedule_items_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
             referencedColumns: ["id"]
           },
         ]
@@ -188,6 +722,45 @@ export type Database = {
           },
         ]
       }
+      presentation_slots: {
+        Row: {
+          category: Database["public"]["Enums"]["team_category"]
+          event_id: string
+          position: number
+          presented_at: string | null
+          team_id: string
+        }
+        Insert: {
+          category: Database["public"]["Enums"]["team_category"]
+          event_id: string
+          position: number
+          presented_at?: string | null
+          team_id: string
+        }
+        Update: {
+          category?: Database["public"]["Enums"]["team_category"]
+          event_id?: string
+          position?: number
+          presented_at?: string | null
+          team_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "presentation_slots_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "presentation_slots_team_event_fkey"
+            columns: ["team_id", "event_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id", "event_id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           created_at: string
@@ -214,6 +787,45 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      published_results: {
+        Row: {
+          category: Database["public"]["Enums"]["team_category"]
+          event_id: string
+          published_at: string
+          published_by: string
+          ranking: Json
+        }
+        Insert: {
+          category: Database["public"]["Enums"]["team_category"]
+          event_id: string
+          published_at?: string
+          published_by: string
+          ranking: Json
+        }
+        Update: {
+          category?: Database["public"]["Enums"]["team_category"]
+          event_id?: string
+          published_at?: string
+          published_by?: string
+          ranking?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "published_results_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "published_results_published_by_fkey"
+            columns: ["published_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       role_requests: {
         Row: {
@@ -267,6 +879,207 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
+          },
+        ]
+      }
+      submission_answers: {
+        Row: {
+          block_id: string
+          content: Json
+          submission_id: string
+          updated_at: string
+          updated_by: string
+          version: number
+        }
+        Insert: {
+          block_id: string
+          content?: Json
+          submission_id: string
+          updated_at?: string
+          updated_by: string
+          version?: number
+        }
+        Update: {
+          block_id?: string
+          content?: Json
+          submission_id?: string
+          updated_at?: string
+          updated_by?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "submission_answers_block_id_fkey"
+            columns: ["block_id"]
+            isOneToOne: false
+            referencedRelation: "canvas_blocks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "submission_answers_submission_id_fkey"
+            columns: ["submission_id"]
+            isOneToOne: false
+            referencedRelation: "submissions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "submission_answers_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      submission_reviews: {
+        Row: {
+          created_at: string
+          decision: string
+          feedback: string | null
+          id: string
+          reviewer_id: string
+          submission_id: string
+        }
+        Insert: {
+          created_at?: string
+          decision: string
+          feedback?: string | null
+          id?: string
+          reviewer_id: string
+          submission_id: string
+        }
+        Update: {
+          created_at?: string
+          decision?: string
+          feedback?: string | null
+          id?: string
+          reviewer_id?: string
+          submission_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "submission_reviews_reviewer_id_fkey"
+            columns: ["reviewer_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "submission_reviews_submission_id_fkey"
+            columns: ["submission_id"]
+            isOneToOne: false
+            referencedRelation: "submissions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      submission_revisions: {
+        Row: {
+          created_at: string
+          created_by: string
+          revision: number
+          snapshot: Json
+          submission_id: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          revision: number
+          snapshot: Json
+          submission_id: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          revision?: number
+          snapshot?: Json
+          submission_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "submission_revisions_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "submission_revisions_submission_id_fkey"
+            columns: ["submission_id"]
+            isOneToOne: false
+            referencedRelation: "submissions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      submissions: {
+        Row: {
+          activity_id: string
+          claimed_at: string | null
+          claimed_by: string | null
+          created_at: string
+          event_id: string
+          id: string
+          revision: number
+          status: string
+          submitted_at: string | null
+          team_id: string
+          updated_at: string
+        }
+        Insert: {
+          activity_id: string
+          claimed_at?: string | null
+          claimed_by?: string | null
+          created_at?: string
+          event_id: string
+          id?: string
+          revision?: number
+          status?: string
+          submitted_at?: string | null
+          team_id: string
+          updated_at?: string
+        }
+        Update: {
+          activity_id?: string
+          claimed_at?: string | null
+          claimed_by?: string | null
+          created_at?: string
+          event_id?: string
+          id?: string
+          revision?: number
+          status?: string
+          submitted_at?: string | null
+          team_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "submissions_activity_event_fkey"
+            columns: ["activity_id", "event_id"]
+            isOneToOne: false
+            referencedRelation: "canvas_activities"
+            referencedColumns: ["id", "event_id"]
+          },
+          {
+            foreignKeyName: "submissions_claimed_by_fkey"
+            columns: ["claimed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "submissions_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "submissions_team_event_fkey"
+            columns: ["team_id", "event_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id", "event_id"]
           },
         ]
       }
@@ -396,9 +1209,100 @@ export type Database = {
           },
         ]
       }
+      tie_decisions: {
+        Row: {
+          category: Database["public"]["Enums"]["team_category"]
+          decided_at: string
+          decided_by: string
+          displayed_score: number
+          event_id: string
+          id: string
+          justification: string
+          ordered_team_ids: string[]
+          ranking_fingerprint: string
+        }
+        Insert: {
+          category: Database["public"]["Enums"]["team_category"]
+          decided_at?: string
+          decided_by: string
+          displayed_score: number
+          event_id: string
+          id?: string
+          justification: string
+          ordered_team_ids: string[]
+          ranking_fingerprint: string
+        }
+        Update: {
+          category?: Database["public"]["Enums"]["team_category"]
+          decided_at?: string
+          decided_by?: string
+          displayed_score?: number
+          event_id?: string
+          id?: string
+          justification?: string
+          ordered_team_ids?: string[]
+          ranking_fingerprint?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tie_decisions_decided_by_fkey"
+            columns: ["decided_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tie_decisions_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
-      [_ in never]: never
+      administrative_ranking: {
+        Row: {
+          category: Database["public"]["Enums"]["team_category"] | null
+          event_id: string | null
+          exact_final_score: number | null
+          final_score: number | null
+          score_rank: number | null
+          team_id: string | null
+          team_name: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "evaluation_freezes_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      evaluation_progress: {
+        Row: {
+          category: Database["public"]["Enums"]["team_category"] | null
+          complete: boolean | null
+          completed_evaluator_count: number | null
+          event_id: string | null
+          missing_evaluators: Json | null
+          required_evaluator_count: number | null
+          team_id: string | null
+          team_name: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "evaluation_freezes_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
       archive_and_create_event: {
@@ -407,6 +1311,28 @@ export type Database = {
           archived_event_id: string
           new_event_id: string
         }[]
+      }
+      claim_review: {
+        Args: { submission_id: string }
+        Returns: {
+          activity_id: string
+          claimed_at: string | null
+          claimed_by: string | null
+          created_at: string
+          event_id: string
+          id: string
+          revision: number
+          status: string
+          submitted_at: string | null
+          team_id: string
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "submissions"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
       create_team: {
         Args: {
@@ -455,6 +1381,28 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      decide_submission: {
+        Args: { decision: string; feedback?: string; submission_id: string }
+        Returns: {
+          activity_id: string
+          claimed_at: string | null
+          claimed_by: string | null
+          created_at: string
+          event_id: string
+          id: string
+          revision: number
+          status: string
+          submitted_at: string | null
+          team_id: string
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "submissions"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       decide_team: {
         Args: {
           decision: Database["public"]["Enums"]["team_status"]
@@ -499,8 +1447,138 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      freeze_evaluation: {
+        Args: {
+          category: Database["public"]["Enums"]["team_category"]
+          event_id: string
+        }
+        Returns: {
+          category: Database["public"]["Enums"]["team_category"]
+          criteria_snapshot: Json
+          evaluator_snapshot: Json
+          event_id: string
+          frozen_at: string
+          frozen_by: string
+          team_snapshot: Json
+        }
+        SetofOptions: {
+          from: "*"
+          to: "evaluation_freezes"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      get_administrative_publications: {
+        Args: { target_event: string }
+        Returns: {
+          category: Database["public"]["Enums"]["team_category"]
+          published_at: string
+        }[]
+      }
+      get_administrative_ranking: {
+        Args: { target_event: string }
+        Returns: {
+          category: Database["public"]["Enums"]["team_category"]
+          event_id: string
+          exact_final_score: number
+          final_score: number
+          score_rank: number
+          team_id: string
+          team_name: string
+        }[]
+      }
+      get_evaluation_progress: {
+        Args: { target_event: string }
+        Returns: {
+          category: Database["public"]["Enums"]["team_category"]
+          complete: boolean
+          completed_evaluator_count: number
+          event_id: string
+          missing_evaluators: Json
+          required_evaluator_count: number
+          team_id: string
+          team_name: string
+        }[]
+      }
+      get_event_public_content_for_edit: {
+        Args: { target_event: string }
+        Returns: {
+          date_label: string
+          objectives: Json
+          presentation: string
+          registration_open: boolean
+          schedule: Json
+          tagline: string
+          venue: string
+        }[]
+      }
+      get_featured_event_content: {
+        Args: never
+        Returns: {
+          date_label: string
+          event_name: string
+          event_slug: string
+          objectives: Json
+          presentation: string
+          registration_open: boolean
+          schedule: Json
+          tagline: string
+          venue: string
+        }[]
+      }
+      get_published_results: {
+        Args: { event_slug: string }
+        Returns: {
+          category: Database["public"]["Enums"]["team_category"]
+          event_name: string
+          event_slug: string
+          published_at: string
+          ranking: Json
+        }[]
+      }
       is_event_professor: { Args: { target_event: string }; Returns: boolean }
       is_global_admin: { Args: never; Returns: boolean }
+      publish_category_results: {
+        Args: {
+          category: Database["public"]["Enums"]["team_category"]
+          event_id: string
+        }
+        Returns: {
+          category: Database["public"]["Enums"]["team_category"]
+          event_id: string
+          published_at: string
+          published_by: string
+          ranking: Json
+        }
+        SetofOptions: {
+          from: "*"
+          to: "published_results"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      reopen_submission: {
+        Args: { reason: string; submission_id: string }
+        Returns: {
+          activity_id: string
+          claimed_at: string | null
+          claimed_by: string | null
+          created_at: string
+          event_id: string
+          id: string
+          revision: number
+          status: string
+          submitted_at: string | null
+          team_id: string
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "submissions"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       request_role: {
         Args: {
           target_event?: string
@@ -540,6 +1618,106 @@ export type Database = {
         SetofOptions: {
           from: "*"
           to: "team_members"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      resolve_tie: {
+        Args: {
+          category: Database["public"]["Enums"]["team_category"]
+          displayed_score: number
+          event_id: string
+          justification: string
+          ordered_team_ids: string[]
+        }
+        Returns: {
+          category: Database["public"]["Enums"]["team_category"]
+          decided_at: string
+          decided_by: string
+          displayed_score: number
+          event_id: string
+          id: string
+          justification: string
+          ordered_team_ids: string[]
+          ranking_fingerprint: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "tie_decisions"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      save_canvas_answer: {
+        Args: {
+          block_id: string
+          content: Json
+          expected_version: number
+          submission_id: string
+        }
+        Returns: {
+          block_id: string
+          content: Json
+          submission_id: string
+          updated_at: string
+          updated_by: string
+          version: number
+        }
+        SetofOptions: {
+          from: "*"
+          to: "submission_answers"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      save_event_public_content: {
+        Args: { content: Json; target_event: string }
+        Returns: undefined
+      }
+      shuffle_presentations: {
+        Args: {
+          category: Database["public"]["Enums"]["team_category"]
+          event_id: string
+        }
+        Returns: number
+      }
+      submit_canvas: {
+        Args: { submission_id: string }
+        Returns: {
+          activity_id: string
+          claimed_at: string | null
+          claimed_by: string | null
+          created_at: string
+          event_id: string
+          id: string
+          revision: number
+          status: string
+          submitted_at: string | null
+          team_id: string
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "submissions"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      submit_evaluation: {
+        Args: { comment?: string; scores: Json; team_id: string }
+        Returns: {
+          category: Database["public"]["Enums"]["team_category"]
+          comment: string | null
+          evaluator_id: string
+          event_id: string
+          id: string
+          submitted_at: string
+          team_id: string
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "evaluations"
           isOneToOne: true
           isSetofReturn: false
         }
