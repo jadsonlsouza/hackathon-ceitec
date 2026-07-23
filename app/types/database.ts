@@ -270,11 +270,169 @@ export type Database = {
           },
         ]
       }
+      team_members: {
+        Row: {
+          approved_by: string | null
+          created_at: string
+          email: string
+          enrollment: string
+          event_id: string
+          id: string
+          name: string
+          status: Database["public"]["Enums"]["member_status"]
+          team_id: string
+          user_id: string | null
+        }
+        Insert: {
+          approved_by?: string | null
+          created_at?: string
+          email: string
+          enrollment: string
+          event_id: string
+          id?: string
+          name: string
+          status?: Database["public"]["Enums"]["member_status"]
+          team_id: string
+          user_id?: string | null
+        }
+        Update: {
+          approved_by?: string | null
+          created_at?: string
+          email?: string
+          enrollment?: string
+          event_id?: string
+          id?: string
+          name?: string
+          status?: Database["public"]["Enums"]["member_status"]
+          team_id?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "team_members_approved_by_fkey"
+            columns: ["approved_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "team_members_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "team_members_team_event_fkey"
+            columns: ["team_id", "event_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id", "event_id"]
+          },
+          {
+            foreignKeyName: "team_members_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      teams: {
+        Row: {
+          category: Database["public"]["Enums"]["team_category"]
+          created_at: string
+          decided_at: string | null
+          decided_by: string | null
+          event_id: string
+          id: string
+          leader_id: string
+          name: string
+          status: Database["public"]["Enums"]["team_status"]
+        }
+        Insert: {
+          category: Database["public"]["Enums"]["team_category"]
+          created_at?: string
+          decided_at?: string | null
+          decided_by?: string | null
+          event_id: string
+          id?: string
+          leader_id: string
+          name: string
+          status?: Database["public"]["Enums"]["team_status"]
+        }
+        Update: {
+          category?: Database["public"]["Enums"]["team_category"]
+          created_at?: string
+          decided_at?: string | null
+          decided_by?: string | null
+          event_id?: string
+          id?: string
+          leader_id?: string
+          name?: string
+          status?: Database["public"]["Enums"]["team_status"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "teams_decided_by_fkey"
+            columns: ["decided_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "teams_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "teams_leader_id_fkey"
+            columns: ["leader_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
+      archive_and_create_event: {
+        Args: { actor: string; confirmed_name: string; target_event: string }
+        Returns: {
+          archived_event_id: string
+          new_event_id: string
+        }[]
+      }
+      create_team: {
+        Args: {
+          category: Database["public"]["Enums"]["team_category"]
+          event_id: string
+          members: Json
+          name: string
+        }
+        Returns: {
+          category: Database["public"]["Enums"]["team_category"]
+          created_at: string
+          decided_at: string | null
+          decided_by: string | null
+          event_id: string
+          id: string
+          leader_id: string
+          name: string
+          status: Database["public"]["Enums"]["team_status"]
+        }
+        SetofOptions: {
+          from: "*"
+          to: "teams"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       decide_role_request: {
         Args: {
           decision: Database["public"]["Enums"]["request_status"]
@@ -293,6 +451,50 @@ export type Database = {
         SetofOptions: {
           from: "*"
           to: "role_requests"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      decide_team: {
+        Args: {
+          decision: Database["public"]["Enums"]["team_status"]
+          team_id: string
+        }
+        Returns: {
+          category: Database["public"]["Enums"]["team_category"]
+          created_at: string
+          decided_at: string | null
+          decided_by: string | null
+          event_id: string
+          id: string
+          leader_id: string
+          name: string
+          status: Database["public"]["Enums"]["team_status"]
+        }
+        SetofOptions: {
+          from: "*"
+          to: "teams"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      decide_team_join: {
+        Args: { approve: boolean; member_id: string }
+        Returns: {
+          approved_by: string | null
+          created_at: string
+          email: string
+          enrollment: string
+          event_id: string
+          id: string
+          name: string
+          status: Database["public"]["Enums"]["member_status"]
+          team_id: string
+          user_id: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "team_members"
           isOneToOne: true
           isSetofReturn: false
         }
@@ -321,6 +523,27 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      request_team_join: {
+        Args: { member_id: string }
+        Returns: {
+          approved_by: string | null
+          created_at: string
+          email: string
+          enrollment: string
+          event_id: string
+          id: string
+          name: string
+          status: Database["public"]["Enums"]["member_status"]
+          team_id: string
+          user_id: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "team_members"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
     }
     Enums: {
       event_role: "professor" | "monitor" | "evaluator"
@@ -332,7 +555,15 @@ export type Database = {
         | "results_published"
         | "archived"
       global_role: "student" | "global_admin"
+      member_status:
+        | "invited"
+        | "join_requested"
+        | "active"
+        | "rejected"
+        | "removed"
       request_status: "pending" | "approved" | "rejected" | "revoked"
+      team_category: "junior" | "senior"
+      team_status: "pending" | "approved" | "rejected"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -473,7 +704,16 @@ export const Constants = {
         "archived",
       ],
       global_role: ["student", "global_admin"],
+      member_status: [
+        "invited",
+        "join_requested",
+        "active",
+        "rejected",
+        "removed",
+      ],
       request_status: ["pending", "approved", "rejected", "revoked"],
+      team_category: ["junior", "senior"],
+      team_status: ["pending", "approved", "rejected"],
     },
   },
 } as const
