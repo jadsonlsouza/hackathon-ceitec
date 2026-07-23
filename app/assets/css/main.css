@@ -42,5 +42,26 @@ button, input, select, textarea { font: inherit; }
 .request-actions button:disabled { cursor: wait; opacity: .6; }
 .request-actions .danger-button { background: #991b1b; }
 .request-actions .danger-button:hover:not(:disabled) { background: #7f1d1d; }
+.team-page { margin: 0 auto; max-width: 70rem; min-height: 100vh; padding: 3rem 1.5rem; }
+.team-header { max-width: 42rem; }
+.team-header h1 { font-size: clamp(2rem, 5vw, 3.25rem); margin: 0; }
+.team-panel { background: #111827; border: 1px solid #334155; border-radius: 1rem; margin-top: 2rem; padding: 1.5rem; }
+.team-panel h2 { margin-top: 0; }
+.team-meta, .member-card p, .team-details { color: #cbd5e1; }
+.team-form { display: grid; gap: .65rem; max-width: 52rem; }
+.team-form input, .team-form select { background: #0f172a; border: 1px solid #475569; border-radius: .5rem; color: #f8fafc; min-height: 2.75rem; padding: .65rem .75rem; width: 100%; }
+.team-form button, .member-actions button { background: #0369a1; border: 0; border-radius: .5rem; color: #fff; cursor: pointer; font-weight: 700; min-height: 2.75rem; padding: .65rem 1rem; }
+.team-form button:disabled, .member-actions button:disabled { cursor: wait; opacity: .6; }
+.member-fields { border: 1px solid #475569; border-radius: .75rem; display: grid; gap: 1rem; margin: 1rem 0; padding: 1rem; }
+.member-row { border-top: 1px solid #334155; display: grid; gap: .45rem; padding-top: 1rem; }
+.member-row h3 { margin: 0; }
+.member-list { display: grid; gap: .75rem; list-style: none; margin: 1.25rem 0 0; padding: 0; }
+.member-card { align-items: center; border: 1px solid #334155; border-radius: .75rem; display: flex; gap: 1rem; justify-content: space-between; padding: 1rem; }
+.member-card h3, .member-card p { margin: 0; }
+.member-status { color: #7dd3fc !important; margin-top: .5rem !important; }
+.member-actions { display: flex; flex-wrap: wrap; gap: .75rem; }
+.member-actions .danger-button { background: #991b1b; }
+.team-details { line-height: 1.6; padding-left: 1.25rem; }
 @media (max-width: 32rem) { .auth-card { padding: 1.5rem; } .auth-links { flex-direction: column; gap: .75rem; } }
 @media (max-width: 42rem) { .request-card { align-items: stretch; flex-direction: column; } .request-actions button { flex: 1; } }
+@media (max-width: 42rem) { .member-card { align-items: stretch; flex-direction: column; } .member-actions button { flex: 1; } }
