@@ -14,6 +14,8 @@ const isAuthorized = computed(
 )
 
 const createName = ref('')
+const createNameInput = ref<HTMLInputElement | null>(null)
+const createNameError = ref<string | null>(null)
 const createSlug = ref('')
 const createFeatured = ref(false)
 const creating = ref(false)
@@ -66,7 +68,16 @@ const canConfirmArchive = computed(
 async function createEvent() {
   if (!isAuthorized.value || !profile.value || creating.value) return
 
+  const trimmedName = createName.value.trim()
+  if (!trimmedName) {
+    createNameError.value = 'Informe um nome de evento.'
+    await nextTick()
+    createNameInput.value?.focus()
+    return
+  }
+
   creating.value = true
+  createNameError.value = null
   createMessage.value = null
   pageError.value = null
 
@@ -74,7 +85,7 @@ async function createEvent() {
     const { error: createError } = await $supabase
       .from('events')
       .insert({
-        name: createName.value.trim(),
+        name: trimmedName,
         slug: createSlug.value.trim(),
         status: 'draft',
         is_featured: createFeatured.value,
@@ -107,11 +118,22 @@ function openArchiveDialog(event: EventRow) {
 }
 
 function closeArchiveDialog() {
+  if (archiving.value) return
+
   archiveSecret.value = ''
   archiveError.value = null
   confirmedName.value = ''
   selectedEvent.value = null
   archiveDialog.value?.close()
+}
+
+function handleArchiveCancel(event: Event) {
+  event.preventDefault()
+  closeArchiveDialog()
+}
+
+function handleArchiveBackdrop(event: MouseEvent) {
+  if (event.target === event.currentTarget) closeArchiveDialog()
 }
 
 async function archiveEvent() {
@@ -198,10 +220,22 @@ async function archiveEvent() {
           <input
             id="event-name"
             v-model="createName"
+            ref="createNameInput"
             name="event-name"
             required
+            :aria-invalid="createNameError ? 'true' : undefined"
+            :aria-describedby="createNameError ? 'event-name-error' : undefined"
             autocomplete="off"
+            @input="createNameError = null"
           >
+          <p
+            v-if="createNameError"
+            id="event-name-error"
+            class="form-error"
+            role="alert"
+          >
+            {{ createNameError }}
+          </p>
 
           <label for="event-slug">Identificador na URL</label>
           <input
@@ -278,8 +312,8 @@ async function archiveEvent() {
       ref="archiveDialog"
       class="archive-dialog"
       aria-labelledby="archive-dialog-title"
-      @close="archiveSecret = ''; archiveError = null"
-      @cancel="archiveSecret = ''; archiveError = null"
+      @cancel="handleArchiveCancel"
+      @click.self="handleArchiveBackdrop"
     >
       <form @submit.prevent="archiveEvent">
         <h2 id="archive-dialog-title">
@@ -319,7 +353,12 @@ async function archiveEvent() {
         >
 
         <div class="dialog-actions">
-          <button type="button" class="secondary-button" @click="closeArchiveDialog">
+          <button
+            type="button"
+            class="secondary-button"
+            :disabled="archiving"
+            @click="closeArchiveDialog"
+          >
             Cancelar
           </button>
           <button type="submit" class="danger-button" :disabled="!canConfirmArchive">

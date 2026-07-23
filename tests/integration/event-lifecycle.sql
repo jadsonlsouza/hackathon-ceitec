@@ -3,7 +3,7 @@ begin;
 create extension if not exists pgtap with schema extensions;
 set local search_path = extensions, public;
 
-select plan(34);
+select plan(37);
 
 select has_function(
   'public',
@@ -103,6 +103,13 @@ select ok(
   'authenticated has no event delete privilege'
 );
 
+select col_has_check(
+  'public',
+  'events',
+  'name',
+  'event names have a database check constraint'
+);
+
 select ok(
   has_column_privilege('service_role', 'public.profiles', 'id', 'select'),
   'service_role can filter the server authorization lookup by profile id'
@@ -145,6 +152,20 @@ update public.profiles
 set global_role = 'global_admin'
 where id = '00000000-0000-4000-8000-000000000001';
 
+select throws_ok(
+  $$
+    insert into public.events (name, slug, created_by)
+    values (
+      '   ',
+      'whitespace-event-name',
+      '00000000-0000-4000-8000-000000000001'
+    )
+  $$,
+  '23514',
+  null,
+  'the database rejects whitespace-only event names'
+);
+
 set local role service_role;
 select is(
   (
@@ -179,6 +200,27 @@ values
     false,
     '00000000-0000-4000-8000-000000000001'
   );
+
+set local role authenticated;
+select set_config(
+  'request.jwt.claim.sub',
+  '00000000-0000-4000-8000-000000000001',
+  true
+);
+select throws_ok(
+  $$
+    update public.events
+    set
+      status = 'archived',
+      archived_at = now(),
+      is_featured = false
+    where id = '10000000-0000-4000-8000-000000000001'
+  $$,
+  '42501',
+  'new row violates row-level security policy for table "events"',
+  'an authenticated global admin cannot archive an event directly'
+);
+reset role;
 
 set local role anon;
 select throws_ok(

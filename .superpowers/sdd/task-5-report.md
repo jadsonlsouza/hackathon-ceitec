@@ -17,6 +17,10 @@ Implemented and verified.
 - Added the Nuxt server admin client and `POST /api/admin/archive-event`.
 - Added an accessible Portuguese event administration page with create,
   active/archive history, and destructive confirmation flows.
+- Rejected blank and whitespace-only event names in both the browser and
+  database, with an announced field error and focus recovery in the UI.
+- Prevented Cancel, Escape, and backdrop dismissal while an archive request is
+  in flight.
 - Restricted replacement archiving to the current featured event at both UI
   and transaction boundaries.
 - Added all four required environment variables to `.env.example`.
@@ -77,8 +81,9 @@ Result: PASS
 - A forced audit failure after both event mutations proves that the archive and
   replacement insert roll back together.
 - Archived events are immutable, and all event deletion is rejected.
-- The browser clears the archive secret in `finally`, on cancel, and on dialog
-  close, and never writes it to browser storage.
+- The browser clears the archive secret in `finally` after every archive
+  request and when cancelling before a request, never writes it to browser
+  storage, and cannot dismiss the modal while the request is in flight.
 - Archive errors are announced inside the still-open native modal.
 
 ## Verification
@@ -111,3 +116,64 @@ The final token review replaced the fabricated unit JWT with the documented
 Supabase JWT shape. Supabase does not issue a standard top-level `auth_time`
 claim, so standard tokens now derive the original authentication time from
 AMR while explicitly ignoring refresh, anonymous, and e-mail-change entries.
+
+## P1 review follow-up
+
+### RED
+
+```text
+npx supabase test db tests/integration/event-lifecycle.sql
+Failed test 12: event names have a database check constraint
+Failed test 16: the database rejects whitespace-only event names
+
+npx vitest run tests/component/event-admin-ui.test.ts --config vitest.config.ts
+Test Files  1 failed (1)
+Tests       2 failed | 1 passed (3)
+Failure: whitespace-only name called events.insert
+Failure: Cancel remained enabled while the archive request was pending
+```
+
+The authenticated `global_admin` direct-archive regression was added in the
+same RED cycle and already passed because the existing RLS boundary rejected
+the write with SQLSTATE `42501`.
+
+### GREEN
+
+```text
+npx supabase db reset --local
+Applied migration 20260723172343_event_lifecycle.sql
+Finished supabase db reset
+
+npx supabase test db tests/integration/event-lifecycle.sql
+Files=1, Tests=37
+Result: PASS
+
+npx supabase test db tests/integration/*.sql
+Files=3, Tests=112
+Result: PASS
+
+npx supabase db lint --local --schema public,private --fail-on warning
+No schema errors found
+
+npx supabase db advisors --local --type all --level warn --fail-on warn
+No issues found
+
+npx vitest run tests/unit/archive-event.test.ts tests/component/event-admin-ui.test.ts --config vitest.config.ts
+Test Files  2 passed (2)
+Tests       12 passed (12)
+
+npx vitest run --config vitest.config.ts
+Test Files  11 passed (11)
+Tests       36 passed (36)
+
+npm run build
+Nuxt 4.5.0 production client and Nitro server build complete
+
+git diff --check
+Clean
+```
+
+The component gate mounts the real administration page with Vue Test Utils in
+`happy-dom`; it verifies whitespace validation and focus, accessible errors,
+all in-flight user dismissal paths, and secret clearing on both success and
+failure. Source-text scanning was removed from the endpoint unit suite.

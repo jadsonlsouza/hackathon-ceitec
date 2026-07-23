@@ -1,5 +1,3 @@
-import { readFileSync } from 'node:fs'
-import { fileURLToPath } from 'node:url'
 import { describe, expect, it, vi } from 'vitest'
 import { processArchiveEvent } from '../../server/api/admin/archive-event.post'
 
@@ -209,29 +207,5 @@ describe('POST /api/admin/archive-event', () => {
       confirmed_name: 'Hackathon CEITEC',
       actor: USER_ID,
     })
-  })
-})
-
-describe('event lifecycle administration UI', () => {
-  const rootDir = fileURLToPath(new URL('../..', import.meta.url))
-
-  it('provides an accessible Portuguese confirmation dialog and clears the secret', () => {
-    const page = readFileSync(
-      `${rootDir}/app/pages/app/admin/eventos.vue`,
-      'utf8',
-    )
-
-    expect(page).toContain('Administração de eventos')
-    expect(page).toContain('aria-labelledby="archive-dialog-title"')
-    expect(page).toContain('Confirme o nome exato do evento')
-    expect(page).toContain('Segredo de arquivamento')
-    expect(page).toContain('finally')
-    expect(page).toContain("archiveSecret.value = ''")
-    expect(page).toContain('v-if="event.is_featured"')
-    expect(page).toContain('v-if="archiveError"')
-    expect(page).toContain('class="form-error" role="alert"')
-    expect(page).not.toContain('localStorage')
-    expect(page).not.toContain('sessionStorage')
-    expect(page).not.toContain('Copiar configuração')
   })
 })

@@ -1,3 +1,7 @@
+alter table public.events
+add constraint events_name_not_blank
+check (length(btrim(name)) > 0);
+
 create function private.protect_event_lifecycle()
 returns trigger
 language plpgsql
