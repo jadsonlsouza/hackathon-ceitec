@@ -1,0 +1,393 @@
+<script setup lang="ts">
+import TieResolution from '../../../../../components/results/TieResolution.vue'
+import { resultsRpcErrorMessage } from '../../../../../utils/results-rpc-error'
+
+definePageMeta({ middleware: 'auth' })
+
+type Category = 'junior' | 'senior'
+
+interface ProgressRow {
+  event_id: string
+  category: Category
+  team_id: string
+  team_name: string
+  required_evaluator_count: number
+  completed_evaluator_count: number
+  missing_evaluators: Array<{
+    evaluator_id: string
+    display_name: string
+  }>
+  complete: boolean
+}
+
+interface RankingRow {
+  event_id: string
+  category: Category
+  team_id: string
+  team_name: string
+  exact_final_score: number
+  final_score: number
+  score_rank: number
+}
+
+interface Decision {
+  event_id: string
+  category: Category
+  displayed_score: number
+}
+
+interface Publication {
+  event_id: string
+  category: Category
+  published_at: string
+}
+
+const categories: Category[] = ['junior', 'senior']
+const route = useRoute()
+const eventId = computed(() => String(route.params.eventId))
+const { $supabase } = useNuxtApp()
+const supabase = $supabase as any
+const {
+  eventRoles,
+  pending: accessPending,
+  error: accessError,
+} = useCurrentAccess()
+const processingAction = ref<string | null>(null)
+const actionError = ref<string | null>(null)
+const successMessage = ref<string | null>(null)
+
+const isProfessor = computed(() => eventRoles.value.some(role => (
+  role.event_id === eventId.value && role.role === 'professor'
+)))
+
+const resultKey = computed(() => `result-admin:${eventId.value}`)
+const {
+  data: source,
+  pending,
+  error,
+  refresh,
+} = await useAsyncData(
+  resultKey,
+  async () => {
+    if (!isProfessor.value) {
+      return {
+        progress: [] as ProgressRow[],
+        ranking: [] as RankingRow[],
+        decisions: [] as Decision[],
+        publications: [] as Publication[],
+      }
+    }
+    const [progress, ranking, decisions, publications] = await Promise.all([
+      supabase
+        .from('evaluation_progress')
+        .select('*')
+        .eq('event_id', eventId.value)
+        .order('category')
+        .order('team_name'),
+      supabase
+        .from('administrative_ranking')
+        .select('*')
+        .eq('event_id', eventId.value)
+        .order('category')
+        .order('final_score', { ascending: false }),
+      supabase
+        .from('tie_decisions')
+        .select('event_id,category,displayed_score')
+        .eq('event_id', eventId.value),
+      supabase
+        .from('published_results')
+        .select('event_id,category,published_at')
+        .eq('event_id', eventId.value),
+    ])
+    const failure = [
+      progress.error,
+      ranking.error,
+      decisions.error,
+      publications.error,
+    ].find(Boolean)
+    if (failure) throw failure
+    return {
+      progress: (progress.data ?? []) as ProgressRow[],
+      ranking: (ranking.data ?? []) as RankingRow[],
+      decisions: (decisions.data ?? []) as Decision[],
+      publications: (publications.data ?? []) as Publication[],
+    }
+  },
+  {
+    server: false,
+    watch: [eventId, eventRoles],
+    default: () => ({
+      progress: [] as ProgressRow[],
+      ranking: [] as RankingRow[],
+      decisions: [] as Decision[],
+      publications: [] as Publication[],
+    }),
+  },
+)
+
+function categoryLabel(category: Category) {
+  return category === 'junior' ? 'Júnior' : 'Sênior'
+}
+
+function categoryProgress(category: Category) {
+  return source.value.progress.filter(row => row.category === category)
+}
+
+function categoryRanking(category: Category) {
+  return source.value.ranking.filter(row => row.category === category)
+}
+
+function publication(category: Category) {
+  return source.value.publications.find(row => row.category === category)
+}
+
+function tieGroups(category: Category) {
+  const grouped = new Map<number, RankingRow[]>()
+  for (const row of categoryRanking(category)) {
+    const group = grouped.get(Number(row.final_score)) ?? []
+    group.push(row)
+    grouped.set(Number(row.final_score), group)
+  }
+  return [...grouped.entries()]
+    .filter(([, rows]) => rows.length > 1)
+    .map(([score, rows]) => ({
+      score,
+      rows,
+      resolved: source.value.decisions.some(decision => (
+        decision.category === category
+        && Number(decision.displayed_score) === score
+      )),
+    }))
+}
+
+function blockers(category: Category) {
+  const messages: string[] = []
+  const progress = categoryProgress(category)
+  if (!progress.length) messages.push('A avaliação ainda não foi congelada.')
+  if (progress.some(row => !row.complete)) {
+    messages.push('Há equipes com avaliações pendentes.')
+  }
+  if (tieGroups(category).some(group => !group.resolved)) {
+    messages.push('Há empates sem decisão registrada.')
+  }
+  return messages
+}
+
+async function refreshResults() {
+  await refresh()
+  await refreshNuxtData(`result-admin:${eventId.value}`)
+}
+
+async function resolveTie(payload: {
+  event_id: string
+  category: Category
+  displayed_score: number
+  ordered_team_ids: string[]
+  justification: string
+}) {
+  const action = `resolve:${payload.category}:${payload.displayed_score}`
+  if (!isProfessor.value || processingAction.value) return
+  processingAction.value = action
+  actionError.value = null
+  successMessage.value = null
+  try {
+    const { error: rpcError } = await supabase.rpc('resolve_tie', payload)
+    if (rpcError) throw rpcError
+    successMessage.value = 'Desempate registrado e auditado.'
+    await refreshResults()
+  }
+  catch (caught) {
+    actionError.value = resultsRpcErrorMessage(
+      caught,
+      'Não foi possível registrar o desempate. Tente novamente.',
+    )
+  }
+  finally {
+    processingAction.value = null
+  }
+}
+
+async function publishCategory(category: Category) {
+  const action = `publish:${category}`
+  if (
+    !isProfessor.value
+    || processingAction.value
+    || blockers(category).length
+    || publication(category)
+  ) return
+  processingAction.value = action
+  actionError.value = null
+  successMessage.value = null
+  try {
+    const { error: rpcError } = await supabase.rpc(
+      'publish_category_results',
+      { event_id: eventId.value, category },
+    )
+    if (rpcError) throw rpcError
+    successMessage.value = `Resultados da categoria ${categoryLabel(category)} publicados.`
+    await refreshResults()
+  }
+  catch (caught) {
+    actionError.value = resultsRpcErrorMessage(
+      caught,
+      'Não foi possível publicar esta categoria. Tente novamente.',
+    )
+  }
+  finally {
+    processingAction.value = null
+  }
+}
+</script>
+
+<template>
+  <main class="results-admin-page">
+    <header class="results-header">
+      <p class="eyebrow">
+        Administração
+      </p>
+      <h1>Resultados e desempates</h1>
+      <p class="intro">
+        Confira a completude, colabore com os avaliadores nos empates e publique
+        cada categoria separadamente.
+      </p>
+    </header>
+
+    <p v-if="accessPending || pending" class="request-status" role="status">
+      Carregando resultados…
+    </p>
+    <p v-else-if="accessError || error" class="form-error" role="alert">
+      Não foi possível carregar os resultados.
+    </p>
+    <p v-else-if="!isProfessor" class="form-error" role="alert">
+      Somente o Professor responsável pode acessar esta área.
+    </p>
+    <template v-else>
+      <p v-if="actionError" class="form-error" role="alert">
+        {{ actionError }}
+      </p>
+      <p v-if="successMessage" class="form-success" role="status">
+        {{ successMessage }}
+      </p>
+
+      <section
+        v-for="category in categories"
+        :key="category"
+        class="result-category"
+      >
+        <header>
+          <div>
+            <p class="eyebrow">
+              Categoria
+            </p>
+            <h2>{{ categoryLabel(category) }}</h2>
+          </div>
+          <span v-if="publication(category)" class="published-badge">
+            Publicada
+          </span>
+        </header>
+
+        <div class="result-progress">
+          <h3>Progresso das avaliações</h3>
+          <p v-if="!categoryProgress(category).length">
+            Nenhuma configuração congelada nesta categoria.
+          </p>
+          <ul v-else>
+            <li
+              v-for="row in categoryProgress(category)"
+              :key="row.team_id"
+            >
+              <strong>{{ row.team_name }}</strong>
+              <span>
+                {{ row.completed_evaluator_count }} de
+                {{ row.required_evaluator_count }}
+              </span>
+              <span v-if="row.complete" class="complete-label">Completa</span>
+              <span v-else class="missing-label">
+                Faltam:
+                {{
+                  row.missing_evaluators
+                    .map(item => item.display_name || 'Avaliador')
+                    .join(', ')
+                }}
+              </span>
+            </li>
+          </ul>
+        </div>
+
+        <div class="private-ranking">
+          <h3>Classificação administrativa</h3>
+          <p v-if="!categoryRanking(category).length">
+            A classificação aparecerá quando uma equipe estiver completa.
+          </p>
+          <ol v-else>
+            <li
+              v-for="row in categoryRanking(category)"
+              :key="row.team_id"
+            >
+              <span>{{ row.score_rank }}º</span>
+              <strong>{{ row.team_name }}</strong>
+              <b>{{ Number(row.final_score).toFixed(2) }}</b>
+            </li>
+          </ol>
+        </div>
+
+        <div
+          v-for="group in tieGroups(category)"
+          :key="`${category}:${group.score}`"
+          class="tie-card"
+        >
+          <p v-if="group.resolved" class="form-success">
+            Desempate de nota {{ group.score.toFixed(2) }} já registrado.
+          </p>
+          <TieResolution
+            v-else
+            data-resolve-tie
+            :event-id="eventId"
+            :category="category"
+            :displayed-score="group.score"
+            :teams="group.rows.map(row => ({
+              team_id: row.team_id,
+              team_name: row.team_name,
+            }))"
+            :processing="processingAction === `resolve:${category}:${group.score}`"
+            @resolve="resolveTie"
+          />
+        </div>
+
+        <div class="publication-panel">
+          <template v-if="publication(category)">
+            <h3>Categoria publicada</h3>
+            <p>
+              Snapshot imutável criado em
+              {{ new Date(publication(category)!.published_at).toLocaleString('pt-BR') }}.
+            </p>
+          </template>
+          <template v-else>
+            <h3 v-if="blockers(category).length">
+              Publicação bloqueada
+            </h3>
+            <h3 v-else>
+              Pronta para publicar
+            </h3>
+            <ul v-if="blockers(category).length">
+              <li v-for="message in blockers(category)" :key="message">
+                {{ message }}
+              </li>
+            </ul>
+            <button
+              type="button"
+              :disabled="Boolean(processingAction) || blockers(category).length > 0"
+              @click="publishCategory(category)"
+            >
+              {{
+                processingAction === `publish:${category}`
+                  ? 'Publicando…'
+                  : `Publicar ${categoryLabel(category)}`
+              }}
+            </button>
+          </template>
+        </div>
+      </section>
+    </template>
+  </main>
+</template>
