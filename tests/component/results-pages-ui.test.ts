@@ -10,6 +10,7 @@ const refresh = vi.fn()
 const eventRoles = ref([{ event_id: EVENT_ID, role: 'professor' }])
 const routeParams = ref<Record<string, string>>({ eventId: EVENT_ID })
 let mountedHost: ReturnType<typeof mount> | undefined
+const queriedTables: string[] = []
 
 const source = {
   progress: [
@@ -49,6 +50,7 @@ const source = {
 }
 
 function query(table: string) {
+  queriedTables.push(table)
   const payload = table === 'evaluation_progress'
     ? source.progress
     : table === 'administrative_ranking'
@@ -171,7 +173,19 @@ describe('result pages', () => {
   })
   beforeEach(() => {
     routeParams.value = { eventId: EVENT_ID }
-    rpc.mockReset().mockResolvedValue({ data: null, error: null })
+    queriedTables.length = 0
+    rpc.mockReset().mockImplementation((name: string) => {
+      if (name === 'get_evaluation_progress') {
+        return Promise.resolve({ data: source.progress, error: null })
+      }
+      if (name === 'get_administrative_ranking') {
+        return Promise.resolve({ data: source.ranking, error: null })
+      }
+      if (name === 'get_administrative_publications') {
+        return Promise.resolve({ data: source.publications, error: null })
+      }
+      return Promise.resolve({ data: null, error: null })
+    })
     refresh.mockReset().mockResolvedValue(undefined)
   })
 
@@ -181,12 +195,18 @@ describe('result pages', () => {
     expect(wrapper.text()).toContain('Avaliadora Bia')
     expect(wrapper.text()).toContain('Publicação bloqueada')
     expect(wrapper.text()).toContain('Equipe Alpha')
+    expect(queriedTables).not.toContain('evaluation_progress')
+    expect(queriedTables).not.toContain('administrative_ranking')
+    expect(queriedTables).not.toContain('published_results')
+    expect(rpc).toHaveBeenCalledWith('get_evaluation_progress', {
+      target_event: EVENT_ID,
+    })
   })
 
   it('guards tie and publication actions against rapid duplicate clicks', async () => {
     const pending = new Promise(() => {})
-    rpc.mockReturnValue(pending)
     const wrapper = await mountPage(AdminPage)
+    rpc.mockClear().mockReturnValue(pending)
 
     const resolve = wrapper.get('[data-resolve-tie] form')
     await resolve.get('textarea').setValue('Decisão conjunta dos avaliadores.')
@@ -211,8 +231,8 @@ describe('result pages', () => {
       missing_evaluators: [],
       complete: true,
     }
-    rpc.mockReturnValue(new Promise(() => {}))
     const wrapper = await mountPage(AdminPage)
+    rpc.mockClear().mockReturnValue(new Promise(() => {}))
 
     const publish = wrapper.findAll('.publication-panel button')
       .find(button => button.text().includes('Publicar Júnior'))

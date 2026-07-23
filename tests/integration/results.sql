@@ -39,6 +39,18 @@ select has_function(
   array['text'],
   'public slug-scoped result RPC exists'
 );
+select has_function(
+  'public', 'get_evaluation_progress', array['uuid'],
+  'Professor-only progress RPC exists'
+);
+select has_function(
+  'public', 'get_administrative_ranking', array['uuid'],
+  'Professor-only ranking RPC exists'
+);
+select has_function(
+  'public', 'get_administrative_publications', array['uuid'],
+  'Professor-only publication-state RPC exists'
+);
 
 select is(
   (
@@ -83,8 +95,17 @@ select ok(
   not has_table_privilege('anon', 'public.tie_decisions', 'select')
   and not has_table_privilege('anon', 'public.evaluation_progress', 'select')
   and not has_table_privilege('anon', 'public.administrative_ranking', 'select')
-  and has_table_privilege('anon', 'public.published_results', 'select'),
-  'anonymous access is limited to publication snapshots'
+  and not has_table_privilege('anon', 'public.published_results', 'select')
+  and not has_table_privilege(
+    'authenticated', 'public.evaluation_progress', 'select'
+  )
+  and not has_table_privilege(
+    'authenticated', 'public.administrative_ranking', 'select'
+  )
+  and not has_table_privilege(
+    'authenticated', 'public.published_results', 'select'
+  ),
+  'private and published tables have no direct client read grants'
 );
 
 insert into auth.users (id, email, raw_user_meta_data)
@@ -102,7 +123,9 @@ values
   ('00000000-0000-4000-8000-000000000606',
     'results-student-c@example.test', '{"full_name":"Aluno C"}'),
   ('00000000-0000-4000-8000-000000000607',
-    'results-student-s@example.test', '{"full_name":"Aluno S"}');
+    'results-student-s@example.test', '{"full_name":"Aluno S"}'),
+  ('00000000-0000-4000-8000-000000000608',
+    'results-monitor@example.test', '{"full_name":"Monitor"}');
 
 insert into public.events (
   id, name, slug, status, professor_id, created_by, archived_at
@@ -134,6 +157,9 @@ values
     '00000000-0000-4000-8000-000000000601'),
   ('10000000-0000-4000-8000-000000000602',
     '00000000-0000-4000-8000-000000000601', 'professor',
+    '00000000-0000-4000-8000-000000000601'),
+  ('10000000-0000-4000-8000-000000000601',
+    '00000000-0000-4000-8000-000000000608', 'monitor',
     '00000000-0000-4000-8000-000000000601');
 
 insert into public.teams (
@@ -317,6 +343,91 @@ select set_config(
   'request.jwt.claim.sub', '00000000-0000-4000-8000-000000000601', true
 );
 
+select is(
+  (
+    select count(*)::integer
+    from public.get_evaluation_progress(
+      '10000000-0000-4000-8000-000000000601'
+    )
+  ),
+  4,
+  'Professor reads only the requested event progress through the RPC'
+);
+
+set local role authenticated;
+select set_config(
+  'request.jwt.claim.sub', '00000000-0000-4000-8000-000000000602', true
+);
+select throws_ok(
+  $$
+    select * from public.get_evaluation_progress(
+      '10000000-0000-4000-8000-000000000601'
+    )
+  $$,
+  'P0001', 'forbidden',
+  'evaluator cannot read private evaluation progress'
+);
+select throws_ok(
+  $$
+    select * from public.get_administrative_ranking(
+      '10000000-0000-4000-8000-000000000601'
+    )
+  $$,
+  'P0001', 'forbidden',
+  'evaluator cannot read private ranking'
+);
+
+set local role authenticated;
+select set_config(
+  'request.jwt.claim.sub', '00000000-0000-4000-8000-000000000608', true
+);
+select throws_ok(
+  $$
+    select * from public.get_evaluation_progress(
+      '10000000-0000-4000-8000-000000000601'
+    )
+  $$,
+  'P0001', 'forbidden',
+  'monitor cannot read private evaluation progress'
+);
+select throws_ok(
+  $$
+    select * from public.get_administrative_ranking(
+      '10000000-0000-4000-8000-000000000601'
+    )
+  $$,
+  'P0001', 'forbidden',
+  'monitor cannot read private ranking'
+);
+
+set local role authenticated;
+select set_config(
+  'request.jwt.claim.sub', '00000000-0000-4000-8000-000000000604', true
+);
+select throws_ok(
+  $$
+    select * from public.get_administrative_ranking(
+      '10000000-0000-4000-8000-000000000601'
+    )
+  $$,
+  'P0001', 'forbidden',
+  'student cannot read private ranking'
+);
+select throws_ok(
+  $$
+    select * from public.get_evaluation_progress(
+      '10000000-0000-4000-8000-000000000601'
+    )
+  $$,
+  'P0001', 'forbidden',
+  'student cannot read private evaluation progress'
+);
+
+set local role authenticated;
+select set_config(
+  'request.jwt.claim.sub', '00000000-0000-4000-8000-000000000601', true
+);
+
 select throws_ok(
   $$
     select public.resolve_tie(
@@ -351,9 +462,10 @@ select throws_ok(
 select is(
   (
     select completed_evaluator_count
-    from public.evaluation_progress
-    where event_id = '10000000-0000-4000-8000-000000000601'
-      and category = 'junior'
+    from public.get_evaluation_progress(
+      '10000000-0000-4000-8000-000000000601'
+    )
+    where category = 'junior'
       and team_id = '20000000-0000-4000-8000-000000000603'
   ),
   1,
@@ -362,9 +474,10 @@ select is(
 select is(
   (
     select missing_evaluators -> 0 ->> 'display_name'
-    from public.evaluation_progress
-    where event_id = '10000000-0000-4000-8000-000000000601'
-      and category = 'junior'
+    from public.get_evaluation_progress(
+      '10000000-0000-4000-8000-000000000601'
+    )
+    where category = 'junior'
       and team_id = '20000000-0000-4000-8000-000000000603'
   ),
   'Avaliadora B',
@@ -373,9 +486,10 @@ select is(
 select is(
   (
     select count(*)::integer
-    from public.administrative_ranking
-    where event_id = '10000000-0000-4000-8000-000000000601'
-      and category = 'junior'
+    from public.get_administrative_ranking(
+      '10000000-0000-4000-8000-000000000601'
+    )
+    where category = 'junior'
   ),
   2,
   'incomplete frozen teams are excluded from private ranking'
@@ -383,9 +497,10 @@ select is(
 select results_eq(
   $$
     select team_name, final_score
-    from public.administrative_ranking
-    where event_id = '10000000-0000-4000-8000-000000000601'
-      and category = 'junior'
+    from public.get_administrative_ranking(
+      '10000000-0000-4000-8000-000000000601'
+    )
+    where category = 'junior'
     order by team_name
   $$,
   $$
@@ -411,9 +526,10 @@ select is(
 select is(
   (
     select round(exact_final_score, 4)
-    from public.administrative_ranking
-    where event_id = '10000000-0000-4000-8000-000000000601'
-      and category = 'junior'
+    from public.get_administrative_ranking(
+      '10000000-0000-4000-8000-000000000601'
+    )
+    where category = 'junior'
       and team_id = '20000000-0000-4000-8000-000000000601'
   ),
   4.3333::numeric,
@@ -428,6 +544,92 @@ select throws_ok(
   'P0001', 'evaluations_incomplete',
   'an incomplete frozen team blocks category publication'
 );
+select lives_ok(
+  $$
+    select public.publish_category_results(
+      '10000000-0000-4000-8000-000000000601', 'senior'
+    )
+  $$,
+  'Senior can publish independently while Junior remains incomplete'
+);
+
+set local role anon;
+select is(
+  (
+    select count(*)::integer
+    from public.get_published_results('resultados-ceitec')
+  ),
+  0,
+  'first category stays hidden publicly until the event is fully published'
+);
+select throws_ok(
+  $$
+    select * from public.published_results
+  $$,
+  '42501', null,
+  'anonymous users cannot select publication rows directly'
+);
+
+set local role authenticated;
+select set_config(
+  'request.jwt.claim.sub', '00000000-0000-4000-8000-000000000602', true
+);
+select throws_ok(
+  $$
+    select * from public.published_results
+  $$,
+  '42501', null,
+  'authenticated clients cannot select publication rows directly'
+);
+select throws_ok(
+  $$
+    select public.submit_evaluation(
+      '20000000-0000-4000-8000-000000000604',
+      (
+        select jsonb_agg(jsonb_build_object(
+          'criterion_id', criterion ->> 'criterion_id',
+          'score', 4
+        ))
+        from public.evaluation_freezes as frozen_config
+        cross join lateral jsonb_array_elements(
+          frozen_config.criteria_snapshot
+        ) as criterion
+        where frozen_config.event_id =
+          '10000000-0000-4000-8000-000000000601'
+          and frozen_config.category = 'senior'
+      ),
+      null
+    )
+  $$,
+  'P0001', 'category_results_published',
+  'submit_evaluation deterministically rejects a published category'
+);
+select lives_ok(
+  $$
+    select public.submit_evaluation(
+      '20000000-0000-4000-8000-000000000603',
+      (
+        select jsonb_agg(jsonb_build_object(
+          'criterion_id', criterion ->> 'criterion_id',
+          'score', case
+            when criterion ->> 'name' = 'Time' then 4
+            else 5
+          end
+        ))
+        from public.evaluation_freezes as frozen_config
+        cross join lateral jsonb_array_elements(
+          frozen_config.criteria_snapshot
+        ) as criterion
+        where frozen_config.event_id =
+          '10000000-0000-4000-8000-000000000601'
+          and frozen_config.category = 'junior'
+      ),
+      null
+    )
+  $$,
+  'the unpublished Junior category remains editable'
+);
+
 reset role;
 insert into public.evaluations (
   id, event_id, category, team_id, evaluator_id
@@ -450,6 +652,33 @@ from public.evaluation_criteria as criterion
 where criterion.event_id = '10000000-0000-4000-8000-000000000601'
   and criterion.name in ('Time', 'Solução');
 
+delete from public.event_roles
+where event_id = '10000000-0000-4000-8000-000000000601'
+  and user_id = '00000000-0000-4000-8000-000000000603'
+  and role = 'evaluator';
+set local role authenticated;
+select set_config(
+  'request.jwt.claim.sub', '00000000-0000-4000-8000-000000000601', true
+);
+select is(
+  (
+    select count(*)::integer
+    from public.get_evaluation_progress(
+      '10000000-0000-4000-8000-000000000601'
+    )
+    where category = 'junior' and complete
+  ),
+  3,
+  'revoking an evaluator after submission does not erase frozen completeness'
+);
+reset role;
+insert into public.event_roles (event_id, user_id, role, approved_by)
+values (
+  '10000000-0000-4000-8000-000000000601',
+  '00000000-0000-4000-8000-000000000603',
+  'evaluator',
+  '00000000-0000-4000-8000-000000000601'
+);
 set local role authenticated;
 select set_config(
   'request.jwt.claim.sub', '00000000-0000-4000-8000-000000000601', true
@@ -615,9 +844,8 @@ select lives_ok(
 select is(
   (
     select ranking -> 0 ->> 'team_name'
-    from public.published_results
-    where event_id = '10000000-0000-4000-8000-000000000601'
-      and category = 'junior'
+    from public.get_published_results('resultados-ceitec')
+    where category = 'junior'
   ),
   'Equipe Beta',
   'publication applies the manual order without changing equal scores'
@@ -628,8 +856,8 @@ select is(
     from public.events
     where id = '10000000-0000-4000-8000-000000000601'
   ),
-  'evaluation',
-  'publishing only one category does not advance the event'
+  'results_published',
+  'publishing Junior advances the event because Senior already exists'
 );
 select lives_ok(
   $$
@@ -637,7 +865,7 @@ select lives_ok(
       '10000000-0000-4000-8000-000000000601', 'senior'
     )
   $$,
-  'independent complete senior ranking publishes'
+  'repeating the earlier Senior publication is idempotent'
 );
 select is(
   (

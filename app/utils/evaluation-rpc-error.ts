@@ -10,6 +10,7 @@ const messages: Array<[string, string]> = [
   ['event_not_in_evaluation', 'Esta ação só está disponível na fase de avaliação.'],
   ['approved_team_required', 'É necessária pelo menos uma equipe aprovada nesta categoria.'],
   ['evaluation_already_started', 'A ordem não pode mudar porque as avaliações já começaram.'],
+  ['category_results_published', 'Os resultados desta categoria já foram publicados.'],
   ['evaluation_config_frozen', 'A configuração já foi congelada para esta categoria.'],
   ['evaluation_already_frozen', 'A configuração já foi congelada para esta categoria.'],
   ['criterion_required', 'Cadastre pelo menos um critério ativo.'],

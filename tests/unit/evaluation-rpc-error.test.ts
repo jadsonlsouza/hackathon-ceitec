@@ -2,6 +2,12 @@ import { describe, expect, it } from 'vitest'
 import { evaluationRpcErrorMessage } from '../../app/utils/evaluation-rpc-error'
 
 describe('evaluation RPC error messages', () => {
+  it('explains that a published category can no longer be edited', () => {
+    expect(evaluationRpcErrorMessage(
+      { message: 'category_results_published' },
+      'fallback',
+    )).toContain('já foram publicados')
+  })
   it.each([
     ['authentication_required', 'Entre novamente'],
     ['forbidden', 'Professor responsável'],

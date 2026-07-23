@@ -78,26 +78,19 @@ const {
       }
     }
     const [progress, ranking, decisions, publications] = await Promise.all([
-      supabase
-        .from('evaluation_progress')
-        .select('*')
-        .eq('event_id', eventId.value)
-        .order('category')
-        .order('team_name'),
-      supabase
-        .from('administrative_ranking')
-        .select('*')
-        .eq('event_id', eventId.value)
-        .order('category')
-        .order('final_score', { ascending: false }),
+      supabase.rpc('get_evaluation_progress', {
+        target_event: eventId.value,
+      }),
+      supabase.rpc('get_administrative_ranking', {
+        target_event: eventId.value,
+      }),
       supabase
         .from('tie_decisions')
         .select('event_id,category,displayed_score')
         .eq('event_id', eventId.value),
-      supabase
-        .from('published_results')
-        .select('event_id,category,published_at')
-        .eq('event_id', eventId.value),
+      supabase.rpc('get_administrative_publications', {
+        target_event: eventId.value,
+      }),
     ])
     const failure = [
       progress.error,
