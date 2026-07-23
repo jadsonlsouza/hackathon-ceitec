@@ -1,3 +1,215 @@
+import type { SupabaseClient } from '@supabase/supabase-js'
+import {
+  computed,
+  getCurrentInstance,
+  onMounted,
+  onScopeDispose,
+  ref,
+  watch,
+  type ComputedRef,
+  type Ref,
+} from 'vue'
+import type { Database } from '~/types/database'
+
+interface TeamContext {
+  teamEventIds: string[]
+  teamIds: string[]
+}
+
+interface TeamContextController {
+  data: Ref<TeamContext>
+  pending: Ref<boolean>
+  error: Ref<unknown>
+  retain: () => void
+  release: () => void
+  refresh: () => Promise<void>
+}
+
+const teamControllers = new WeakMap<object, TeamContextController>()
+
+function createTeamContextController(
+  supabase: SupabaseClient<Database>,
+  userId: ComputedRef<string | null>,
+  email: ComputedRef<string | null>,
+): TeamContextController {
+  const data = ref<TeamContext>({ teamEventIds: [], teamIds: [] })
+  const pending = ref(false)
+  const error = ref<unknown>(null)
+  let channel: ReturnType<typeof supabase.channel> | null = null
+  let stopIdentityWatch: (() => void) | null = null
+  let consumers = 0
+  let active = false
+  let generation = 0
+  let reloadPromise: Promise<void> | null = null
+  let subscribedEmail: string | null = null
+  let subscribedTeamIds: string[] = []
+
+  function stopChannel() {
+    const current = channel
+    channel = null
+    subscribedEmail = null
+    subscribedTeamIds = []
+    if (current) void supabase.removeChannel(current)
+  }
+
+  function startChannel() {
+    const scopedUserId = userId.value
+    if (
+      !active
+      || !scopedUserId
+      || !email.value
+      || channel
+      || typeof window === 'undefined'
+    ) return
+
+    let nextChannel = supabase
+      .channel(`dashboard-teams:${scopedUserId}`)
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'team_members',
+        filter: `user_id=eq.${scopedUserId}`,
+      }, () => {
+        void refresh()
+      })
+    if (email.value) {
+      nextChannel = nextChannel.on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'team_members',
+        filter: `email=eq.${email.value}`,
+      }, () => {
+        void refresh()
+      })
+    }
+    for (const teamId of data.value.teamIds) {
+      nextChannel = nextChannel.on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'teams',
+        filter: `id=eq.${teamId}`,
+      }, () => {
+        void refresh()
+      })
+    }
+    subscribedEmail = email.value
+    subscribedTeamIds = [...data.value.teamIds]
+    channel = nextChannel.subscribe()
+  }
+
+  async function refresh() {
+    const expectedUserId = userId.value
+    if (!expectedUserId) {
+      data.value = { teamEventIds: [], teamIds: [] }
+      pending.value = false
+      return
+    }
+    if (reloadPromise) return reloadPromise
+    const expectedGeneration = generation
+    pending.value = true
+    error.value = null
+    const currentPromise = (async () => {
+      try {
+        const { data: rows, error: teamError } = await supabase
+          .from('teams')
+          .select('id,event_id,status')
+        if (teamError) throw teamError
+        if (
+          expectedGeneration !== generation
+          || expectedUserId !== userId.value
+        ) return
+        const visibleTeams = (rows ?? []).filter(team => team.status !== 'rejected')
+        const nextData = {
+          teamEventIds: [...new Set(visibleTeams.map(team => team.event_id))],
+          teamIds: visibleTeams.map(team => team.id),
+        }
+        const channelShapeChanged = (
+          nextData.teamIds.join(',') !== subscribedTeamIds.join(',')
+          || email.value !== subscribedEmail
+        )
+        data.value = nextData
+        if (channelShapeChanged) {
+          stopChannel()
+          startChannel()
+        }
+      }
+      catch (caught) {
+        if (
+          expectedGeneration !== generation
+          || expectedUserId !== userId.value
+        ) return
+        data.value = { teamEventIds: [], teamIds: [] }
+        error.value = caught
+      }
+      finally {
+        if (
+          expectedGeneration === generation
+          && expectedUserId === userId.value
+        ) pending.value = false
+      }
+    })()
+    reloadPromise = currentPromise
+    try {
+      await currentPromise
+    }
+    finally {
+      if (reloadPromise === currentPromise) reloadPromise = null
+    }
+  }
+
+  function start() {
+    if (active) return
+    active = true
+    stopIdentityWatch = watch(
+      [userId, email],
+      ([nextUserId], [previousUserId]) => {
+        if (nextUserId !== previousUserId) {
+          generation += 1
+          reloadPromise = null
+          data.value = { teamEventIds: [], teamIds: [] }
+          error.value = null
+        }
+        stopChannel()
+        if (!nextUserId || !email.value) {
+          pending.value = false
+          return
+        }
+        startChannel()
+        void refresh()
+      },
+      { immediate: true },
+    )
+  }
+
+  function stop() {
+    if (!active) return
+    active = false
+    generation += 1
+    reloadPromise = null
+    stopIdentityWatch?.()
+    stopIdentityWatch = null
+    stopChannel()
+    data.value = { teamEventIds: [], teamIds: [] }
+    pending.value = false
+    error.value = null
+  }
+
+  return {
+    data,
+    pending,
+    error,
+    retain() {
+      consumers += 1
+      if (consumers === 1) start()
+    },
+    release() {
+      consumers = Math.max(0, consumers - 1)
+      if (consumers === 0) stop()
+    },
+    refresh,
+  }
+}
+
 export function useDashboardEventContext() {
   const route = useRoute()
   const { $supabase } = useNuxtApp()
@@ -7,42 +219,57 @@ export function useDashboardEventContext() {
     return typeof value === 'string' && value ? value : null
   })
 
-  const teamAccess = useAsyncData(
-    'dashboard-event-context',
-    async () => {
-      const { data, error } = await $supabase
-        .from('teams')
-        .select('event_id')
-      if (error) throw error
-      return {
-        teamEventIds: [...new Set((data ?? []).map(team => team.event_id))],
-      }
-    },
-    {
-      server: false,
-      default: () => ({ teamEventIds: [] as string[] }),
-      watch: [access.profile, access.eventRoles],
-    },
+  const profileEmail = computed(() => access.profile.value?.email ?? null)
+  if (!$supabase) {
+    const teamEventIds = computed(() => [] as string[])
+    return {
+      ...access,
+      teamEventIds,
+      contextPending: ref(false),
+      contextError: ref<unknown>(null),
+      refreshTeamContext: async () => {},
+      currentEventId: computed(() => null as string | null),
+    }
+  }
+  let teamAccess = teamControllers.get($supabase)
+  if (!teamAccess) {
+    teamAccess = createTeamContextController(
+      $supabase,
+      access.userId,
+      profileEmail,
+    )
+    teamControllers.set($supabase, teamAccess)
+  }
+  if (getCurrentInstance()) {
+    onMounted(teamAccess.retain)
+    onScopeDispose(teamAccess.release)
+  }
+
+  const teamEventIds = computed(
+    () => teamAccess?.data.value.teamEventIds ?? [],
   )
 
   const authorizedEventIds = computed(() => new Set([
     ...access.eventRoles.value.map(role => role.event_id),
-    ...teamAccess.data.value.teamEventIds,
+    ...teamEventIds.value,
   ]))
   const currentEventId = computed(() => {
-    if (routeEventId.value && authorizedEventIds.value.has(routeEventId.value)) {
-      return routeEventId.value
+    if (routeEventId.value) {
+      return authorizedEventIds.value.has(routeEventId.value)
+        ? routeEventId.value
+        : null
     }
     return access.eventRoles.value[0]?.event_id
-      ?? teamAccess.data.value.teamEventIds[0]
+      ?? teamEventIds.value[0]
       ?? null
   })
 
   return {
     ...access,
-    teamEventIds: computed(() => teamAccess.data.value.teamEventIds),
+    teamEventIds,
     contextPending: teamAccess.pending,
     contextError: teamAccess.error,
+    refreshTeamContext: teamAccess.refresh,
     currentEventId,
   }
 }

@@ -7,6 +7,7 @@ const EVENT_ID = '10000000-0000-4000-8000-000000000901'
 const routePath = ref('/app')
 const profile = ref<{ global_role: 'student' | 'global_admin' }>({ global_role: 'student' })
 const eventRoles = ref<Array<{ event_id: string, role: 'professor' | 'monitor' | 'evaluator' }>>([])
+const accessUserId = ref<string | null>('dashboard-test-user')
 const accessPending = ref(false)
 const accessError = ref<unknown>(null)
 const contextData = ref({ teamEventIds: [] as string[] })
@@ -60,6 +61,7 @@ describe('dashboard UI', () => {
     vi.stubGlobal('useCurrentAccess', () => ({
       profile,
       eventRoles,
+      userId: accessUserId,
       pending: accessPending,
       error: accessError,
     }))
@@ -82,6 +84,7 @@ describe('dashboard UI', () => {
     routePath.value = '/app'
     profile.value = { global_role: 'student' }
     eventRoles.value = []
+    accessUserId.value = 'dashboard-test-user'
     accessPending.value = false
     accessError.value = null
     contextData.value = { teamEventIds: [] }
@@ -95,7 +98,7 @@ describe('dashboard UI', () => {
 
   it.each([
     ['global_admin', [], null, [], ['Eventos', 'Professores', 'Auditoria']],
-    ['student', [{ event_id: EVENT_ID, role: 'professor' }], EVENT_ID, [], ['Equipes', 'Canvas', 'Conteúdo público', 'Avaliadores', 'Resultados']],
+    ['student', [{ event_id: EVENT_ID, role: 'professor' }], EVENT_ID, [], ['Equipes', 'Solicitações', 'Canvas', 'Conteúdo público', 'Revisões', 'Avaliadores', 'Resultados']],
     ['student', [{ event_id: EVENT_ID, role: 'monitor' }], EVENT_ID, [], ['Revisões']],
     ['student', [{ event_id: EVENT_ID, role: 'evaluator' }], EVENT_ID, [], ['Avaliações']],
     ['student', [], EVENT_ID, [EVENT_ID], ['Minha equipe', 'Atividades']],
@@ -190,6 +193,15 @@ describe('dashboard UI', () => {
     await nextTick()
     expect(wrapper.get('[data-card-status="ready"]').text()).toContain('3')
     expect(wrapper.get('[data-card-action]').attributes('href')).toBe('/app/admin/eventos')
+  })
+
+  it('labels evaluator assignment totals as assigned categories', async () => {
+    eventRoles.value = [{ event_id: EVENT_ID, role: 'evaluator' }]
+    summaryData.value = { ...summaryData.value, evaluations: 2 }
+    const wrapper = await mountSuspended(DashboardPage)
+
+    expect(wrapper.get('.status-card h2').text()).toBe('Categorias atribuídas')
+    expect(wrapper.text()).not.toContain('Avaliações atribuídas')
   })
 
   it('shows a sanitized recoverable global error', async () => {

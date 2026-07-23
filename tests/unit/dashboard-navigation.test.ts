@@ -23,7 +23,7 @@ describe('dashboard capability navigation', () => {
   })
 
   it.each([
-    ['professor', ['Equipes', 'Canvas', 'Conteúdo público', 'Avaliadores', 'Resultados']],
+    ['professor', ['Equipes', 'Solicitações', 'Canvas', 'Conteúdo público', 'Revisões', 'Avaliadores', 'Resultados']],
     ['monitor', ['Revisões']],
     ['evaluator', ['Avaliações']],
   ] as const)('maps the approved %s role to its event capabilities', (role, labels) => {
@@ -68,11 +68,12 @@ describe('dashboard capability navigation', () => {
     expect(new Set(links.map(item => item.to)).size).toBe(links.length)
     expect(links.map(item => item.label)).toEqual([
       'Equipes',
+      'Solicitações',
       'Canvas',
       'Conteúdo público',
+      'Revisões',
       'Avaliadores',
       'Resultados',
-      'Revisões',
       'Avaliações',
       'Minha equipe',
       'Atividades',

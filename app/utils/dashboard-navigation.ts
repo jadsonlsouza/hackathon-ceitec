@@ -33,8 +33,10 @@ const navigationByCapability: Record<Capability, NavigationDefinition[]> = {
   ],
   manage_event: [
     { label: 'Equipes', to: 'equipes', eventRelative: true },
+    { label: 'Solicitações', to: 'solicitacoes', eventRelative: true },
     { label: 'Canvas', to: 'admin/canvas', eventRelative: true },
     { label: 'Conteúdo público', to: 'admin/conteudo-publico', eventRelative: true },
+    { label: 'Revisões', to: 'revisoes', eventRelative: true },
     { label: 'Avaliadores', to: 'admin/avaliacao', eventRelative: true },
     { label: 'Resultados', to: 'admin/resultados', eventRelative: true },
   ],

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { watch } from 'vue'
 import StatusCard from '../../components/dashboard/StatusCard.vue'
 import { useDashboardEventContext } from '../../composables/useDashboardEventContext'
 import {
@@ -20,6 +21,7 @@ const { $supabase } = useNuxtApp()
 const {
   profile,
   eventRoles,
+  userId,
   pending: accessPending,
   error: accessError,
   teamEventIds,
@@ -33,7 +35,6 @@ const capabilities = computed(() => capabilitiesForAccess(
   currentEventId.value,
   teamEventIds.value,
 ))
-
 const summary = useAsyncData(
   'dashboard-summary',
   async (): Promise<DashboardSummary> => {
@@ -104,6 +105,16 @@ const summary = useAsyncData(
     watch: [profile, eventRoles, currentEventId, teamEventIds],
   },
 )
+watch(userId, () => {
+  summary.data.value = {
+    events: 0,
+    teams: 0,
+    reviews: 0,
+    evaluations: 0,
+    activities: 0,
+  }
+  summary.error.value = null
+})
 
 const cardDefinitions: Record<Capability, {
   title: string
@@ -133,7 +144,7 @@ const cardDefinitions: Record<Capability, {
     eventRelative: true,
   },
   evaluate_teams: {
-    title: 'Avaliações atribuídas',
+    title: 'Categorias atribuídas',
     count: 'evaluations',
     actionLabel: 'Abrir avaliações',
     actionPath: 'avaliacao',

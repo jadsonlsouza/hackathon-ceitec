@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { watch } from 'vue'
 import type { Database } from '../../../types/database'
 
 definePageMeta({ middleware: 'auth' })
@@ -9,7 +10,12 @@ type AuditRow = Pick<
 >
 
 const { $supabase } = useNuxtApp()
-const { profile, pending: accessPending, error: accessError } = useCurrentAccess()
+const {
+  profile,
+  userId,
+  pending: accessPending,
+  error: accessError,
+} = useCurrentAccess()
 const isAuthorized = computed(() => profile.value?.global_role === 'global_admin')
 const audit = useAsyncData(
   'global-audit-log',
@@ -29,6 +35,10 @@ const audit = useAsyncData(
     watch: [profile],
   },
 )
+watch(userId, () => {
+  audit.data.value = []
+  audit.error.value = null
+})
 </script>
 
 <template>
