@@ -10,21 +10,32 @@ const form = reactive<SignUpInput>({
 const errorMessage = ref('')
 const pending = ref(false)
 const success = ref(false)
+const fieldErrors = reactive<Record<string, string>>({})
 const { signUp } = useAuth()
 
 async function submit() {
-  if (!form.name || !form.email || !form.password) {
-    errorMessage.value = 'Preencha todos os campos obrigatórios.'
+  const validation = validateSignUp(form)
+  Object.assign(fieldErrors, validation.errors)
+  for (const field of Object.keys(fieldErrors)) {
+    if (!(field in validation.errors)) delete fieldErrors[field]
+  }
+  if (validation.firstInvalidId) {
+    await nextTick()
+    focusFirstInvalidField(validation.firstInvalidId)
     return
   }
 
   pending.value = true
   errorMessage.value = ''
-  const { error } = await signUp({ ...form })
-  pending.value = false
-
-  if (error) return void (errorMessage.value = 'Não foi possível criar sua conta. Tente novamente.')
-  success.value = true
+  try {
+    const { error } = await signUp({ ...form })
+    if (error) return void (errorMessage.value = 'Não foi possível criar sua conta. Tente novamente.')
+    success.value = true
+  } catch {
+    errorMessage.value = 'Não foi possível criar sua conta. Tente novamente.'
+  } finally {
+    pending.value = false
+  }
 }
 </script>
 
@@ -35,15 +46,18 @@ async function submit() {
       <h1 id="signup-title">Criar conta</h1>
       <p class="intro">Informe seus dados para começar.</p>
 
-      <form v-if="!success" @submit.prevent="submit">
+      <form v-if="!success" novalidate @submit.prevent="submit">
         <label for="signup-name">Nome completo</label>
-        <input id="signup-name" v-model.trim="form.name" autocomplete="name" required>
+        <input id="signup-name" v-model.trim="form.name" autocomplete="name" :aria-describedby="fieldErrors.name ? 'signup-name-error' : undefined" :aria-invalid="Boolean(fieldErrors.name)">
+        <p v-if="fieldErrors.name" id="signup-name-error" class="form-error" role="alert">{{ fieldErrors.name }}</p>
 
         <label for="signup-email">E-mail</label>
-        <input id="signup-email" v-model.trim="form.email" type="email" autocomplete="email" required>
+        <input id="signup-email" v-model.trim="form.email" type="email" autocomplete="email" :aria-describedby="fieldErrors.email ? 'signup-email-error' : undefined" :aria-invalid="Boolean(fieldErrors.email)">
+        <p v-if="fieldErrors.email" id="signup-email-error" class="form-error" role="alert">{{ fieldErrors.email }}</p>
 
         <label for="signup-password">Senha</label>
-        <input id="signup-password" v-model="form.password" type="password" minlength="8" autocomplete="new-password" required>
+        <input id="signup-password" v-model="form.password" type="password" autocomplete="new-password" :aria-describedby="fieldErrors.password ? 'signup-password-error' : undefined" :aria-invalid="Boolean(fieldErrors.password)">
+        <p v-if="fieldErrors.password" id="signup-password-error" class="form-error" role="alert">{{ fieldErrors.password }}</p>
 
         <label for="signup-role">Como deseja participar?</label>
         <select id="signup-role" v-model="form.requestedRole">

@@ -1,3 +1,6 @@
+import type { SupabaseClient } from '@supabase/supabase-js'
+import type { Database } from '~/types/database'
+
 export interface SignUpInput {
   name: string
   email: string
@@ -6,15 +9,13 @@ export interface SignUpInput {
   eventId?: string
 }
 
-export function useAuth() {
-  const { $supabase } = useNuxtApp()
-
+export function createAuthActions(supabase: SupabaseClient<Database>, origin: string) {
   const signInWithPassword = (email: string, password: string) =>
-    $supabase.auth.signInWithPassword({ email, password })
+    supabase.auth.signInWithPassword({ email, password })
 
   // Requested roles live in editable user metadata and are intentionally not authorization grants.
   const signUp = (input: SignUpInput) =>
-    $supabase.auth.signUp({
+    supabase.auth.signUp({
       email: input.email,
       password: input.password,
       options: {
@@ -27,17 +28,23 @@ export function useAuth() {
     })
 
   const signInWithGoogle = () =>
-    $supabase.auth.signInWithOAuth({
+    supabase.auth.signInWithOAuth({
       provider: 'google',
-      options: { redirectTo: `${location.origin}/app` },
+      options: { redirectTo: `${origin}/app` },
     })
 
   const sendPasswordReset = (email: string) =>
-    $supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${location.origin}/redefinir-senha`,
+    supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${origin}/redefinir-senha`,
     })
 
-  const signOut = () => $supabase.auth.signOut()
+  const signOut = () => supabase.auth.signOut()
 
   return { signInWithPassword, signUp, signInWithGoogle, sendPasswordReset, signOut }
+}
+
+export function useAuth() {
+  const { $supabase } = useNuxtApp()
+  const origin = import.meta.client ? location.origin : ''
+  return createAuthActions($supabase, origin)
 }

@@ -4,25 +4,32 @@ const confirmation = ref('')
 const errorMessage = ref('')
 const success = ref(false)
 const pending = ref(false)
+const fieldErrors = reactive<Record<string, string>>({})
 const { $supabase } = useNuxtApp()
 
 async function submit() {
-  if (password.value.length < 8) {
-    errorMessage.value = 'A senha deve ter pelo menos 8 caracteres.'
-    return
+  const validation = validateNewPassword({ password: password.value, confirmation: confirmation.value })
+  Object.assign(fieldErrors, validation.errors)
+  for (const field of Object.keys(fieldErrors)) {
+    if (!(field in validation.errors)) delete fieldErrors[field]
   }
-  if (password.value !== confirmation.value) {
-    errorMessage.value = 'As senhas não coincidem.'
+  if (validation.firstInvalidId) {
+    await nextTick()
+    focusFirstInvalidField(validation.firstInvalidId)
     return
   }
 
   pending.value = true
   errorMessage.value = ''
-  const { error } = await $supabase.auth.updateUser({ password: password.value })
-  pending.value = false
-
-  if (error) return void (errorMessage.value = 'Não foi possível redefinir sua senha. Solicite um novo link.')
-  success.value = true
+  try {
+    const { error } = await $supabase.auth.updateUser({ password: password.value })
+    if (error) return void (errorMessage.value = 'Não foi possível redefinir sua senha. Solicite um novo link.')
+    success.value = true
+  } catch {
+    errorMessage.value = 'Não foi possível redefinir sua senha. Solicite um novo link.'
+  } finally {
+    pending.value = false
+  }
 }
 </script>
 
@@ -33,11 +40,13 @@ async function submit() {
       <h1 id="reset-title">Redefinir senha</h1>
       <p class="intro">Escolha uma nova senha para sua conta.</p>
 
-      <form v-if="!success" @submit.prevent="submit">
+      <form v-if="!success" novalidate @submit.prevent="submit">
         <label for="reset-password">Nova senha</label>
-        <input id="reset-password" v-model="password" type="password" minlength="8" autocomplete="new-password" required>
+        <input id="reset-password" v-model="password" type="password" autocomplete="new-password" :aria-describedby="fieldErrors.password ? 'reset-password-error' : undefined" :aria-invalid="Boolean(fieldErrors.password)">
+        <p v-if="fieldErrors.password" id="reset-password-error" class="form-error" role="alert">{{ fieldErrors.password }}</p>
         <label for="reset-confirmation">Confirme a nova senha</label>
-        <input id="reset-confirmation" v-model="confirmation" type="password" minlength="8" autocomplete="new-password" required>
+        <input id="reset-confirmation" v-model="confirmation" type="password" autocomplete="new-password" :aria-describedby="fieldErrors.confirmation ? 'reset-confirmation-error' : undefined" :aria-invalid="Boolean(fieldErrors.confirmation)">
+        <p v-if="fieldErrors.confirmation" id="reset-confirmation-error" class="form-error" role="alert">{{ fieldErrors.confirmation }}</p>
         <p v-if="errorMessage" class="form-error" role="alert">{{ errorMessage }}</p>
         <button type="submit" :disabled="pending">{{ pending ? 'Salvando...' : 'Salvar nova senha' }}</button>
       </form>
