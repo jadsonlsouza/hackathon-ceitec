@@ -5,15 +5,58 @@ export interface WeightedCriterion {
 
 const MAX_WEIGHT_CENTS = 99_999_999
 
-function shiftDecimal(value: number, places: number): number {
-  const [coefficient, exponent = '0'] = value.toString().split('e')
-  return Number(`${coefficient}e${Number(exponent) + places}`)
+interface ScaledDecimal {
+  integer: bigint
+  scale: number
+}
+
+function powerOfTen(exponent: number): bigint {
+  return 10n ** BigInt(exponent)
+}
+
+function scaledDecimal(value: number): ScaledDecimal {
+  const [coefficient, exponentText = '0'] = value.toString().split('e')
+  const negative = coefficient.startsWith('-')
+  const unsigned = negative ? coefficient.slice(1) : coefficient
+  const [whole, fraction = ''] = unsigned.split('.')
+  let integer = BigInt(`${whole}${fraction}`)
+  let scale = fraction.length - Number(exponentText)
+
+  if (scale < 0) {
+    integer *= powerOfTen(-scale)
+    scale = 0
+  }
+
+  while (scale > 0 && integer % 10n === 0n) {
+    integer /= 10n
+    scale -= 1
+  }
+
+  return {
+    integer: negative ? -integer : integer,
+    scale,
+  }
+}
+
+function divideRoundHalfAway(
+  numerator: bigint,
+  denominator: bigint,
+): bigint {
+  const negative = numerator < 0n
+  const magnitude = negative ? -numerator : numerator
+  const quotient = magnitude / denominator
+  const remainder = magnitude % denominator
+  const rounded = quotient + (remainder * 2n >= denominator ? 1n : 0n)
+  return negative ? -rounded : rounded
 }
 
 function round2(value: number): number {
-  const shifted = shiftDecimal(Math.abs(value), 2)
-  const rounded = Math.sign(value) * Math.round(shifted)
-  return shiftDecimal(rounded, -2)
+  const decimal = scaledDecimal(value)
+  const cents = divideRoundHalfAway(
+    decimal.integer * 100n,
+    powerOfTen(decimal.scale),
+  )
+  return Number(cents) / 100
 }
 
 function isFiniteNumber(value: number): boolean {
@@ -29,23 +72,17 @@ function weightToCents(weight: number): bigint | null {
     return null
   }
 
-  const [coefficient, exponentText = '0'] = weight.toString().split('e')
-  const fractionLength = coefficient.split('.')[1]?.length ?? 0
-  const decimalPlaces = Math.max(
-    0,
-    fractionLength - Number(exponentText),
-  )
-  const cents = shiftDecimal(weight, 2)
-
-  if (
-    decimalPlaces > 2
-    || !Number.isSafeInteger(cents)
-    || cents > MAX_WEIGHT_CENTS
-  ) {
+  const decimal = scaledDecimal(weight)
+  if (decimal.scale > 2) {
     return null
   }
 
-  return BigInt(cents)
+  const cents = decimal.integer * powerOfTen(2 - decimal.scale)
+  if (cents > BigInt(MAX_WEIGHT_CENTS)) {
+    return null
+  }
+
+  return cents
 }
 
 export function weightedScore(items: WeightedCriterion[]): number {
@@ -82,10 +119,21 @@ export function finalTeamScore(evaluatorScores: number[]): number {
     throw new Error('invalid_evaluator_score')
   }
 
-  return round2(
-    evaluatorScores.reduce((sum, score) => sum + score, 0)
-    / evaluatorScores.length,
+  const decimals = evaluatorScores.map(scaledDecimal)
+  const commonScale = Math.max(...decimals.map(decimal => decimal.scale))
+  const sum = decimals.reduce(
+    (total, decimal) =>
+      total
+      + decimal.integer * powerOfTen(commonScale - decimal.scale),
+    0n,
   )
+  const denominator
+    = powerOfTen(commonScale) * BigInt(evaluatorScores.length)
+  const cents = divideRoundHalfAway(
+    sum * 100n,
+    denominator,
+  )
+  return Number(cents) / 100
 }
 
 export function isDisplayedTie(left: number, right: number): boolean {

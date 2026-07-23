@@ -67,6 +67,24 @@ describe('finalTeamScore', () => {
     expect(finalTeamScore([4.994, 4.996])).toBe(5)
   })
 
+  it('averages composed weighted scores with exact decimal midpoints', () => {
+    const firstEvaluator = weightedScore([{ score: 1, weight: 1 }])
+    const secondEvaluatorA = weightedScore([
+      { score: 1, weight: 0.11 },
+      { score: 2, weight: 0.89 },
+    ])
+    const secondEvaluatorB = weightedScore([
+      { score: 1, weight: 0.53 },
+      { score: 2, weight: 0.47 },
+    ])
+
+    expect(firstEvaluator).toBe(1)
+    expect(secondEvaluatorA).toBe(1.89)
+    expect(secondEvaluatorB).toBe(1.47)
+    expect(finalTeamScore([firstEvaluator, secondEvaluatorA])).toBe(1.45)
+    expect(finalTeamScore([firstEvaluator, secondEvaluatorB])).toBe(1.24)
+  })
+
   it('handles decimal floating-point edges deterministically', () => {
     expect(finalTeamScore([1.005])).toBe(1.01)
     expect(finalTeamScore([2.675])).toBe(2.68)
