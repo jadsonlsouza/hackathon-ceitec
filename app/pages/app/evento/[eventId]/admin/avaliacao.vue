@@ -46,12 +46,14 @@ interface Evaluation {
   event_id: string
   category: Category
   team_id: string
+  evaluator_id: string
 }
 
 interface Freeze {
   event_id: string
   category: Category
   evaluator_snapshot: Array<{ evaluator_id: string }>
+  team_snapshot: Array<{ team_id: string }>
 }
 
 const categories: Category[] = ['junior', 'senior']
@@ -137,11 +139,11 @@ const {
         .eq('status', 'approved'),
       supabase
         .from('evaluations')
-        .select('id,event_id,category,team_id')
+        .select('id,event_id,category,team_id,evaluator_id')
         .eq('event_id', eventId.value),
       supabase
         .from('evaluation_freezes')
-        .select('event_id,category,evaluator_snapshot')
+        .select('event_id,category,evaluator_snapshot,team_snapshot')
         .eq('event_id', eventId.value),
     ])
 
@@ -222,14 +224,25 @@ function progress(category: Category) {
     team => team.category === category,
   )
   const frozen = frozenCategory(category)
+  const frozenTeamIds = new Set(
+    frozen?.team_snapshot.map(team => team.team_id) ?? [],
+  )
+  const frozenEvaluatorIds = new Set(
+    frozen?.evaluator_snapshot.map(evaluator => evaluator.evaluator_id) ?? [],
+  )
+  const teamCount = frozen?.team_snapshot.length ?? approvedTeams.length
   const evaluatorCount = frozen?.evaluator_snapshot.length ?? 0
   return {
-    teams: approvedTeams.length,
+    teams: teamCount,
     frozen: Boolean(frozen),
     completed: source.value.evaluations.filter(
-      evaluation => evaluation.category === category,
+      evaluation => (
+        evaluation.category === category
+        && frozenTeamIds.has(evaluation.team_id)
+        && frozenEvaluatorIds.has(evaluation.evaluator_id)
+      ),
     ).length,
-    required: approvedTeams.length * evaluatorCount,
+    required: teamCount * evaluatorCount,
   }
 }
 

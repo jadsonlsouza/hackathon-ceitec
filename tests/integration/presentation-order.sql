@@ -127,11 +127,22 @@ values
     'Archived Event', 'shuffle-archived-event', 'evaluation',
     '00000000-0000-4000-8000-000000000401',
     '00000000-0000-4000-8000-000000000401', null
+  ),
+  (
+    '10000000-0000-4000-8000-000000000407',
+    'Frozen Snapshot Event', 'shuffle-frozen-snapshot', 'evaluation',
+    '00000000-0000-4000-8000-000000000401',
+    '00000000-0000-4000-8000-000000000401', null
   );
 
 insert into public.event_roles (event_id, user_id, role, approved_by)
 values (
   '10000000-0000-4000-8000-000000000401',
+  '00000000-0000-4000-8000-000000000403',
+  'evaluator',
+  '00000000-0000-4000-8000-000000000401'
+), (
+  '10000000-0000-4000-8000-000000000407',
   '00000000-0000-4000-8000-000000000403',
   'evaluator',
   '00000000-0000-4000-8000-000000000401'
@@ -203,6 +214,27 @@ values
     'Archived Junior', 'junior',
     '00000000-0000-4000-8000-000000000406', 'approved',
     '00000000-0000-4000-8000-000000000401', now()
+  ),
+  (
+    '20000000-0000-4000-8000-000000000410',
+    '10000000-0000-4000-8000-000000000407',
+    'Frozen Junior A', 'junior',
+    '00000000-0000-4000-8000-000000000404', 'approved',
+    '00000000-0000-4000-8000-000000000401', now()
+  ),
+  (
+    '20000000-0000-4000-8000-000000000411',
+    '10000000-0000-4000-8000-000000000407',
+    'Frozen Junior B', 'junior',
+    '00000000-0000-4000-8000-000000000405', 'approved',
+    '00000000-0000-4000-8000-000000000401', now()
+  ),
+  (
+    '20000000-0000-4000-8000-000000000412',
+    '10000000-0000-4000-8000-000000000407',
+    'Approved After Freeze', 'junior',
+    '00000000-0000-4000-8000-000000000406', 'pending',
+    null, null
   );
 
 alter table public.presentation_slots disable trigger protect_presentation_slot;
@@ -334,6 +366,91 @@ select throws_ok(
   $$,
   'P0001', 'approved_team_required',
   'an empty category reports that an approved team is required'
+);
+
+insert into public.evaluator_assignments (
+  event_id, evaluator_id, category
+)
+values (
+  '10000000-0000-4000-8000-000000000407',
+  '00000000-0000-4000-8000-000000000403',
+  'junior'
+);
+
+select lives_ok(
+  $$
+    select public.freeze_evaluation(
+      '10000000-0000-4000-8000-000000000407',
+      'junior'
+    )
+  $$,
+  'snapshot fixture freezes two approved teams'
+);
+
+select lives_ok(
+  $$
+    select public.decide_team(
+      '20000000-0000-4000-8000-000000000412',
+      'approved'
+    )
+  $$,
+  'a third team may be approved after the category freeze'
+);
+
+select is(
+  public.shuffle_presentations(
+    '10000000-0000-4000-8000-000000000407',
+    'junior'
+  ),
+  2,
+  'post-freeze shuffle keeps exactly the two frozen teams'
+);
+
+reset role;
+
+update public.teams
+set status = 'rejected'
+where id = '20000000-0000-4000-8000-000000000410';
+
+set local role authenticated;
+select set_config(
+  'request.jwt.claim.sub',
+  '00000000-0000-4000-8000-000000000401',
+  true
+);
+
+select is(
+  public.shuffle_presentations(
+    '10000000-0000-4000-8000-000000000407',
+    'junior'
+  ),
+  2,
+  'post-freeze shuffle survives a later team status change'
+);
+
+reset role;
+
+select results_eq(
+  $$
+    select team_id
+    from public.presentation_slots
+    where event_id = '10000000-0000-4000-8000-000000000407'
+      and category = 'junior'
+    order by team_id
+  $$,
+  $$
+    values
+      ('20000000-0000-4000-8000-000000000410'::uuid),
+      ('20000000-0000-4000-8000-000000000411'::uuid)
+  $$,
+  'frozen shuffle excludes later approvals and retains frozen team ids'
+);
+
+set local role authenticated;
+select set_config(
+  'request.jwt.claim.sub',
+  '00000000-0000-4000-8000-000000000401',
+  true
 );
 
 select is(

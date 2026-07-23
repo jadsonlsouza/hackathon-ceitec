@@ -220,9 +220,13 @@ async function submitEvaluation() {
       source.value.evaluations.map(evaluation => evaluation.team_id),
     )
     completed.add(teamId.value)
+    const frozenTeamIds = new Set(
+      presentation.value.frozen.team_snapshot.map(team => team.team_id),
+    )
     const next = source.value.slots
       .filter(slot => (
         slot.category === presentation.value?.slot.category
+        && frozenTeamIds.has(slot.team_id)
         && slot.position > (presentation.value?.slot.position ?? 0)
         && !completed.has(slot.team_id)
       ))

@@ -28,6 +28,73 @@ using (
   )
 );
 
+create or replace function private.protect_presentation_slot()
+returns trigger
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  caller_id uuid := (select auth.uid());
+  target_event uuid := case
+    when tg_op = 'DELETE' then old.event_id else new.event_id
+  end;
+  event_state public.event_status;
+  frozen_teams jsonb;
+begin
+  select event.status
+  into event_state
+  from public.events as event
+  where event.id = target_event
+  for update;
+
+  if not found or event_state = 'archived' then
+    raise exception using errcode = 'P0001', message = 'event_not_available';
+  end if;
+  if caller_id is null or not exists (
+    select 1 from public.events as event
+    where event.id = target_event and event.professor_id = caller_id
+  ) then
+    raise exception using errcode = 'P0001', message = 'forbidden';
+  end if;
+
+  if tg_op <> 'DELETE' then
+    select frozen_config.team_snapshot
+    into frozen_teams
+    from public.evaluation_freezes as frozen_config
+    where frozen_config.event_id = new.event_id
+      and frozen_config.category = new.category;
+
+    if frozen_teams is not null then
+      if not exists (
+        select 1
+        from jsonb_array_elements(frozen_teams) as frozen_team
+        where frozen_team ->> 'team_id' = new.team_id::text
+      ) then
+        raise exception using
+          errcode = 'P0001',
+          message = 'frozen_team_required';
+      end if;
+    elsif not exists (
+      select 1 from public.teams as team
+      where team.id = new.team_id
+        and team.event_id = new.event_id
+        and team.category = new.category
+        and team.status = 'approved'
+    ) then
+      raise exception using
+        errcode = 'P0001',
+        message = 'approved_team_category_required';
+    end if;
+  end if;
+
+  if tg_op = 'DELETE' then
+    return old;
+  end if;
+  return new;
+end;
+$$;
+
 create function private.shuffle_presentations_impl(
   target_event uuid,
   target_category public.team_category
@@ -41,6 +108,7 @@ declare
   caller_id uuid := (select auth.uid());
   event_state public.event_status;
   approved_team_count integer;
+  eligible_team_ids uuid[];
 begin
   if caller_id is null then
     raise exception using
@@ -97,12 +165,25 @@ begin
       message = 'evaluation_already_started';
   end if;
 
-  select count(*)::integer
-  into approved_team_count
-  from public.teams as team
-  where team.event_id = target_event
-    and team.category = target_category
-    and team.status = 'approved';
+  select array_agg((frozen_team ->> 'team_id')::uuid)
+  into eligible_team_ids
+  from public.evaluation_freezes as frozen_config
+  cross join lateral jsonb_array_elements(
+    frozen_config.team_snapshot
+  ) as frozen_team
+  where frozen_config.event_id = target_event
+    and frozen_config.category = target_category;
+
+  if eligible_team_ids is null then
+    select array_agg(team.id order by team.id)
+    into eligible_team_ids
+    from public.teams as team
+    where team.event_id = target_event
+      and team.category = target_category
+      and team.status = 'approved';
+  end if;
+
+  approved_team_count := coalesce(cardinality(eligible_team_ids), 0);
 
   if approved_team_count = 0 then
     raise exception using
@@ -129,12 +210,9 @@ begin
     )::integer
   from (
     select
-      team.id as team_id,
+      eligible_team.team_id,
       gen_random_uuid() as random_key
-    from public.teams as team
-    where team.event_id = target_event
-      and team.category = target_category
-      and team.status = 'approved'
+    from unnest(eligible_team_ids) as eligible_team(team_id)
   ) as shuffled;
 
   insert into public.audit_log (

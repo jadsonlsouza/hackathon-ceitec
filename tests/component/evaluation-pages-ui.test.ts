@@ -24,6 +24,7 @@ const EVALUATOR_ID = '00000000-0000-4000-8000-000000000501'
 const TEAM_A = '20000000-0000-4000-8000-000000000501'
 const TEAM_B = '20000000-0000-4000-8000-000000000502'
 const TEAM_C = '20000000-0000-4000-8000-000000000503'
+const TEAM_EXTRA = '20000000-0000-4000-8000-000000000504'
 const CRITERION_A = '60000000-0000-4000-8000-000000000501'
 const CRITERION_B = '60000000-0000-4000-8000-000000000502'
 
@@ -192,7 +193,8 @@ function seedEvaluatorData() {
     data: [
       { event_id: EVENT_ID, category: 'junior', team_id: TEAM_A, position: 1 },
       { event_id: EVENT_ID, category: 'junior', team_id: TEAM_B, position: 2 },
-      { event_id: EVENT_ID, category: 'junior', team_id: TEAM_C, position: 3 },
+      { event_id: EVENT_ID, category: 'junior', team_id: TEAM_EXTRA, position: 3 },
+      { event_id: EVENT_ID, category: 'junior', team_id: TEAM_C, position: 4 },
     ],
     error: null,
   })
@@ -467,15 +469,41 @@ describe('evaluation pages', () => {
     results.set(resultKey('teams'), {
       data: [
         { id: TEAM_A, event_id: EVENT_ID, category: 'junior', status: 'approved' },
-        { id: TEAM_B, event_id: EVENT_ID, category: 'junior', status: 'approved' },
+        { id: TEAM_EXTRA, event_id: EVENT_ID, category: 'junior', status: 'approved' },
         { id: TEAM_C, event_id: EVENT_ID, category: 'senior', status: 'approved' },
       ],
       error: null,
     })
     results.set(resultKey('evaluations'), {
       data: [
-        { id: 'evaluation-1', event_id: EVENT_ID, category: 'junior', team_id: TEAM_A },
-        { id: 'evaluation-2', event_id: EVENT_ID, category: 'junior', team_id: TEAM_B },
+        {
+          id: 'evaluation-1',
+          event_id: EVENT_ID,
+          category: 'junior',
+          team_id: TEAM_A,
+          evaluator_id: EVALUATOR_ID,
+        },
+        {
+          id: 'evaluation-2',
+          event_id: EVENT_ID,
+          category: 'junior',
+          team_id: TEAM_B,
+          evaluator_id: 'evaluator-2',
+        },
+        {
+          id: 'evaluation-post-freeze-team',
+          event_id: EVENT_ID,
+          category: 'junior',
+          team_id: TEAM_EXTRA,
+          evaluator_id: EVALUATOR_ID,
+        },
+        {
+          id: 'evaluation-post-freeze-evaluator',
+          event_id: EVENT_ID,
+          category: 'junior',
+          team_id: TEAM_C,
+          evaluator_id: 'evaluator-3',
+        },
       ],
       error: null,
     })
@@ -488,7 +516,7 @@ describe('evaluation pages', () => {
 
     expect(wrapper.text()).toContain('Peso 1')
     expect(wrapper.get('[data-progress="junior"]').text()).toContain(
-      '2 de 4 avaliações concluídas',
+      '2 de 6 avaliações concluídas',
     )
     expect(wrapper.get('[data-progress="senior"]').text()).toContain(
       'Configuração ainda não congelada',
