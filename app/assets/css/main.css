@@ -4,3 +4,25 @@ body { margin: 0; min-height: 100vh; background: #070b14; color: #f8fafc; }
 a { color: inherit; }
 button, input, select, textarea { font: inherit; }
 :focus-visible { outline: 3px solid #38bdf8; outline-offset: 2px; }
+
+.auth-page { align-items: center; display: flex; justify-content: center; min-height: 100vh; padding: 1.5rem; }
+.auth-card { background: #111827; border: 1px solid #334155; border-radius: 1rem; box-shadow: 0 20px 45px #0008; max-width: 29rem; padding: 2rem; width: 100%; }
+.eyebrow { color: #38bdf8; font-size: .85rem; font-weight: 700; letter-spacing: .08em; margin: 0 0 .5rem; text-transform: uppercase; }
+.auth-card h1 { font-size: 2rem; margin: 0; }
+.intro { color: #cbd5e1; line-height: 1.5; margin: .5rem 0 1.5rem; }
+.auth-card form { display: grid; gap: .55rem; }
+.auth-card label { font-weight: 600; margin-top: .5rem; }
+.auth-card input, .auth-card select { background: #0f172a; border: 1px solid #475569; border-radius: .5rem; color: #f8fafc; min-height: 2.75rem; padding: .65rem .75rem; width: 100%; }
+.auth-card button { background: #0284c7; border: 0; border-radius: .5rem; color: #fff; cursor: pointer; font-weight: 700; margin-top: 1rem; min-height: 2.75rem; padding: .65rem 1rem; }
+.auth-card button:hover:not(:disabled) { background: #0369a1; }
+.auth-card button:disabled { cursor: wait; opacity: .7; }
+.auth-card .secondary-button { background: transparent; border: 1px solid #64748b; margin-top: 0; width: 100%; }
+.auth-card .secondary-button:hover:not(:disabled) { background: #1e293b; }
+.divider { color: #94a3b8; display: flex; gap: .75rem; align-items: center; margin: 1.25rem 0; text-align: center; }
+.divider::before, .divider::after { background: #334155; content: ''; flex: 1; height: 1px; }
+.auth-links { display: flex; gap: 1rem; justify-content: space-between; margin: 1.5rem 0 0; }
+.auth-links a { color: #7dd3fc; }
+.form-error { color: #fca5a5; margin: .75rem 0 0; }
+.form-success { color: #86efac; line-height: 1.5; }
+.field-help { color: #94a3b8; font-size: .9rem; margin: .25rem 0; }
+@media (max-width: 32rem) { .auth-card { padding: 1.5rem; } .auth-links { flex-direction: column; gap: .75rem; } }
