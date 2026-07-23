@@ -1,0 +1,2 @@
+-- Seed data is intentionally empty. Identity rows are created from auth.users,
+-- and events are created by authorized global administrators.
