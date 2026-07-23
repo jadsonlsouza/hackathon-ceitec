@@ -11,8 +11,12 @@ interface ReviewItem {
   status: 'submitted' | 'resubmitted' | 'in_review'
   revision: number
   team: { id: string, name: string, category: 'junior' | 'senior' }
-  activity: { id: string, title: string }
-  revisions: Array<{ revision: number, snapshot: { answers?: Array<Record<string, unknown>> } }>
+  activity: {
+    id: string
+    title: string
+    blocks: Array<{ id: string, key: string, title: string, prompt: string, position: number }>
+  }
+  revisions: Array<{ revision: number, snapshot: Record<string, unknown> }>
 }
 
 const route = useRoute()
@@ -40,7 +44,7 @@ const { data: submissions, pending, error } = await useAsyncData(
     if (!isReviewer.value) return []
     const { data, error: queueError } = await $supabase
       .from('submissions')
-      .select('*, team:teams(id,name,category), activity:canvas_activities(id,title), revisions:submission_revisions(revision,snapshot)')
+      .select('*, team:teams(id,name,category), activity:canvas_activities(id,title,blocks:canvas_blocks(id,key,title,prompt,position)), revisions:submission_revisions(revision,snapshot)')
       .eq('event_id', eventId.value)
       .in('status', ['submitted', 'resubmitted', 'in_review'])
       .order('submitted_at')
@@ -157,6 +161,7 @@ useEventRealtime(eventId, computed(() => (
         :submission-id="selected.id"
         :revision="selectedRevision.revision"
         :snapshot="selectedRevision.snapshot"
+        :blocks="[...selected.activity.blocks].sort((a, b) => a.position - b.position)"
         @decided="handleDecision"
       />
     </template>

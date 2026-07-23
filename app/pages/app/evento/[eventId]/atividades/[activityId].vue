@@ -50,6 +50,14 @@ interface Answer {
   version: number
 }
 
+interface SubmissionReview {
+  id: string
+  submission_id: string
+  decision: 'approved' | 'returned' | 'reopened'
+  feedback: string | null
+  created_at: string
+}
+
 const route = useRoute()
 const eventId = computed(() => String(route.params.eventId))
 const activityId = computed(() => String(route.params.activityId))
@@ -60,6 +68,7 @@ const actionError = ref<string | null>(null)
 const successMessage = ref<string | null>(null)
 const remoteUpdateAvailable = ref(false)
 const blockStates = ref<Record<string, AutosaveState>>({})
+const blockResetKeys = ref<Record<string, number>>({})
 
 function activityPageKey(targetEventId: string, targetActivityId: string) {
   return `canvas-activity:${targetEventId}:${targetActivityId}`
@@ -72,6 +81,17 @@ async function loadAnswers(submissionId: string) {
     .eq('submission_id', submissionId)
   if (error) throw error
   return (data ?? []) as Answer[]
+}
+
+async function loadReviews(submissionId: string) {
+  const { data, error } = await $supabase
+    .from('submission_reviews')
+    .select('id,submission_id,decision,feedback,created_at')
+    .eq('submission_id', submissionId)
+    .order('created_at', { ascending: false })
+    .limit(10)
+  if (error) throw error
+  return (data ?? []) as SubmissionReview[]
 }
 
 const dataKey = computed(() => activityPageKey(eventId.value, activityId.value))
@@ -92,7 +112,15 @@ const { data: pageData, pending, error } = await useAsyncData(
       .eq('id', activityId.value)
       .maybeSingle()
     if (activityError) throw activityError
-    if (!activityData) return { team: teamData as Team | null, activity: null, submission: null, answers: [] as Answer[] }
+    if (!activityData) {
+      return {
+        team: teamData as Team | null,
+        activity: null,
+        submission: null,
+        answers: [] as Answer[],
+        reviews: [] as SubmissionReview[],
+      }
+    }
 
     let { data: submissionData, error: submissionError } = await $supabase
       .from('submissions')
@@ -118,6 +146,7 @@ const { data: pageData, pending, error } = await useAsyncData(
     }
 
     const answers = submissionData ? await loadAnswers(submissionData.id) : []
+    const reviews = submissionData ? await loadReviews(submissionData.id) : []
     return {
       team: teamData as Team | null,
       activity: {
@@ -126,12 +155,19 @@ const { data: pageData, pending, error } = await useAsyncData(
       } as Activity,
       submission: submissionData as Submission | null,
       answers,
+      reviews,
     }
   },
   {
     server: false,
     watch: [eventId, activityId],
-    default: () => ({ team: null, activity: null, submission: null, answers: [] as Answer[] }),
+    default: () => ({
+      team: null,
+      activity: null,
+      submission: null,
+      answers: [] as Answer[],
+      reviews: [] as SubmissionReview[],
+    }),
   },
 )
 
@@ -139,6 +175,11 @@ const activity = computed(() => pageData.value.activity)
 const team = computed(() => pageData.value.team)
 const submission = computed(() => pageData.value.submission)
 const answersByBlock = computed(() => new Map(pageData.value.answers.map(answer => [answer.block_id, answer])))
+const latestReview = computed(() => (
+  [...pageData.value.reviews].sort((a, b) => (
+    new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+  ))[0] ?? null
+))
 const isOpen = computed(() => {
   if (!activity.value) return false
   const now = Date.now()
@@ -185,10 +226,29 @@ function handleBlockState(blockId: string, state: AutosaveState) {
 async function reloadAnswer(blockId: string) {
   if (!submission.value) return
   try {
-    const answers = await loadAnswers(submission.value.id)
+    const { data: remoteAnswer, error: answerError } = await $supabase
+      .from('submission_answers')
+      .select('*')
+      .eq('submission_id', submission.value.id)
+      .eq('block_id', blockId)
+      .maybeSingle()
+    if (answerError) throw answerError
+
+    const answers = pageData.value.answers.filter(answer => answer.block_id !== blockId)
+    if (remoteAnswer) answers.push(remoteAnswer as Answer)
     pageData.value = { ...pageData.value, answers }
-    blockStates.value = { ...blockStates.value, [blockId]: 'saved' }
-    remoteUpdateAvailable.value = false
+
+    const otherPending = Object.entries(blockStates.value).some(([currentBlockId, state]) => (
+      currentBlockId !== blockId && state !== 'saved'
+    ))
+    const nextStates = { ...blockStates.value }
+    delete nextStates[blockId]
+    blockStates.value = nextStates
+    blockResetKeys.value = {
+      ...blockResetKeys.value,
+      [blockId]: (blockResetKeys.value[blockId] ?? 0) + 1,
+    }
+    remoteUpdateAvailable.value = otherPending
   }
   catch {
     actionError.value = 'Não foi possível carregar a versão mais recente.'
@@ -207,6 +267,13 @@ async function handleRealtimeChange(payload: unknown) {
     pageData.value = {
       ...pageData.value,
       submission: { ...submission.value, ...change.new } as Submission,
+    }
+    try {
+      const reviews = await loadReviews(submission.value.id)
+      pageData.value = { ...pageData.value, reviews }
+    }
+    catch {
+      actionError.value = 'O status foi atualizado, mas o feedback ainda não pôde ser carregado.'
     }
     return
   }
@@ -288,11 +355,17 @@ async function submitCanvas() {
       <p v-if="!isOpen" class="request-status">A atividade está fora do período de edição.</p>
       <p v-if="actionError" class="form-error" role="alert">{{ actionError }}</p>
       <p v-if="successMessage" class="form-success" role="status">{{ successMessage }}</p>
+      <section v-if="latestReview" class="review-feedback" aria-labelledby="latest-review-title">
+        <h2 id="latest-review-title">Última validação</h2>
+        <p v-if="latestReview.feedback">{{ latestReview.feedback }}</p>
+        <p v-else-if="latestReview.decision === 'approved'">Aprovado sem feedback adicional.</p>
+        <p v-else class="field-help">A validação não incluiu feedback.</p>
+      </section>
 
       <section class="canvas-block-list" aria-label="Blocos do Canvas">
         <CanvasBlockEditor
           v-for="block in activity.blocks"
-          :key="block.id"
+          :key="`${block.id}:${blockResetKeys[block.id] ?? 0}`"
           :block="block"
           :submission-id="submission.id"
           :initial-content="answersByBlock.get(block.id)?.content ?? null"

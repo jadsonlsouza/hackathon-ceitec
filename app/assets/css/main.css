@@ -113,6 +113,9 @@ button, input, select, textarea { font: inherit; }
 .snapshot-answer { background: #0b1220; border: 1px solid #334155; border-radius: .75rem; margin: 1rem 0; padding: 1rem; }
 .snapshot-answer h3, .snapshot-answer p { margin: 0; }
 .submission-review > label { display: block; margin: 1.25rem 0 .5rem; }
+.review-feedback { background: #082f49; border: 1px solid #0ea5e9; border-radius: .8rem; margin-top: 1.25rem; padding: 1rem; }
+.review-feedback h2 { font-size: 1rem; margin: 0 0 .45rem; }
+.review-feedback p { color: #e0f2fe; line-height: 1.55; margin: 0; }
 @media (max-width: 32rem) { .auth-card { padding: 1.5rem; } .auth-links { flex-direction: column; gap: .75rem; } }
 @media (max-width: 42rem) { .request-card { align-items: stretch; flex-direction: column; } .request-actions button { flex: 1; } }
 @media (max-width: 42rem) { .member-card { align-items: stretch; flex-direction: column; } .member-actions button { flex: 1; } }

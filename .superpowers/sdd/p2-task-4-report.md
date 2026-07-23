@@ -46,8 +46,8 @@ DONE
 ## Verification
 
 - `npx supabase db reset`: PASS; six migrations applied in order.
-- `npx vitest run`: PASS, 85 tests across 20 files.
-- `npx supabase test db tests/integration`: PASS, 252 pgTAP assertions across
+- `npx vitest run`: PASS, 87 tests across 20 files.
+- `npx supabase test db tests/integration`: PASS, 253 pgTAP assertions across
   six files.
 - `npx supabase db lint --local --schema public --level warning
   --fail-on error`: PASS, no schema errors.
@@ -71,3 +71,39 @@ immutable revision rendering, duplicate guards, and optional feedback.
 
 - Full Playwright coverage remains dependent on the deterministic authenticated
   browser harness described above.
+
+## Task-review fixes
+
+### RED
+
+- Mounted review tests with the real persisted snapshot shape
+  `{ problema: { text: '...' } }` rendered no answers because the component
+  expected a synthetic `answers[]` property.
+- The two-block mounted conflict test showed no `block_id`-scoped answer query;
+  the old recovery path fetched every answer and could replace another block's
+  pending local edit.
+- The mounted student page showed a returned status without its persisted
+  feedback and did not refresh the latest review after the approval status
+  event.
+
+### GREEN
+
+- The queue now fetches activity blocks with key, title, prompt, and position,
+  sorts them, and maps each immutable snapshot property by `block.key`.
+- Conflict recovery fetches and merges only the requested block, remounts only
+  that editor with the remote content/version, and preserves other editor
+  instances and their pending submit gate.
+- The student page loads the authorized review history, shows the latest
+  feedback or the explicit `Aprovado sem feedback adicional.` state, and
+  refreshes only submission/review data after status Realtime events.
+- The existing `submission_reviews` RLS already delegates through the
+  submission's team/reviewer visibility. A new pgTAP assertion confirms an
+  active team member can read the review; no access migration was necessary.
+
+### Review-fix verification
+
+- Focused Vitest: PASS, 19 tests.
+- Canvas pgTAP: PASS, 70 assertions.
+- Full Vitest: PASS, 87 tests across 20 files.
+- Full pgTAP: PASS, 253 assertions across six files.
+- Build, database lint, advisors, and `git diff --check`: PASS.

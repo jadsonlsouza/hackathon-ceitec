@@ -2,21 +2,19 @@
 import { computed, ref } from 'vue'
 import { canvasRpcErrorMessage } from '../../utils/canvas-rpc-error'
 
-interface SnapshotAnswer {
-  block_id: string
+interface ReviewBlock {
+  id: string
+  key: string
   title: string
+  prompt: string
   position: number
-  content: unknown
-}
-
-interface SubmissionSnapshot {
-  answers?: SnapshotAnswer[]
 }
 
 const props = defineProps<{
   submissionId: string
   revision: number
-  snapshot: SubmissionSnapshot
+  snapshot: Record<string, unknown>
+  blocks: ReviewBlock[]
 }>()
 
 const emit = defineEmits<{ decided: [decision: 'approved' | 'returned'] }>()
@@ -26,7 +24,12 @@ const processing = ref(false)
 const decisionError = ref<string | null>(null)
 
 const answers = computed(() => (
-  [...(props.snapshot.answers ?? [])].sort((a, b) => a.position - b.position)
+  [...props.blocks]
+    .sort((a, b) => a.position - b.position)
+    .map(block => ({
+      ...block,
+      content: props.snapshot[block.key],
+    }))
 ))
 
 function answerText(content: unknown) {
@@ -71,8 +74,9 @@ async function decide(decision: 'approved' | 'returned') {
     </header>
 
     <p v-if="answers.length === 0" class="request-status">Esta revisão não possui respostas registradas.</p>
-    <article v-for="answer in answers" :key="answer.block_id" class="snapshot-answer">
+    <article v-for="answer in answers" :key="answer.id" class="snapshot-answer">
       <h3>{{ answer.title }}</h3>
+      <p v-if="answer.prompt" class="field-help">{{ answer.prompt }}</p>
       <p>{{ answerText(answer.content) || 'Sem resposta.' }}</p>
     </article>
 

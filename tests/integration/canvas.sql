@@ -3,7 +3,7 @@ begin;
 create extension if not exists pgtap with schema extensions;
 set local search_path = extensions, public;
 
-select plan(69);
+select plan(70);
 
 select has_table('public', 'canvas_templates', 'Canvas templates exist');
 select has_table('public', 'canvas_template_blocks', 'template blocks exist');
@@ -611,6 +611,21 @@ select ok(
   ),
   'a null-feedback approval still records a review'
 );
+
+set local role authenticated;
+select set_config('request.jwt.claim.sub',
+  '00000000-0000-4000-8000-000000000101', true);
+select is(
+  (
+    select count(*)::integer
+    from public.submission_reviews
+    where submission_id = '50000000-0000-4000-8000-000000000101'
+      and decision = 'approved'
+  ),
+  1,
+  'an active team member can read the latest review through submission RLS'
+);
+reset role;
 
 set local role authenticated;
 select set_config('request.jwt.claim.sub',

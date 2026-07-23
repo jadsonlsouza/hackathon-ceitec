@@ -32,6 +32,7 @@ function resultKey(table: string, action = 'select') {
 
 function query(table: string) {
   const operation: Operation = { table, action: 'select', filters: [] }
+  let singleResult = false
   operations.push(operation)
   const builder: Record<string, unknown> = {}
   const chain = () => builder
@@ -60,10 +61,27 @@ function query(table: string) {
     operation.action = 'delete'
     return builder
   }
-  builder.maybeSingle = chain
-  builder.single = chain
+  builder.maybeSingle = () => {
+    singleResult = true
+    return builder
+  }
+  builder.single = () => {
+    singleResult = true
+    return builder
+  }
   builder.then = (resolve: (value: Result) => unknown, reject: (reason: unknown) => unknown) => (
-    Promise.resolve(results.get(resultKey(table, operation.action)) ?? { data: null, error: null }).then(resolve, reject)
+    Promise.resolve(results.get(resultKey(table, operation.action)) ?? { data: null, error: null })
+      .then((result) => {
+        if (!singleResult || !Array.isArray(result.data)) return result
+        const blockId = operation.filters.find(([column]) => column === 'block_id')?.[1]
+        return {
+          ...result,
+          data: blockId
+            ? result.data.find(row => (row as { block_id?: unknown }).block_id === blockId) ?? null
+            : result.data[0] ?? null,
+        }
+      })
+      .then(resolve, reject)
   )
   return builder
 }
@@ -208,6 +226,102 @@ describe('student Canvas page', () => {
 
     expect(wrapper.text()).toContain('Status: Aprovado')
   })
+
+  it('reloads only the conflicted block and preserves another pending local edit', async () => {
+    results.set(resultKey('canvas_activities'), {
+      data: {
+        id: ACTIVITY_ID,
+        event_id: EVENT_ID,
+        title: 'Canvas principal',
+        instructions: 'Preencha em equipe.',
+        opens_at: '2020-01-01T00:00:00.000Z',
+        due_at: '2099-01-01T00:00:00.000Z',
+        published: true,
+        allow_resubmission: true,
+        categories: ['junior'],
+        blocks: [
+          { id: 'block-1', key: 'problema', title: 'Problema', prompt: '', position: 1, max_items: null },
+          { id: 'block-2', key: 'solucao', title: 'Solução', prompt: '', position: 2, max_items: null },
+        ],
+      },
+      error: null,
+    })
+    results.set(resultKey('submission_answers'), {
+      data: [
+        { submission_id: SUBMISSION_ID, block_id: 'block-1', content: { text: 'Versão remota' }, version: 4 },
+        { submission_id: SUBMISSION_ID, block_id: 'block-2', content: { text: 'Versão remota que não deve entrar' }, version: 8 },
+      ],
+      error: null,
+    })
+    const ActivityPage = (await import('../../app/pages/app/evento/[eventId]/atividades/[activityId].vue')).default
+    const wrapper = await mountPage(ActivityPage)
+    const editors = wrapper.findAllComponents({ name: 'CanvasBlockEditor' })
+    vi.useFakeTimers()
+
+    await editors[1].get('textarea').setValue('Edição local pendente')
+    editors[0].vm.$emit('state-change', 'block-1', 'conflict')
+    editors[0].vm.$emit('reload-latest', 'block-1')
+    await flushPromises()
+
+    const refreshedEditors = wrapper.findAllComponents({ name: 'CanvasBlockEditor' })
+    expect(refreshedEditors[0].get<HTMLTextAreaElement>('textarea').element.value).toBe('Versão remota')
+    expect(refreshedEditors[1].get<HTMLTextAreaElement>('textarea').element.value).toBe('Edição local pendente')
+    expect(wrapper.get('[data-action="submit-canvas"]').attributes()).toHaveProperty('disabled')
+    const targetedQuery = operations.find(operation => (
+      operation.table === 'submission_answers'
+      && operation.filters.some(([column, value]) => column === 'block_id' && value === 'block-1')
+    ))
+    expect(targetedQuery).toBeDefined()
+
+    await refreshedEditors[0].get('textarea').setValue('Edição após recarregar')
+    await vi.advanceTimersByTimeAsync(700)
+    expect(rpc).toHaveBeenCalledWith('save_canvas_answer', expect.objectContaining({
+      block_id: 'block-1',
+      expected_version: 4,
+    }))
+    vi.useRealTimers()
+  })
+
+  it('shows returned feedback and refreshes the latest review without touching draft answers', async () => {
+    results.set(resultKey('submissions'), {
+      data: { id: SUBMISSION_ID, event_id: EVENT_ID, activity_id: ACTIVITY_ID, team_id: TEAM_ID, status: 'returned', revision: 1 },
+      error: null,
+    })
+    results.set(resultKey('submission_reviews'), {
+      data: [{
+        id: 'review-1',
+        submission_id: SUBMISSION_ID,
+        decision: 'returned',
+        feedback: 'Detalhe melhor a validação.',
+        created_at: '2026-07-23T12:00:00.000Z',
+      }],
+      error: null,
+    })
+    const ActivityPage = (await import('../../app/pages/app/evento/[eventId]/atividades/[activityId].vue')).default
+    const wrapper = await mountPage(ActivityPage)
+    expect(wrapper.text()).toContain('Detalhe melhor a validação.')
+
+    results.set(resultKey('submission_reviews'), {
+      data: [{
+        id: 'review-2',
+        submission_id: SUBMISSION_ID,
+        decision: 'approved',
+        feedback: null,
+        created_at: '2026-07-23T13:00:00.000Z',
+      }],
+      error: null,
+    })
+    const callback = channelOn.mock.calls.find(call => call[1]?.table === 'submissions')?.[2] as ((payload: unknown) => void)
+    callback({
+      table: 'submissions',
+      new: { id: SUBMISSION_ID, event_id: EVENT_ID, status: 'approved', revision: 1 },
+    })
+    await flushPromises()
+
+    expect(wrapper.text()).toContain('Aprovado sem feedback adicional.')
+    expect(wrapper.find('textarea').exists()).toBe(true)
+    expect(wrapper.get<HTMLTextAreaElement>('textarea').element.value).toBe('Rascunho')
+  })
 })
 
 describe('activity list', () => {
@@ -284,8 +398,12 @@ describe('review queue', () => {
         status: 'submitted',
         revision: 1,
         team: { id: TEAM_ID, name: 'Equipe Átomo', category: 'junior' },
-        activity: { id: ACTIVITY_ID, title: 'Canvas principal' },
-        revisions: [{ revision: 1, snapshot: { answers: [{ block_id: 'b1', title: 'Problema', position: 1, content: { text: 'Imutável' } }] } }],
+        activity: {
+          id: ACTIVITY_ID,
+          title: 'Canvas principal',
+          blocks: [{ id: 'b1', key: 'problema', title: 'Problema', prompt: 'Explique.', position: 1 }],
+        },
+        revisions: [{ revision: 1, snapshot: { problema: { text: 'Imutável' } } }],
       }],
       error: null,
     })
@@ -302,6 +420,7 @@ describe('review queue', () => {
     resolveClaim({ data: { status: 'in_review' }, error: null })
     await flushPromises()
     expect(wrapper.text()).toContain('Imutável')
+    expect(wrapper.text()).toContain('Explique.')
     expect(wrapper.get('#review-category-filter').exists()).toBe(true)
     expect(wrapper.get('#review-status-filter').exists()).toBe(true)
   })

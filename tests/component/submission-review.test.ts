@@ -19,11 +19,10 @@ describe('SubmissionReview', () => {
       props: {
         submissionId: 'submission-1',
         revision: 2,
-        snapshot: {
-          answers: [
-            { block_id: 'block-1', title: 'Problema', position: 1, content: { text: 'Resposta congelada' } },
-          ],
-        },
+        snapshot: { problema: { text: 'Resposta congelada' } },
+        blocks: [
+          { id: 'block-1', key: 'problema', title: 'Problema', prompt: 'Explique o contexto.', position: 1 },
+        ],
       },
     })
 
@@ -52,7 +51,8 @@ describe('SubmissionReview', () => {
       props: {
         submissionId: 'submission-1',
         revision: 1,
-        snapshot: { answers: [] },
+        snapshot: {},
+        blocks: [],
       },
     })
 
