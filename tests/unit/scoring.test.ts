@@ -2,22 +2,29 @@ import { describe, expect, it } from 'vitest'
 import {
   finalTeamScore,
   isDisplayedTie,
+  scoreToNumber,
   weightedScore,
 } from '../../shared/domain/scoring'
 
 describe('weightedScore', () => {
   it('calculates the weighted average for one evaluator', () => {
-    expect(weightedScore([
+    const result = weightedScore([
       { score: 5, weight: 2 },
       { score: 3, weight: 1 },
-    ])).toBeCloseTo(13 / 3)
+    ])
+
+    expect(result.numerator).toBe(13n)
+    expect(result.denominator).toBe(3n)
+    expect(scoreToNumber(result)).toBeCloseTo(13 / 3)
+    expect(Object.isFrozen(result)).toBe(true)
+    expect(Reflect.set(result, 'numerator', 0n)).toBe(false)
   })
 
   it('accepts zero-weight criteria when another weight is positive', () => {
-    expect(weightedScore([
+    expect(scoreToNumber(weightedScore([
       { score: 1, weight: 0 },
       { score: 5, weight: 1 },
-    ])).toBe(5)
+    ]))).toBe(5)
   })
 
   it('preserves numeric(8,2) decimal weights through final rounding', () => {
@@ -37,10 +44,10 @@ describe('weightedScore', () => {
   })
 
   it('keeps integer weights compatible with decimal arithmetic', () => {
-    expect(weightedScore([
+    expect(scoreToNumber(weightedScore([
       { score: 5, weight: 1 },
       { score: 3, weight: 1 },
-    ])).toBe(4)
+    ]))).toBe(4)
   })
 
   it.each([
@@ -78,11 +85,28 @@ describe('finalTeamScore', () => {
       { score: 2, weight: 0.47 },
     ])
 
-    expect(firstEvaluator).toBe(1)
-    expect(secondEvaluatorA).toBe(1.89)
-    expect(secondEvaluatorB).toBe(1.47)
+    expect(scoreToNumber(firstEvaluator)).toBe(1)
+    expect(scoreToNumber(secondEvaluatorA)).toBe(1.89)
+    expect(scoreToNumber(secondEvaluatorB)).toBe(1.47)
     expect(finalTeamScore([firstEvaluator, secondEvaluatorA])).toBe(1.45)
     expect(finalTeamScore([firstEvaluator, secondEvaluatorB])).toBe(1.24)
+  })
+
+  it('preserves irreducible weighted rationals through aggregation', () => {
+    const firstEvaluator = weightedScore([
+      { score: 2, weight: 0.07 },
+      { score: 5, weight: 1.81 },
+    ])
+    const secondEvaluator = weightedScore([
+      { score: 4, weight: 1.97 },
+      { score: 5, weight: 0.38 },
+    ])
+
+    expect(firstEvaluator.numerator).toBe(919n)
+    expect(firstEvaluator.denominator).toBe(188n)
+    expect(secondEvaluator.numerator).toBe(978n)
+    expect(secondEvaluator.denominator).toBe(235n)
+    expect(finalTeamScore([firstEvaluator, secondEvaluator])).toBe(4.53)
   })
 
   it('handles decimal floating-point edges deterministically', () => {

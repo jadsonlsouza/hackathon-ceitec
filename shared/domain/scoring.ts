@@ -1,13 +1,26 @@
 export interface WeightedCriterion {
-  score: number
-  weight: number
+  readonly score: number
+  readonly weight: number
 }
+
+declare const exactWeightedScoreBrand: unique symbol
+
+export type ExactWeightedScore = Readonly<{
+  numerator: bigint
+  denominator: bigint
+  [exactWeightedScoreBrand]: true
+}>
 
 const MAX_WEIGHT_CENTS = 99_999_999
 
 interface ScaledDecimal {
   integer: bigint
   scale: number
+}
+
+interface Rational {
+  numerator: bigint
+  denominator: bigint
 }
 
 function powerOfTen(exponent: number): bigint {
@@ -50,6 +63,45 @@ function divideRoundHalfAway(
   return negative ? -rounded : rounded
 }
 
+function greatestCommonDivisor(left: bigint, right: bigint): bigint {
+  let dividend = left < 0n ? -left : left
+  let divisor = right < 0n ? -right : right
+
+  while (divisor !== 0n) {
+    const remainder = dividend % divisor
+    dividend = divisor
+    divisor = remainder
+  }
+
+  return dividend
+}
+
+function reduceRational(
+  numerator: bigint,
+  denominator: bigint,
+): Rational {
+  const divisor = greatestCommonDivisor(numerator, denominator)
+  return {
+    numerator: numerator / divisor,
+    denominator: denominator / divisor,
+  }
+}
+
+function addRationals(left: Rational, right: Rational): Rational {
+  const denominatorDivisor = greatestCommonDivisor(
+    left.denominator,
+    right.denominator,
+  )
+  const leftMultiplier = right.denominator / denominatorDivisor
+  const rightMultiplier = left.denominator / denominatorDivisor
+
+  return reduceRational(
+    left.numerator * leftMultiplier
+    + right.numerator * rightMultiplier,
+    left.denominator * leftMultiplier,
+  )
+}
+
 function round2(value: number): number {
   const decimal = scaledDecimal(value)
   const cents = divideRoundHalfAway(
@@ -85,7 +137,9 @@ function weightToCents(weight: number): bigint | null {
   return cents
 }
 
-export function weightedScore(items: WeightedCriterion[]): number {
+export function weightedScore(
+  items: readonly WeightedCriterion[],
+): ExactWeightedScore {
   let totalWeightCents = 0n
   let weightedTotal = 0n
 
@@ -108,30 +162,76 @@ export function weightedScore(items: WeightedCriterion[]): number {
     throw new Error('positive_weight_required')
   }
 
-  return Number(weightedTotal) / Number(totalWeightCents)
+  const reduced = reduceRational(weightedTotal, totalWeightCents)
+  return Object.freeze(reduced) as ExactWeightedScore
 }
 
-export function finalTeamScore(evaluatorScores: number[]): number {
+function isExactWeightedScore(
+  score: ExactWeightedScore | number,
+): score is ExactWeightedScore {
+  return typeof score === 'object'
+    && score !== null
+    && typeof score.numerator === 'bigint'
+    && typeof score.denominator === 'bigint'
+}
+
+function isValidExactScore(score: ExactWeightedScore): boolean {
+  return score.denominator > 0n
+    && score.numerator >= score.denominator
+    && score.numerator <= score.denominator * 5n
+}
+
+function scoreAsRational(
+  score: ExactWeightedScore | number,
+): Rational {
+  if (isExactWeightedScore(score)) {
+    return {
+      numerator: score.numerator,
+      denominator: score.denominator,
+    }
+  }
+
+  const decimal = scaledDecimal(score)
+  return {
+    numerator: decimal.integer,
+    denominator: powerOfTen(decimal.scale),
+  }
+}
+
+export function scoreToNumber(score: ExactWeightedScore): number {
+  if (!isValidExactScore(score)) {
+    throw new Error('invalid_evaluator_score')
+  }
+  return Number(score.numerator) / Number(score.denominator)
+}
+
+export function finalTeamScore(
+  evaluatorScores: readonly (ExactWeightedScore | number)[],
+): number {
   if (!evaluatorScores.length) {
     throw new Error('evaluation_required')
   }
-  if (evaluatorScores.some(score => !isScore(score))) {
+  if (evaluatorScores.some(score =>
+    isExactWeightedScore(score)
+      ? !isValidExactScore(score)
+      : !isScore(score),
+  )) {
     throw new Error('invalid_evaluator_score')
   }
 
-  const decimals = evaluatorScores.map(scaledDecimal)
-  const commonScale = Math.max(...decimals.map(decimal => decimal.scale))
-  const sum = decimals.reduce(
-    (total, decimal) =>
-      total
-      + decimal.integer * powerOfTen(commonScale - decimal.scale),
-    0n,
+  const sum = evaluatorScores
+    .map(scoreAsRational)
+    .reduce(
+      addRationals,
+      { numerator: 0n, denominator: 1n },
+    )
+  const average = reduceRational(
+    sum.numerator,
+    sum.denominator * BigInt(evaluatorScores.length),
   )
-  const denominator
-    = powerOfTen(commonScale) * BigInt(evaluatorScores.length)
   const cents = divideRoundHalfAway(
-    sum * 100n,
-    denominator,
+    average.numerator * 100n,
+    average.denominator,
   )
   return Number(cents) / 100
 }
