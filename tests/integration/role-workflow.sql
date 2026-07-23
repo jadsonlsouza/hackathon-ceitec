@@ -3,7 +3,7 @@ begin;
 create extension if not exists pgtap with schema extensions;
 set local search_path = extensions, public;
 
-select plan(35);
+select plan(41);
 
 select has_function(
   'public',
@@ -72,21 +72,21 @@ select ok(
 );
 
 select ok(
-  has_function_privilege(
+  not has_function_privilege(
     'authenticated',
     'private.request_role_impl(event_role,uuid)',
     'execute'
   ),
-  'authenticated may reach the request implementation through its wrapper'
+  'authenticated cannot execute the private role-request implementation directly'
 );
 
 select ok(
-  has_function_privilege(
+  not has_function_privilege(
     'authenticated',
     'private.decide_role_request_impl(uuid,request_status)',
     'execute'
   ),
-  'authenticated may reach the decision implementation through its wrapper'
+  'authenticated cannot execute the private decision implementation directly'
 );
 
 select ok(
@@ -197,6 +197,26 @@ values (
   now(),
   '00000000-0000-4000-8000-000000000001'
 );
+
+insert into public.event_roles (
+  event_id,
+  user_id,
+  role,
+  approved_by
+)
+values
+  (
+    '10000000-0000-4000-8000-000000000001',
+    '00000000-0000-4000-8000-000000000002',
+    'professor',
+    '00000000-0000-4000-8000-000000000001'
+  ),
+  (
+    '10000000-0000-4000-8000-000000000002',
+    '00000000-0000-4000-8000-000000000002',
+    'professor',
+    '00000000-0000-4000-8000-000000000001'
+  );
 
 insert into public.role_requests (
   id,
@@ -323,6 +343,11 @@ set id = '20000000-0000-4000-8000-000000000001'
 where user_id = '00000000-0000-4000-8000-000000000003'
   and event_id = '10000000-0000-4000-8000-000000000001';
 
+update public.role_requests
+set id = '20000000-0000-4000-8000-000000000002'
+where user_id = '00000000-0000-4000-8000-000000000004'
+  and event_id = '10000000-0000-4000-8000-000000000001';
+
 set local role authenticated;
 select set_config(
   'request.jwt.claim.sub',
@@ -358,6 +383,28 @@ select is(
   ),
   1,
   'an event professor can read the pending applicant profile'
+);
+
+select is(
+  (select count(*)::integer from public.role_requests),
+  3,
+  'an event professor sees only monitor and evaluator requests for assigned events'
+);
+
+select throws_ok(
+  $$
+    select public.decide_role_request(
+      (
+        select id
+        from public.role_requests
+        where user_id = '00000000-0000-4000-8000-000000000003'
+      ),
+      null
+    )
+  $$,
+  'P0001',
+  'invalid_decision',
+  'a null decision is rejected explicitly'
 );
 
 select is(
@@ -399,6 +446,32 @@ select is(
   'approval writes an event-bound audit record'
 );
 
+reset role;
+set local role authenticated;
+select set_config(
+  'request.jwt.claim.sub',
+  '00000000-0000-4000-8000-000000000003',
+  true
+);
+
+select is(
+  (
+    select status::text
+    from public.role_requests
+    where id = '20000000-0000-4000-8000-000000000001'
+  ),
+  'approved',
+  'an applicant retains visibility of their decided request status'
+);
+
+reset role;
+set local role authenticated;
+select set_config(
+  'request.jwt.claim.sub',
+  '00000000-0000-4000-8000-000000000002',
+  true
+);
+
 select throws_ok(
   $$
     select public.decide_role_request(
@@ -418,11 +491,7 @@ select throws_ok(
 select throws_ok(
   $$
     select public.decide_role_request(
-      (
-        select id
-        from public.role_requests
-        where user_id = '00000000-0000-4000-8000-000000000004'
-      ),
+      '20000000-0000-4000-8000-000000000002',
       'approved'
     )
   $$,
@@ -494,6 +563,12 @@ select set_config(
 );
 
 select is(
+  (select count(*)::integer from public.role_requests),
+  2,
+  'a global admin sees only professor requests'
+);
+
+select is(
   (
     select (public.decide_role_request(
       (
@@ -528,6 +603,30 @@ select is(
   ),
   1,
   'professor approval creates the professor event role'
+);
+
+select is(
+  (
+    select count(*)::integer
+    from public.event_roles
+    where event_id = '10000000-0000-4000-8000-000000000001'
+      and user_id = '00000000-0000-4000-8000-000000000002'
+      and role = 'professor'
+  ),
+  0,
+  'professor replacement revokes the previous professor event role'
+);
+
+select is(
+  (
+    select count(*)::integer
+    from public.audit_log
+    where event_id = '10000000-0000-4000-8000-000000000001'
+      and action = 'event_professor_replaced'
+      and entity_id = '00000000-0000-4000-8000-000000000002'
+  ),
+  1,
+  'professor replacement preserves the prior assignment in event audit history'
 );
 
 select is(

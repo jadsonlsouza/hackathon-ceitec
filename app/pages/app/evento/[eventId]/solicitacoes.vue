@@ -18,11 +18,23 @@ interface RoleRequestRow {
 const route = useRoute()
 const eventId = computed(() => String(route.params.eventId))
 const { $supabase } = useNuxtApp()
+const {
+  eventRoles,
+  pending: accessPending,
+  error: accessError,
+} = useCurrentAccess()
 const processingId = ref<string | null>(null)
+const decisionError = ref<string | null>(null)
+const requestsKey = computed(() => eventRoleRequestsKey(eventId.value))
+const isAuthorized = computed(() => (
+  canManageEventRoleRequests(eventRoles.value, eventId.value)
+))
 
 const { data: requests, pending, error } = await useAsyncData(
-  'role-requests',
+  requestsKey,
   async () => {
+    if (!isAuthorized.value) return []
+
     const { data, error: requestError } = await $supabase
       .from('role_requests')
       .select(`
@@ -42,6 +54,7 @@ const { data: requests, pending, error } = await useAsyncData(
   {
     server: false,
     default: () => [] as RoleRequestRow[],
+    watch: [eventRoles],
   },
 )
 
@@ -52,24 +65,18 @@ function roleLabel(role: RequestedRole) {
 }
 
 async function decide(id: string, decision: 'approved' | 'rejected') {
-  processingId.value = id
+  if (!isAuthorized.value || processingId.value) return
 
-  try {
-    const { error } = await $supabase.rpc('decide_role_request', {
-      request_id: id,
-      decision,
-    })
-    if (error) {
-      throw createError({
-        statusCode: 400,
-        statusMessage: 'Não foi possível registrar a decisão.',
-      })
-    }
-    await refreshNuxtData('role-requests')
-  }
-  finally {
-    processingId.value = null
-  }
+  await submitRoleDecision({
+    rpc: $supabase.rpc.bind($supabase),
+    refresh: refreshNuxtData,
+    setProcessing: value => processingId.value = value,
+    setError: value => decisionError.value = value,
+    isProcessing: () => processingId.value !== null,
+    requestId: id,
+    decision,
+    refreshKey: eventRoleRequestsKey(eventId.value),
+  })
 }
 </script>
 
@@ -85,11 +92,21 @@ async function decide(id: string, decision: 'approved' | 'rejected') {
       </p>
     </header>
 
-    <p v-if="pending" class="request-status">
+    <p v-if="processingId" class="request-status" role="alert">
+      Processando decisão…
+    </p>
+    <p v-if="decisionError" class="form-error" role="alert">
+      {{ decisionError }}
+    </p>
+
+    <p v-if="accessPending || (isAuthorized && pending)" class="request-status">
       Carregando solicitações…
     </p>
-    <p v-else-if="error" class="form-error" role="alert">
+    <p v-else-if="accessError || (isAuthorized && error)" class="form-error" role="alert">
       Não foi possível carregar as solicitações.
+    </p>
+    <p v-else-if="!isAuthorized" class="form-error" role="alert">
+      Você não é o Professor responsável por este evento.
     </p>
     <p v-else-if="requests.length === 0" class="request-status">
       Não há solicitações pendentes.
@@ -111,7 +128,7 @@ async function decide(id: string, decision: 'approved' | 'rejected') {
         <div class="request-actions">
           <button
             type="button"
-            :disabled="processingId === request.id"
+            :disabled="isRequestProcessing(processingId, request.id)"
             @click="decide(request.id, 'approved')"
           >
             Aprovar
@@ -119,7 +136,7 @@ async function decide(id: string, decision: 'approved' | 'rejected') {
           <button
             type="button"
             class="danger-button"
-            :disabled="processingId === request.id"
+            :disabled="isRequestProcessing(processingId, request.id)"
             @click="decide(request.id, 'rejected')"
           >
             Rejeitar
