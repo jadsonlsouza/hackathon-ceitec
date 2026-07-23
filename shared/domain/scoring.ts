@@ -3,16 +3,17 @@ export interface WeightedCriterion {
   weight: number
 }
 
-function round2(value: number): number {
-  const [coefficient, exponent = '0'] = Math.abs(value).toString().split('e')
-  const shifted = Number(`${coefficient}e${Number(exponent) + 2}`)
-  const rounded = Math.sign(value) * Math.round(shifted)
-  const [roundedCoefficient, roundedExponent = '0']
-    = rounded.toString().split('e')
+const MAX_WEIGHT_CENTS = 99_999_999
 
-  return Number(
-    `${roundedCoefficient}e${Number(roundedExponent) - 2}`,
-  )
+function shiftDecimal(value: number, places: number): number {
+  const [coefficient, exponent = '0'] = value.toString().split('e')
+  return Number(`${coefficient}e${Number(exponent) + places}`)
+}
+
+function round2(value: number): number {
+  const shifted = shiftDecimal(Math.abs(value), 2)
+  const rounded = Math.sign(value) * Math.round(shifted)
+  return shiftDecimal(rounded, -2)
 }
 
 function isFiniteNumber(value: number): boolean {
@@ -23,27 +24,54 @@ function isScore(value: number): boolean {
   return isFiniteNumber(value) && value >= 1 && value <= 5
 }
 
-export function weightedScore(items: WeightedCriterion[]): number {
-  if (items.some(({ score, weight }) =>
-    !isFiniteNumber(score)
-    || !Number.isInteger(score)
-    || score < 1
-    || score > 5
-    || !isFiniteNumber(weight)
-    || weight < 0,
-  )) {
-    throw new Error('invalid_score_or_weight')
+function weightToCents(weight: number): bigint | null {
+  if (!isFiniteNumber(weight) || weight < 0) {
+    return null
   }
 
-  const totalWeight = items.reduce((sum, item) => sum + item.weight, 0)
-  if (!isFiniteNumber(totalWeight) || totalWeight <= 0) {
+  const [coefficient, exponentText = '0'] = weight.toString().split('e')
+  const fractionLength = coefficient.split('.')[1]?.length ?? 0
+  const decimalPlaces = Math.max(
+    0,
+    fractionLength - Number(exponentText),
+  )
+  const cents = shiftDecimal(weight, 2)
+
+  if (
+    decimalPlaces > 2
+    || !Number.isSafeInteger(cents)
+    || cents > MAX_WEIGHT_CENTS
+  ) {
+    return null
+  }
+
+  return BigInt(cents)
+}
+
+export function weightedScore(items: WeightedCriterion[]): number {
+  let totalWeightCents = 0n
+  let weightedTotal = 0n
+
+  for (const { score, weight } of items) {
+    const weightCents = weightToCents(weight)
+    if (
+      !Number.isInteger(score)
+      || score < 1
+      || score > 5
+      || weightCents === null
+    ) {
+      throw new Error('invalid_score_or_weight')
+    }
+
+    totalWeightCents += weightCents
+    weightedTotal += BigInt(score) * weightCents
+  }
+
+  if (totalWeightCents <= 0n) {
     throw new Error('positive_weight_required')
   }
 
-  return items.reduce(
-    (sum, item) => sum + item.score * item.weight,
-    0,
-  ) / totalWeight
+  return Number(weightedTotal) / Number(totalWeightCents)
 }
 
 export function finalTeamScore(evaluatorScores: number[]): number {

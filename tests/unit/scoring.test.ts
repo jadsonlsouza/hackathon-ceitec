@@ -20,6 +20,29 @@ describe('weightedScore', () => {
     ])).toBe(5)
   })
 
+  it('preserves numeric(8,2) decimal weights through final rounding', () => {
+    expect(finalTeamScore([
+      weightedScore([
+        { score: 1, weight: 0.03 },
+        { score: 2, weight: 0.21 },
+      ]),
+    ])).toBe(1.88)
+
+    expect(finalTeamScore([
+      weightedScore([
+        { score: 2, weight: 0.15 },
+        { score: 4, weight: 0.01 },
+      ]),
+    ])).toBe(2.13)
+  })
+
+  it('keeps integer weights compatible with decimal arithmetic', () => {
+    expect(weightedScore([
+      { score: 5, weight: 1 },
+      { score: 3, weight: 1 },
+    ])).toBe(4)
+  })
+
   it.each([
     [[], 'positive_weight_required'],
     [[{ score: 3, weight: 0 }], 'positive_weight_required'],
@@ -29,6 +52,9 @@ describe('weightedScore', () => {
     [[{ score: 3, weight: -1 }], 'invalid_score_or_weight'],
     [[{ score: Number.NaN, weight: 1 }], 'invalid_score_or_weight'],
     [[{ score: 3, weight: Number.POSITIVE_INFINITY }], 'invalid_score_or_weight'],
+    [[{ score: 3, weight: 0.001 }], 'invalid_score_or_weight'],
+    [[{ score: 3, weight: 1.234 }], 'invalid_score_or_weight'],
+    [[{ score: 3, weight: 1_000_000 }], 'invalid_score_or_weight'],
   ])('rejects invalid input %#', (items, expectedMessage) => {
     expect(() => weightedScore(items as { score: number; weight: number }[]))
       .toThrow(expectedMessage as string)
