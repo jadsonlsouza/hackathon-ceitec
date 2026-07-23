@@ -8,6 +8,7 @@ import {
   type Ref,
 } from 'vue'
 import type { Database } from '~/types/database'
+import { installBrowserReconciliation } from '../utils/browser-reconciliation'
 
 type Profile = Database['public']['Tables']['profiles']['Row']
 type EventRole = Database['public']['Tables']['event_roles']['Row']
@@ -70,6 +71,7 @@ export function createCurrentAccessController(
   let generation = 0
   let authEpoch = 0
   let reloadPromise: Promise<void> | null = null
+  let stopReconciliation: (() => void) | null = null
 
   function clearAccess() {
     profile.value = null
@@ -88,7 +90,7 @@ export function createCurrentAccessController(
     accessChannel = supabase
       .channel(`current-access:${targetUserId}`)
       .on('postgres_changes', {
-        event: '*',
+        event: 'INSERT',
         schema: 'public',
         table: 'profiles',
         filter: `id=eq.${targetUserId}`,
@@ -96,7 +98,23 @@ export function createCurrentAccessController(
         void reloadCurrent()
       })
       .on('postgres_changes', {
-        event: '*',
+        event: 'UPDATE',
+        schema: 'public',
+        table: 'profiles',
+        filter: `id=eq.${targetUserId}`,
+      }, () => {
+        void reloadCurrent()
+      })
+      .on('postgres_changes', {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'event_roles',
+        filter: `user_id=eq.${targetUserId}`,
+      }, () => {
+        void reloadCurrent()
+      })
+      .on('postgres_changes', {
+        event: 'UPDATE',
         schema: 'public',
         table: 'event_roles',
         filter: `user_id=eq.${targetUserId}`,
@@ -193,6 +211,9 @@ export function createCurrentAccessController(
       void changeUser(nextUserId)
     })
     authSubscription = data.subscription
+    // Filtered DELETE events cannot reliably identify a row after RLS removes
+    // access. Reconciliation covers revocations; INSERT/UPDATE stay immediate.
+    stopReconciliation = installBrowserReconciliation(refresh)
     void refresh()
   }
 
@@ -204,6 +225,8 @@ export function createCurrentAccessController(
     reloadPromise = null
     authSubscription?.unsubscribe()
     authSubscription = null
+    stopReconciliation?.()
+    stopReconciliation = null
     stopAccessChannel()
     userId.value = null
     clearAccess()

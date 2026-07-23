@@ -10,6 +10,7 @@ import {
   type Ref,
 } from 'vue'
 import type { Database } from '~/types/database'
+import { installBrowserReconciliation } from '../utils/browser-reconciliation'
 
 interface TeamContext {
   teamEventIds: string[]
@@ -30,7 +31,6 @@ const teamControllers = new WeakMap<object, TeamContextController>()
 function createTeamContextController(
   supabase: SupabaseClient<Database>,
   userId: ComputedRef<string | null>,
-  email: ComputedRef<string | null>,
 ): TeamContextController {
   const data = ref<TeamContext>({ teamEventIds: [], teamIds: [] })
   const pending = ref(false)
@@ -41,13 +41,12 @@ function createTeamContextController(
   let active = false
   let generation = 0
   let reloadPromise: Promise<void> | null = null
-  let subscribedEmail: string | null = null
   let subscribedTeamIds: string[] = []
+  let stopReconciliation: (() => void) | null = null
 
   function stopChannel() {
     const current = channel
     channel = null
-    subscribedEmail = null
     subscribedTeamIds = []
     if (current) void supabase.removeChannel(current)
   }
@@ -57,31 +56,22 @@ function createTeamContextController(
     if (
       !active
       || !scopedUserId
-      || !email.value
       || channel
       || typeof window === 'undefined'
     ) return
 
+    // This subscription is deliberately unfiltered. Realtime applies the
+    // authenticated user's RLS policies, and raw emails may contain filter
+    // syntax characters. Revocations are reconciled independently.
     let nextChannel = supabase
       .channel(`dashboard-teams:${scopedUserId}`)
       .on('postgres_changes', {
         event: '*',
         schema: 'public',
         table: 'team_members',
-        filter: `user_id=eq.${scopedUserId}`,
       }, () => {
         void refresh()
       })
-    if (email.value) {
-      nextChannel = nextChannel.on('postgres_changes', {
-        event: '*',
-        schema: 'public',
-        table: 'team_members',
-        filter: `email=eq.${email.value}`,
-      }, () => {
-        void refresh()
-      })
-    }
     for (const teamId of data.value.teamIds) {
       nextChannel = nextChannel.on('postgres_changes', {
         event: '*',
@@ -92,7 +82,6 @@ function createTeamContextController(
         void refresh()
       })
     }
-    subscribedEmail = email.value
     subscribedTeamIds = [...data.value.teamIds]
     channel = nextChannel.subscribe()
   }
@@ -125,7 +114,6 @@ function createTeamContextController(
         }
         const channelShapeChanged = (
           nextData.teamIds.join(',') !== subscribedTeamIds.join(',')
-          || email.value !== subscribedEmail
         )
         data.value = nextData
         if (channelShapeChanged) {
@@ -161,8 +149,8 @@ function createTeamContextController(
     if (active) return
     active = true
     stopIdentityWatch = watch(
-      [userId, email],
-      ([nextUserId], [previousUserId]) => {
+      userId,
+      (nextUserId, previousUserId) => {
         if (nextUserId !== previousUserId) {
           generation += 1
           reloadPromise = null
@@ -170,7 +158,7 @@ function createTeamContextController(
           error.value = null
         }
         stopChannel()
-        if (!nextUserId || !email.value) {
+        if (!nextUserId) {
           pending.value = false
           return
         }
@@ -179,6 +167,7 @@ function createTeamContextController(
       },
       { immediate: true },
     )
+    stopReconciliation = installBrowserReconciliation(refresh)
   }
 
   function stop() {
@@ -188,6 +177,8 @@ function createTeamContextController(
     reloadPromise = null
     stopIdentityWatch?.()
     stopIdentityWatch = null
+    stopReconciliation?.()
+    stopReconciliation = null
     stopChannel()
     data.value = { teamEventIds: [], teamIds: [] }
     pending.value = false
@@ -219,7 +210,6 @@ export function useDashboardEventContext() {
     return typeof value === 'string' && value ? value : null
   })
 
-  const profileEmail = computed(() => access.profile.value?.email ?? null)
   if (!$supabase) {
     const teamEventIds = computed(() => [] as string[])
     return {
@@ -236,7 +226,6 @@ export function useDashboardEventContext() {
     teamAccess = createTeamContextController(
       $supabase,
       access.userId,
-      profileEmail,
     )
     teamControllers.set($supabase, teamAccess)
   }

@@ -29,6 +29,8 @@ function makeClient() {
   const roles = new Map<string, FakeRole[]>()
   const teamEvents = new Map<string, string[]>()
   const teamStatuses = new Map<string, 'pending' | 'approved' | 'rejected'>()
+  const emails = new Map<string, string>()
+  const selectCounts = new Map<string, number>()
   const authCallbacks = new Set<(event: string, session: unknown) => void>()
   const channels: Array<{
     name: string
@@ -44,11 +46,13 @@ function makeClient() {
   roles.set('user-b', [])
   teamEvents.set('user-a', [])
   teamEvents.set('user-b', [])
+  emails.set('user-a', 'leader+one,(draft)@example.test')
+  emails.set('user-b', 'user-b@example.test')
 
   function profileFor(userId: string) {
     return {
       id: userId,
-      email: `${userId}@example.test`,
+      email: emails.get(userId) ?? `${userId}@example.test`,
       display_name: userId,
       global_role: 'student',
       created_at: '2026-07-23T00:00:00Z',
@@ -89,6 +93,7 @@ function makeClient() {
     from(table: string) {
       return {
         select() {
+          selectCounts.set(table, (selectCounts.get(table) ?? 0) + 1)
           if (table === 'teams') {
             return resolved({
               data: (teamEvents.get(currentUserId ?? '') ?? []).map(event_id => ({
@@ -141,6 +146,8 @@ function makeClient() {
     roles,
     teamEvents,
     teamStatuses,
+    emails,
+    selectCounts,
     channels,
     removed,
     unsubscribed,
@@ -233,7 +240,10 @@ describe('dashboard access lifecycle', () => {
     })
   })
 
-  afterEach(() => vi.unstubAllGlobals())
+  afterEach(() => {
+    vi.useRealTimers()
+    vi.unstubAllGlobals()
+  })
 
   it('adds approved roles and removes revoked roles from mounted navigation', async () => {
     const wrapper = mount(dashboardHarness(), { global: { stubs: { NuxtLink } } })
@@ -252,7 +262,9 @@ describe('dashboard access lifecycle', () => {
     expect(wrapper.findAll('[data-dashboard-link]').map(link => link.text())).toEqual(['Revisões'])
 
     fake.roles.set('user-a', [])
-    await fake.emit('event_roles', 'DELETE')
+    window.dispatchEvent(new Event('focus'))
+    await flushPromises()
+    await nextTick()
     expect(wrapper.findAll('[data-dashboard-link]')).toHaveLength(0)
     wrapper.unmount()
   })
@@ -269,7 +281,9 @@ describe('dashboard access lifecycle', () => {
     ])
 
     fake.teamStatuses.set(EVENT_A, 'rejected')
-    await fake.emit('teams', 'UPDATE')
+    window.dispatchEvent(new Event('focus'))
+    await flushPromises()
+    await nextTick()
     expect(wrapper.findAll('[data-dashboard-link]')).toHaveLength(0)
 
     fake.teamStatuses.set(EVENT_A, 'approved')
@@ -277,7 +291,13 @@ describe('dashboard access lifecycle', () => {
     expect(wrapper.findAll('[data-dashboard-link]')).toHaveLength(2)
 
     fake.teamEvents.set('user-a', [])
-    await fake.emit('team_members', 'DELETE')
+    Object.defineProperty(document, 'visibilityState', {
+      configurable: true,
+      value: 'visible',
+    })
+    document.dispatchEvent(new Event('visibilitychange'))
+    await flushPromises()
+    await nextTick()
     expect(wrapper.findAll('[data-dashboard-link]')).toHaveLength(0)
     wrapper.unmount()
   })
@@ -314,6 +334,7 @@ describe('dashboard access lifecycle', () => {
   })
 
   it('deduplicates shared listeners and removes channels and auth listener on cleanup', async () => {
+    vi.useFakeTimers()
     const Parent = defineComponent({
       setup: () => () => h('div', [h(dashboardHarness()), h(dashboardHarness())]),
     })
@@ -321,10 +342,51 @@ describe('dashboard access lifecycle', () => {
     await flushPromises()
 
     expect(fake.channels.filter(channel => channel.name.includes('user-a'))).toHaveLength(2)
+
+    const beforeInterval = new Map(fake.selectCounts)
+    await vi.advanceTimersByTimeAsync(15_000)
+    await flushPromises()
+    expect(fake.selectCounts.get('profiles')).toBe((beforeInterval.get('profiles') ?? 0) + 1)
+    expect(fake.selectCounts.get('event_roles')).toBe((beforeInterval.get('event_roles') ?? 0) + 1)
+    expect(fake.selectCounts.get('teams')).toBe((beforeInterval.get('teams') ?? 0) + 1)
+
+    const beforeBurst = new Map(fake.selectCounts)
+    window.dispatchEvent(new Event('focus'))
+    window.dispatchEvent(new Event('online'))
+    document.dispatchEvent(new Event('visibilitychange'))
+    await flushPromises()
+    expect(fake.selectCounts.get('profiles')).toBe((beforeBurst.get('profiles') ?? 0) + 1)
+    expect(fake.selectCounts.get('event_roles')).toBe((beforeBurst.get('event_roles') ?? 0) + 1)
+    expect(fake.selectCounts.get('teams')).toBe((beforeBurst.get('teams') ?? 0) + 1)
+
     wrapper.unmount()
     await flushPromises()
     expect(fake.removed).toHaveLength(2)
     expect(fake.unsubscribed).toHaveBeenCalledOnce()
+
+    const afterCleanup = new Map(fake.selectCounts)
+    await vi.advanceTimersByTimeAsync(15_000)
+    window.dispatchEvent(new Event('focus'))
+    window.dispatchEvent(new Event('online'))
+    await flushPromises()
+    expect(fake.selectCounts).toEqual(afterCleanup)
+  })
+
+  it('subscribes to team membership without embedding reserved email characters', async () => {
+    const wrapper = mount(dashboardHarness(), { global: { stubs: { NuxtLink } } })
+    await flushPromises()
+
+    const teamMemberHandlers = fake.channels
+      .flatMap(channel => channel.handlers)
+      .filter(handler => handler.config.table === 'team_members')
+    expect(teamMemberHandlers).toHaveLength(1)
+    expect(teamMemberHandlers[0]?.config).not.toHaveProperty('filter')
+
+    const roleHandlers = fake.channels
+      .flatMap(channel => channel.handlers)
+      .filter(handler => handler.config.table === 'event_roles')
+    expect(roleHandlers.map(handler => handler.config.event)).toEqual(['INSERT', 'UPDATE'])
+    wrapper.unmount()
   })
 
   it('denies an unauthorized route event instead of falling back to another event', async () => {

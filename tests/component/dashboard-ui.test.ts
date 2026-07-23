@@ -65,7 +65,19 @@ describe('dashboard UI', () => {
       pending: accessPending,
       error: accessError,
     }))
-    vi.stubGlobal('useNuxtApp', () => ({ $supabase: {} }))
+    const channel = {
+      on: vi.fn(function () { return this }),
+      subscribe: vi.fn(function () { return this }),
+    }
+    vi.stubGlobal('useNuxtApp', () => ({
+      $supabase: {
+        channel: vi.fn(() => channel),
+        removeChannel: vi.fn(),
+        from: vi.fn(() => ({
+          select: vi.fn(async () => ({ data: [], error: null })),
+        })),
+      },
+    }))
     vi.stubGlobal('useAsyncData', (key: string) => (
       key === 'dashboard-event-context'
         ? { data: contextData, pending: contextPending, error: contextError }
