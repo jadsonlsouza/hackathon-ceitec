@@ -1,0 +1,26 @@
+{
+  "name": "hackathon-ceitec",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "build": "nuxt build",
+    "dev": "nuxt dev",
+    "test": "vitest",
+    "test:unit": "vitest run",
+    "test:e2e": "vitest run tests/integration"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.110.8",
+    "nuxt": "^4.5.0",
+    "vue": "^3.5.40",
+    "vue-router": "^5.2.0",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@nuxt/test-utils": "^3.19.1",
+    "@playwright/test": "^1.61.1",
+    "@vue/test-utils": "^2.4.11",
+    "happy-dom": "^17.6.3",
+    "vitest": "^3.2.7"
+  }
+}
