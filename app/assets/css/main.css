@@ -62,6 +62,63 @@ button, input, select, textarea { font: inherit; }
 .member-actions { display: flex; flex-wrap: wrap; gap: .75rem; }
 .member-actions .danger-button { background: #991b1b; }
 .team-details { line-height: 1.6; padding-left: 1.25rem; }
+.sr-only { clip: rect(0, 0, 0, 0); clip-path: inset(50%); height: 1px; overflow: hidden; position: absolute; white-space: nowrap; width: 1px; }
+.canvas-page, .activities-page, .builder-page, .reviews-page { margin: 0 auto; max-width: 76rem; min-height: 100vh; padding: 3rem 1.5rem 6rem; }
+.canvas-header, .activities-header, .builder-header, .reviews-header { max-width: 48rem; }
+.canvas-header h1, .activities-header h1, .builder-header h1, .reviews-header h1 { font-size: clamp(2rem, 5vw, 3.25rem); margin: 0; }
+.canvas-meta { color: #bae6fd; line-height: 1.6; }
+.canvas-block-list, .activity-groups { display: grid; gap: 1.5rem; margin-top: 2rem; }
+.canvas-block { background: linear-gradient(145deg, #111827, #0f172a); border: 1px solid #334155; border-radius: 1rem; box-shadow: 0 18px 40px #0004; padding: 1.5rem; }
+.canvas-block header { align-items: start; display: flex; gap: 1rem; justify-content: space-between; }
+.canvas-block h2 { margin: 0; }
+.block-position { color: #38bdf8; font-size: .8rem; font-weight: 800; letter-spacing: .06em; margin: 0 0 .35rem; text-transform: uppercase; }
+.block-prompt, .snapshot-answer p { color: #cbd5e1; line-height: 1.65; }
+.canvas-block textarea, .submission-review textarea, .builder-form input, .builder-form select, .builder-form textarea, .review-filters select { background: #070b14; border: 1px solid #475569; border-radius: .6rem; color: #f8fafc; padding: .75rem; width: 100%; }
+.canvas-block textarea:disabled { color: #cbd5e1; opacity: .8; }
+.autosave-state { align-items: center; color: #bae6fd; display: flex; flex-wrap: wrap; font-size: .9rem; gap: .65rem; }
+.link-button { background: transparent; border: 0; color: #7dd3fc; cursor: pointer; padding: .2rem; text-decoration: underline; }
+.conflict-banner { background: #451a03; border: 1px solid #f59e0b; border-radius: .75rem; color: #fde68a; margin: 1rem 0; padding: 1rem; }
+.conflict-banner p { margin-top: 0; }
+.conflict-banner button, .canvas-submit-bar button, .builder-form > button { background: #0284c7; border: 0; border-radius: .55rem; color: #fff; cursor: pointer; font-weight: 750; min-height: 2.75rem; padding: .7rem 1rem; }
+.canvas-submit-bar { align-items: center; background: #111827f2; border: 1px solid #334155; border-radius: .8rem; bottom: 1rem; display: flex; gap: 1rem; justify-content: flex-end; margin-top: 1.5rem; padding: 1rem; position: sticky; }
+.canvas-submit-bar p { margin: 0 auto 0 0; }
+.canvas-submit-bar button:disabled, .builder-form button:disabled { cursor: wait; opacity: .55; }
+.activity-group { background: #0b1220; border: 1px solid #1e293b; border-radius: 1rem; padding: 1.25rem; }
+.activity-group > h2 { margin-top: 0; }
+.activity-list { display: grid; gap: .8rem; list-style: none; margin: 0; padding: 0; }
+.activity-card { align-items: center; background: #111827; border: 1px solid #334155; border-radius: .8rem; display: flex; gap: 1rem; justify-content: space-between; padding: 1rem; }
+.activity-card h3, .activity-card p { margin: 0; }
+.activity-card p { color: #cbd5e1; margin-top: .35rem; }
+.activity-card a { background: #0369a1; border-radius: .5rem; font-weight: 700; padding: .7rem 1rem; text-decoration: none; white-space: nowrap; }
+.builder-form { background: #111827; border: 1px solid #334155; border-radius: 1rem; display: grid; gap: .75rem; margin-top: 2rem; padding: 1.5rem; }
+.builder-form fieldset { border: 1px solid #475569; border-radius: .75rem; display: flex; flex-wrap: wrap; gap: 1rem; padding: 1rem; }
+.builder-form label, .submission-review label, .review-filters label { font-weight: 650; }
+.builder-form fieldset label { align-items: center; display: flex; gap: .5rem; }
+.builder-form fieldset label input { width: auto; }
+.date-grid { display: grid; gap: .6rem; grid-template-columns: auto minmax(12rem, 1fr); }
+.builder-options { display: flex; flex-wrap: wrap; gap: 1.25rem; }
+.builder-options label { align-items: center; display: flex; gap: .5rem; }
+.builder-options input { width: auto; }
+.builder-blocks { display: grid !important; }
+.builder-block { background: #0b1220; border: 1px solid #334155; border-radius: .75rem; display: grid; gap: .6rem; padding: 1rem; }
+.builder-block h2 { font-size: 1.1rem; margin: 0; }
+.block-actions { display: flex; flex-wrap: wrap; gap: .6rem; }
+.block-actions button, .builder-form .secondary-button { background: transparent; border: 1px solid #64748b; border-radius: .5rem; color: #f8fafc; cursor: pointer; padding: .6rem .8rem; }
+.block-actions .danger-button { border-color: #ef4444; color: #fecaca; }
+.existing-canvases { margin-top: 2rem; }
+.locked-structure { color: #fcd34d !important; }
+.review-filters { align-items: end; display: grid; gap: .6rem 1rem; grid-template-columns: auto minmax(9rem, 1fr) auto minmax(9rem, 1fr); margin: 2rem 0; }
+.submission-review { background: #111827; border: 1px solid #38bdf8; border-radius: 1rem; margin-top: 2rem; padding: 1.5rem; }
+.submission-review h2 { margin: 0; }
+.snapshot-answer { background: #0b1220; border: 1px solid #334155; border-radius: .75rem; margin: 1rem 0; padding: 1rem; }
+.snapshot-answer h3, .snapshot-answer p { margin: 0; }
+.submission-review > label { display: block; margin: 1.25rem 0 .5rem; }
 @media (max-width: 32rem) { .auth-card { padding: 1.5rem; } .auth-links { flex-direction: column; gap: .75rem; } }
 @media (max-width: 42rem) { .request-card { align-items: stretch; flex-direction: column; } .request-actions button { flex: 1; } }
 @media (max-width: 42rem) { .member-card { align-items: stretch; flex-direction: column; } .member-actions button { flex: 1; } }
+@media (max-width: 42rem) {
+  .canvas-block header, .activity-card, .canvas-submit-bar { align-items: stretch; flex-direction: column; }
+  .activity-card a, .canvas-submit-bar button { text-align: center; width: 100%; }
+  .date-grid, .review-filters { grid-template-columns: 1fr; }
+  .request-actions { flex-direction: column; }
+}
