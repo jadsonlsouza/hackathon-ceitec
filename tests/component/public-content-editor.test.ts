@@ -138,4 +138,18 @@ describe('Professor public-content editor', () => {
     expect(wrapper.text()).toContain('Você não tem permissão')
     expect(wrapper.html()).not.toContain('forbidden')
   })
+
+  it('keeps schedule row identity stable when positions are edited or duplicated', async () => {
+    const wrapper = await mountPage(EditorPage)
+    const rows = wrapper.findAll('[data-schedule-row]')
+    const initialKeys = rows.map(row => row.attributes('data-row-key'))
+
+    await rows[1]!.get('input[type="number"]').setValue('1')
+    await nextTick()
+
+    expect(wrapper.findAll('[data-schedule-row]')).toHaveLength(2)
+    expect(wrapper.findAll('[data-schedule-row]').map(row => row.attributes('data-row-key')))
+      .toEqual(initialKeys)
+    expect(new Set(initialKeys).size).toBe(2)
+  })
 })

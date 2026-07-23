@@ -13,8 +13,10 @@ type EditorContent = {
   venue: string
   dateLabel: string
   registrationOpen: boolean
-  schedule: PublicScheduleItem[]
+  schedule: EditorScheduleItem[]
 }
+
+type EditorScheduleItem = PublicScheduleItem & { clientKey: string }
 
 type EditorRow = {
   tagline: string
@@ -33,6 +35,11 @@ const { $supabase } = useNuxtApp()
 const saving = ref(false)
 const feedback = ref('')
 const validationErrors = ref<string[]>([])
+let nextScheduleRowKey = 0
+const withClientKey = (item: PublicScheduleItem): EditorScheduleItem => ({
+  ...item,
+  clientKey: `schedule-row-${++nextScheduleRowKey}`,
+})
 const canEdit = computed(() => eventRoles.value.some(role => (
   role.event_id === eventId.value && role.role === 'professor'
 )))
@@ -44,7 +51,7 @@ const form = reactive<EditorContent>({
   venue: ceitecPublicContent.venue,
   dateLabel: ceitecPublicContent.date_label,
   registrationOpen: ceitecPublicContent.registration_open,
-  schedule: ceitecPublicContent.schedule.map(item => ({ ...item })),
+  schedule: ceitecPublicContent.schedule.map(withClientKey),
 })
 
 const { data, pending, error } = await useAsyncData(
@@ -66,7 +73,7 @@ if (data.value) {
   form.venue = data.value.venue
   form.dateLabel = data.value.date_label
   form.registrationOpen = data.value.registration_open
-  form.schedule = data.value.schedule.map(item => ({ ...item }))
+  form.schedule = data.value.schedule.map(withClientKey)
 }
 
 const dayItems = (dayNumber: 1 | 2) => form.schedule
@@ -88,10 +95,11 @@ function addScheduleRow(dayNumber: 1 | 2) {
     startsAt: '08:00',
     activity: '',
     position: Math.max(0, ...items.map(item => item.position)) + 1,
+    clientKey: `schedule-row-${++nextScheduleRowKey}`,
   })
 }
 
-function removeScheduleRow(item: PublicScheduleItem) {
+function removeScheduleRow(item: EditorScheduleItem) {
   const index = form.schedule.indexOf(item)
   if (index >= 0) form.schedule.splice(index, 1)
 }
@@ -216,7 +224,13 @@ async function save() {
 
       <fieldset v-for="dayNumber in [1, 2] as const" :key="dayNumber" :data-day="dayNumber">
         <legend>Programação do Dia {{ dayNumber }}</legend>
-        <div v-for="item in dayItems(dayNumber)" :key="item.position" class="schedule-editor-row">
+        <div
+          v-for="item in dayItems(dayNumber)"
+          :key="item.clientKey"
+          class="schedule-editor-row"
+          data-schedule-row
+          :data-row-key="item.clientKey"
+        >
           <label>
             <span>Horário</span>
             <input v-model="item.startsAt" data-schedule-time inputmode="numeric" placeholder="HH:MM">

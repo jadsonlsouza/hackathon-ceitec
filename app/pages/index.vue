@@ -4,8 +4,9 @@ import AboutSection from '~/components/landing/AboutSection.vue'
 import CategoriesSection from '~/components/landing/CategoriesSection.vue'
 import ScheduleSection from '~/components/landing/ScheduleSection.vue'
 import PublicResults from '~/components/landing/PublicResults.vue'
+import UnavailableState from '~/components/landing/UnavailableState.vue'
 
-const { data } = await useFetch('/api/public-event')
+const { data, error: loadError } = await useFetch('/api/public-event')
 const event = computed(() => data.value)
 
 useHead({
@@ -20,7 +21,7 @@ useHead({
 <template>
   <div class="landing-page">
     <a class="skip-link" href="#conteudo-principal">Pular para o conteúdo</a>
-    <template v-if="event">
+    <template v-if="event && !loadError">
       <HeroSection
         :event-name="event.event_name"
         :tagline="event.tagline"
@@ -62,11 +63,7 @@ useHead({
         <PublicResults :event-slug="event.event_slug" :results="event.results" />
       </main>
     </template>
-    <main v-else id="conteudo-principal" class="landing-section">
-      <h1>Nenhum evento público disponível</h1>
-      <p class="section-copy">Volte em breve para acompanhar as próximas edições.</p>
-      <NuxtLink class="secondary-cta" to="/login">Entrar no sistema</NuxtLink>
-    </main>
+    <UnavailableState v-else />
 
     <footer class="landing-footer">
       <img src="/brand/ceitec-horizontal-white.png" alt="" width="1029" height="252">

@@ -4,6 +4,7 @@ export default defineNuxtConfig({
   runtimeConfig: {
     supabaseSecretKey: '',
     eventArchiveSecret: '',
+    allowStaticPublicContentFallback: process.env.NODE_ENV !== 'production',
     public: {
       supabaseUrl: '',
       supabasePublishableKey: '',

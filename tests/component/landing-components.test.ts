@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest'
 import HeroSection from '../../app/components/landing/HeroSection.vue'
 import PublicResults from '../../app/components/landing/PublicResults.vue'
 import ScheduleSection from '../../app/components/landing/ScheduleSection.vue'
+import UnavailableState from '../../app/components/landing/UnavailableState.vue'
 
 const NuxtLink = {
   props: ['to'],
@@ -69,5 +70,15 @@ describe('public landing components', () => {
     })
     expect(wrapper.get('[data-public-ranking]').text()).toContain('Equipe A')
     expect(wrapper.get('a').attributes('href')).toBe('/resultados/hackathon-ceitec')
+  })
+
+  it('renders a safe unavailable state without an active registration CTA', () => {
+    const wrapper = mount(UnavailableState, {
+      global: { stubs: { NuxtLink } },
+    })
+
+    expect(wrapper.text()).toContain('Nenhum evento público disponível')
+    expect(wrapper.find('a[href="/cadastro"]').exists()).toBe(false)
+    expect(wrapper.get('a[href="/login"]').text()).toContain('Entrar')
   })
 })
