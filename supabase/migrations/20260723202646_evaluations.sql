@@ -33,7 +33,12 @@ create table public.criterion_weights (
     foreign key (criterion_id, event_id)
     references public.evaluation_criteria(id, event_id)
     on delete cascade,
-  constraint criterion_weights_nonnegative check (weight >= 0)
+  constraint criterion_weights_nonnegative check (
+    weight >= 0
+    and weight <> 'NaN'::numeric
+    and weight <> 'Infinity'::numeric
+    and weight <> '-Infinity'::numeric
+  )
 );
 
 create index criterion_weights_event_category_idx
@@ -93,6 +98,7 @@ create table public.evaluations (
   constraint evaluations_event_team_evaluator_key unique (
     event_id, team_id, evaluator_id
   ),
+  constraint evaluations_id_event_key unique (id, event_id),
   constraint evaluations_comment_normalized check (
     comment is null
     or (
@@ -110,14 +116,23 @@ create index evaluations_progress_idx
   on public.evaluations (event_id, category, team_id, submitted_at);
 
 create table public.evaluation_scores (
-  evaluation_id uuid not null references public.evaluations(id)
-    on delete cascade,
-  criterion_id uuid not null references public.evaluation_criteria(id),
+  evaluation_id uuid not null,
+  event_id uuid not null,
+  criterion_id uuid not null,
   score smallint not null,
   primary key (evaluation_id, criterion_id),
+  constraint evaluation_scores_evaluation_event_fkey
+    foreign key (evaluation_id, event_id)
+    references public.evaluations(id, event_id)
+    on delete cascade,
+  constraint evaluation_scores_criterion_event_fkey
+    foreign key (criterion_id, event_id)
+    references public.evaluation_criteria(id, event_id),
   constraint evaluation_scores_range check (score between 1 and 5)
 );
 
+create index evaluation_scores_event_idx
+  on public.evaluation_scores (event_id);
 create index evaluation_scores_criterion_idx
   on public.evaluation_scores (criterion_id);
 
@@ -503,17 +518,49 @@ alter table public.evaluations enable row level security;
 alter table public.evaluation_scores enable row level security;
 alter table public.evaluation_freezes enable row level security;
 
+create function private.has_current_evaluator_assignment(
+  target_event uuid,
+  target_category public.team_category
+)
+returns boolean
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  select
+    (select auth.uid()) is not null
+    and exists (
+      select 1
+      from public.evaluator_assignments as assignment
+      join public.event_roles as role_assignment
+        on role_assignment.event_id = assignment.event_id
+        and role_assignment.user_id = assignment.evaluator_id
+        and role_assignment.role = 'evaluator'
+      join public.events as event on event.id = assignment.event_id
+      where assignment.event_id = target_event
+        and assignment.evaluator_id = (select auth.uid())
+        and (
+          target_category is null
+          or assignment.category = target_category
+        )
+        and event.status <> 'archived'
+    );
+$$;
+
+revoke all on function private.has_current_evaluator_assignment(
+  uuid, public.team_category
+) from public, anon, authenticated, service_role;
+grant execute on function private.has_current_evaluator_assignment(
+  uuid, public.team_category
+) to authenticated;
+
 create policy "criteria visible to evaluation staff"
 on public.evaluation_criteria for select to authenticated
 using (
   (select public.is_event_professor(event_id))
-  or exists (
-    select 1
-    from public.evaluator_assignments as assignment
-    join public.events as event on event.id = assignment.event_id
-    where assignment.event_id = evaluation_criteria.event_id
-      and assignment.evaluator_id = (select auth.uid())
-      and event.status <> 'archived'
+  or (
+    select private.has_current_evaluator_assignment(event_id, null)
   )
 );
 
@@ -548,14 +595,8 @@ create policy "weights visible to evaluation staff"
 on public.criterion_weights for select to authenticated
 using (
   (select public.is_event_professor(event_id))
-  or exists (
-    select 1
-    from public.evaluator_assignments as assignment
-    join public.events as event on event.id = assignment.event_id
-    where assignment.event_id = criterion_weights.event_id
-      and assignment.category = criterion_weights.category
-      and assignment.evaluator_id = (select auth.uid())
-      and event.status <> 'archived'
+  or (
+    select private.has_current_evaluator_assignment(event_id, category)
   )
 );
 
@@ -592,10 +633,8 @@ using (
   (select public.is_event_professor(event_id))
   or (
     evaluator_id = (select auth.uid())
-    and exists (
-      select 1 from public.events as event
-      where event.id = evaluator_assignments.event_id
-        and event.status <> 'archived'
+    and (
+      select private.has_current_evaluator_assignment(event_id, category)
     )
   )
 );
@@ -620,14 +659,8 @@ create policy "presentation slots visible to assigned staff"
 on public.presentation_slots for select to authenticated
 using (
   (select public.is_event_professor(event_id))
-  or exists (
-    select 1
-    from public.evaluator_assignments as assignment
-    join public.events as event on event.id = assignment.event_id
-    where assignment.event_id = presentation_slots.event_id
-      and assignment.category = presentation_slots.category
-      and assignment.evaluator_id = (select auth.uid())
-      and event.status <> 'archived'
+  or (
+    select private.has_current_evaluator_assignment(event_id, category)
   )
 );
 
@@ -650,10 +683,8 @@ using (
   (select public.is_event_professor(event_id))
   or (
     evaluator_id = (select auth.uid())
-    and exists (
-      select 1 from public.events as event
-      where event.id = evaluations.event_id
-        and event.status <> 'archived'
+    and (
+      select private.has_current_evaluator_assignment(event_id, category)
     )
   )
 );
@@ -665,6 +696,7 @@ using (
     select 1
     from public.evaluations as evaluation
     where evaluation.id = evaluation_scores.evaluation_id
+      and evaluation.event_id = evaluation_scores.event_id
   )
 );
 
@@ -672,14 +704,8 @@ create policy "freezes visible to assigned staff"
 on public.evaluation_freezes for select to authenticated
 using (
   (select public.is_event_professor(event_id))
-  or exists (
-    select 1
-    from public.evaluator_assignments as assignment
-    join public.events as event on event.id = assignment.event_id
-    where assignment.event_id = evaluation_freezes.event_id
-      and assignment.category = evaluation_freezes.category
-      and assignment.evaluator_id = (select auth.uid())
-      and event.status <> 'archived'
+  or (
+    select private.has_current_evaluator_assignment(event_id, category)
   )
 );
 
@@ -760,6 +786,11 @@ begin
   if event_state = 'archived' then
     raise exception using errcode = 'P0001', message = 'event_not_available';
   end if;
+  if event_state <> 'evaluation' then
+    raise exception using
+      errcode = 'P0001',
+      message = 'event_not_in_evaluation';
+  end if;
   if not exists (
     select 1 from public.events as event
     where event.id = target_event and event.professor_id = caller_id
@@ -774,6 +805,25 @@ begin
     raise exception using
       errcode = 'P0001',
       message = 'evaluation_already_frozen';
+  end if;
+
+  if exists (
+    select 1
+    from public.evaluation_criteria as criterion
+    join public.criterion_weights as weight
+      on weight.criterion_id = criterion.id
+      and weight.event_id = criterion.event_id
+      and weight.category = target_category
+    where criterion.event_id = target_event
+      and criterion.active
+      and (
+        weight.weight < 0
+        or weight.weight = 'NaN'::numeric
+        or weight.weight = 'Infinity'::numeric
+        or weight.weight = '-Infinity'::numeric
+      )
+  ) then
+    raise exception using errcode = 'P0001', message = 'invalid_weight';
   end if;
 
   select jsonb_agg(
@@ -999,6 +1049,11 @@ begin
   if not found or event_state = 'archived' then
     raise exception using errcode = 'P0001', message = 'event_not_available';
   end if;
+  if event_state <> 'evaluation' then
+    raise exception using
+      errcode = 'P0001',
+      message = 'event_not_in_evaluation';
+  end if;
 
   select team.*
   into target
@@ -1162,10 +1217,11 @@ begin
   end if;
 
   insert into public.evaluation_scores (
-    evaluation_id, criterion_id, score
+    evaluation_id, event_id, criterion_id, score
   )
   select
     stored_evaluation_id,
+    target.event_id,
     (score ->> 'criterion_id')::uuid,
     (score ->> 'score')::smallint
   from jsonb_array_elements(target_scores) as score;

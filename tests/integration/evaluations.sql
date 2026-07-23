@@ -12,6 +12,10 @@ select has_table('public', 'presentation_slots', 'presentation slots exist');
 select has_table('public', 'evaluations', 'evaluations exist');
 select has_table('public', 'evaluation_scores', 'evaluation scores exist');
 select has_table('public', 'evaluation_freezes', 'category freezes exist');
+select has_column(
+  'public', 'evaluation_scores', 'event_id',
+  'evaluation scores carry explicit event scope'
+);
 
 select has_function(
   'public', 'freeze_evaluation', array['uuid', 'team_category'],
@@ -147,6 +151,24 @@ values
     '00000000-0000-4000-8000-000000000302'),
   ('10000000-0000-4000-8000-000000000304',
     'Replacement Event', 'replacement-evaluation-event', 'evaluation',
+    '00000000-0000-4000-8000-000000000301',
+    '00000000-0000-4000-8000-000000000301'),
+  ('10000000-0000-4000-8000-000000000305',
+    'Draft Evaluation Event', 'draft-evaluation-phase', 'draft',
+    '00000000-0000-4000-8000-000000000301',
+    '00000000-0000-4000-8000-000000000301'),
+  ('10000000-0000-4000-8000-000000000306',
+    'Registration Evaluation Event', 'registration-evaluation-phase',
+    'registration_open',
+    '00000000-0000-4000-8000-000000000301',
+    '00000000-0000-4000-8000-000000000301'),
+  ('10000000-0000-4000-8000-000000000307',
+    'Progress Evaluation Event', 'progress-evaluation-phase', 'in_progress',
+    '00000000-0000-4000-8000-000000000301',
+    '00000000-0000-4000-8000-000000000301'),
+  ('10000000-0000-4000-8000-000000000308',
+    'Published Evaluation Event', 'published-evaluation-phase',
+    'results_published',
     '00000000-0000-4000-8000-000000000301',
     '00000000-0000-4000-8000-000000000301');
 
@@ -346,6 +368,114 @@ values
   ('50000000-0000-4000-8000-000000000302', 1,
     '{"summary":{"items":["Private draft summary"]}}'::jsonb,
     '00000000-0000-4000-8000-000000000308');
+
+set local role authenticated;
+select set_config(
+  'request.jwt.claim.sub', '00000000-0000-4000-8000-000000000301', true
+);
+
+select throws_ok(
+  $$
+    select public.freeze_evaluation(
+      '10000000-0000-4000-8000-000000000305', 'junior'
+    )
+  $$,
+  'P0001', 'event_not_in_evaluation',
+  'draft events cannot freeze evaluation'
+);
+select throws_ok(
+  $$
+    select public.freeze_evaluation(
+      '10000000-0000-4000-8000-000000000306', 'junior'
+    )
+  $$,
+  'P0001', 'event_not_in_evaluation',
+  'registration events cannot freeze evaluation'
+);
+select throws_ok(
+  $$
+    select public.freeze_evaluation(
+      '10000000-0000-4000-8000-000000000307', 'junior'
+    )
+  $$,
+  'P0001', 'event_not_in_evaluation',
+  'in-progress events cannot freeze evaluation'
+);
+select throws_ok(
+  $$
+    select public.freeze_evaluation(
+      '10000000-0000-4000-8000-000000000308', 'junior'
+    )
+  $$,
+  'P0001', 'event_not_in_evaluation',
+  'published events cannot freeze evaluation'
+);
+
+select throws_ok(
+  $$
+    update public.criterion_weights
+    set weight = 'NaN'::numeric
+    where event_id = '10000000-0000-4000-8000-000000000301'
+      and category = 'junior'
+      and criterion_id = (
+        select id from public.evaluation_criteria
+        where event_id = '10000000-0000-4000-8000-000000000301'
+          and name = 'Time'
+      )
+  $$,
+  '23514',
+  null,
+  'criterion weights reject numeric NaN'
+);
+
+reset role;
+alter table public.criterion_weights
+  drop constraint criterion_weights_nonnegative;
+alter table public.criterion_weights
+  disable trigger protect_criterion_weight_configuration;
+update public.criterion_weights
+set weight = 'NaN'::numeric
+where event_id = '10000000-0000-4000-8000-000000000301'
+  and category = 'junior'
+  and criterion_id = (
+    select id from public.evaluation_criteria
+    where event_id = '10000000-0000-4000-8000-000000000301'
+      and name = 'Time'
+  );
+alter table public.criterion_weights
+  enable trigger protect_criterion_weight_configuration;
+
+set local role authenticated;
+select set_config(
+  'request.jwt.claim.sub', '00000000-0000-4000-8000-000000000301', true
+);
+select throws_ok(
+  $$
+    select public.freeze_evaluation(
+      '10000000-0000-4000-8000-000000000301', 'junior'
+    )
+  $$,
+  'P0001', 'invalid_weight',
+  'freeze defensively rejects a non-finite stored weight'
+);
+
+reset role;
+alter table public.criterion_weights
+  disable trigger protect_criterion_weight_configuration;
+update public.criterion_weights
+set weight = 1
+where event_id = '10000000-0000-4000-8000-000000000301'
+  and category = 'junior'
+  and criterion_id = (
+    select id from public.evaluation_criteria
+    where event_id = '10000000-0000-4000-8000-000000000301'
+      and name = 'Time'
+  );
+alter table public.criterion_weights
+  enable trigger protect_criterion_weight_configuration;
+alter table public.criterion_weights
+  add constraint criterion_weights_nonnegative
+  check (weight >= 0 and weight <> 'NaN'::numeric);
 
 set local role authenticated;
 select set_config(
@@ -812,6 +942,32 @@ select is(
   'one score is stored for every frozen criterion'
 );
 
+select throws_ok(
+  $$
+    insert into public.evaluation_scores (
+      evaluation_id, event_id, criterion_id, score
+    )
+    select
+      evaluation.id,
+      foreign_criterion.event_id,
+      foreign_criterion.id,
+      5
+    from public.evaluations as evaluation
+    cross join lateral (
+      select criterion.id, criterion.event_id
+      from public.evaluation_criteria as criterion
+      where criterion.event_id = '10000000-0000-4000-8000-000000000302'
+      order by criterion.position
+      limit 1
+    ) as foreign_criterion
+    where evaluation.team_id = '20000000-0000-4000-8000-000000000301'
+      and evaluation.evaluator_id = '00000000-0000-4000-8000-000000000303'
+  $$,
+  '23503',
+  null,
+  'evaluation scores reject cross-event criteria even for privileged writes'
+);
+
 set local role authenticated;
 select set_config(
   'request.jwt.claim.sub', '00000000-0000-4000-8000-000000000303', true
@@ -871,6 +1027,40 @@ select is(
   'blank feedback is stored as absent'
 );
 
+set local role authenticated;
+select set_config(
+  'request.jwt.claim.sub', '00000000-0000-4000-8000-000000000303', true
+);
+select is(
+  (
+    select count(*)::integer
+    from public.evaluation_criteria
+    where event_id = '10000000-0000-4000-8000-000000000301'
+  ),
+  5,
+  'current evaluator role can read assigned criteria'
+);
+select is(
+  (
+    select count(*)::integer
+    from public.evaluation_freezes
+    where event_id = '10000000-0000-4000-8000-000000000301'
+      and category = 'junior'
+  ),
+  1,
+  'current evaluator role can read its assigned freeze'
+);
+select is(
+  (
+    select count(*)::integer
+    from public.evaluations
+    where event_id = '10000000-0000-4000-8000-000000000301'
+  ),
+  1,
+  'current evaluator role can read its own evaluation'
+);
+
+reset role;
 delete from public.event_roles
 where event_id = '10000000-0000-4000-8000-000000000301'
   and user_id = '00000000-0000-4000-8000-000000000303'
@@ -879,6 +1069,48 @@ where event_id = '10000000-0000-4000-8000-000000000301'
 set local role authenticated;
 select set_config(
   'request.jwt.claim.sub', '00000000-0000-4000-8000-000000000303', true
+);
+
+select is(
+  (
+    select count(*)::integer
+    from public.evaluation_criteria
+    where event_id = '10000000-0000-4000-8000-000000000301'
+  ),
+  0,
+  'revoked evaluator role immediately loses criteria reads'
+);
+select is(
+  (
+    select count(*)::integer
+    from public.evaluator_assignments
+    where event_id = '10000000-0000-4000-8000-000000000301'
+  ),
+  0,
+  'revoked evaluator role immediately loses assignment reads'
+);
+select is(
+  (
+    select count(*)::integer
+    from public.evaluation_freezes
+    where event_id = '10000000-0000-4000-8000-000000000301'
+  ),
+  0,
+  'revoked evaluator role immediately loses freeze reads'
+);
+select is(
+  (
+    select count(*)::integer
+    from public.evaluations
+    where event_id = '10000000-0000-4000-8000-000000000301'
+  ),
+  0,
+  'revoked evaluator role immediately loses evaluation reads'
+);
+select is(
+  (select count(*)::integer from public.evaluation_scores),
+  0,
+  'revoked evaluator role immediately loses score reads'
 );
 
 select throws_ok(
@@ -906,6 +1138,82 @@ values (
   '00000000-0000-4000-8000-000000000303', 'evaluator',
   '00000000-0000-4000-8000-000000000301'
 );
+
+update public.events
+set status = 'draft'
+where id = '10000000-0000-4000-8000-000000000301';
+set local role authenticated;
+select set_config(
+  'request.jwt.claim.sub', '00000000-0000-4000-8000-000000000303', true
+);
+select throws_ok(
+  $$
+    select public.submit_evaluation(
+      '20000000-0000-4000-8000-000000000301', '[]'::jsonb, null
+    )
+  $$,
+  'P0001', 'event_not_in_evaluation',
+  'draft events reject evaluation submissions'
+);
+reset role;
+
+update public.events
+set status = 'registration_open'
+where id = '10000000-0000-4000-8000-000000000301';
+set local role authenticated;
+select set_config(
+  'request.jwt.claim.sub', '00000000-0000-4000-8000-000000000303', true
+);
+select throws_ok(
+  $$
+    select public.submit_evaluation(
+      '20000000-0000-4000-8000-000000000301', '[]'::jsonb, null
+    )
+  $$,
+  'P0001', 'event_not_in_evaluation',
+  'registration events reject evaluation submissions'
+);
+reset role;
+
+update public.events
+set status = 'in_progress'
+where id = '10000000-0000-4000-8000-000000000301';
+set local role authenticated;
+select set_config(
+  'request.jwt.claim.sub', '00000000-0000-4000-8000-000000000303', true
+);
+select throws_ok(
+  $$
+    select public.submit_evaluation(
+      '20000000-0000-4000-8000-000000000301', '[]'::jsonb, null
+    )
+  $$,
+  'P0001', 'event_not_in_evaluation',
+  'in-progress events reject evaluation submissions'
+);
+reset role;
+
+update public.events
+set status = 'results_published'
+where id = '10000000-0000-4000-8000-000000000301';
+set local role authenticated;
+select set_config(
+  'request.jwt.claim.sub', '00000000-0000-4000-8000-000000000303', true
+);
+select throws_ok(
+  $$
+    select public.submit_evaluation(
+      '20000000-0000-4000-8000-000000000301', '[]'::jsonb, null
+    )
+  $$,
+  'P0001', 'event_not_in_evaluation',
+  'published events reject evaluation submissions'
+);
+reset role;
+
+update public.events
+set status = 'evaluation'
+where id = '10000000-0000-4000-8000-000000000301';
 
 insert into public.team_members (
   event_id, team_id, user_id, name, email, enrollment, status, approved_by

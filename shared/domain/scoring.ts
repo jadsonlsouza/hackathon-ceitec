@@ -4,7 +4,15 @@ export interface WeightedCriterion {
 }
 
 function round2(value: number): number {
-  return Math.round((value + Number.EPSILON) * 100) / 100
+  const [coefficient, exponent = '0'] = Math.abs(value).toString().split('e')
+  const shifted = Number(`${coefficient}e${Number(exponent) + 2}`)
+  const rounded = Math.sign(value) * Math.round(shifted)
+  const [roundedCoefficient, roundedExponent = '0']
+    = rounded.toString().split('e')
+
+  return Number(
+    `${roundedCoefficient}e${Number(roundedExponent) - 2}`,
+  )
 }
 
 function isFiniteNumber(value: number): boolean {

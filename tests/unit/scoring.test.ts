@@ -44,6 +44,8 @@ describe('finalTeamScore', () => {
   it('handles decimal floating-point edges deterministically', () => {
     expect(finalTeamScore([1.005])).toBe(1.01)
     expect(finalTeamScore([2.675])).toBe(2.68)
+    expect(finalTeamScore([2.135])).toBe(2.14)
+    expect(finalTeamScore([4.015])).toBe(4.02)
   })
 
   it('requires at least one finite evaluator score', () => {
@@ -59,6 +61,7 @@ describe('finalTeamScore', () => {
 describe('isDisplayedTie', () => {
   it('treats equal scores rounded to two decimals as a tie', () => {
     expect(isDisplayedTie(4.504, 4.503)).toBe(true)
+    expect(isDisplayedTie(4.015, 4.02)).toBe(true)
   })
 
   it('does not tie scores whose displayed values differ', () => {
