@@ -8,6 +8,18 @@ create type public.member_status as enum (
   'removed'
 );
 
+revoke usage on type
+  public.team_category,
+  public.team_status,
+  public.member_status
+from public, anon, authenticated, service_role;
+
+grant usage on type
+  public.team_category,
+  public.team_status,
+  public.member_status
+to authenticated;
+
 create table public.teams (
   id uuid primary key default gen_random_uuid(),
   event_id uuid not null references public.events(id),

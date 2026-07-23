@@ -123,3 +123,67 @@ focused pgTAP, full pgTAP, lint, advisors, Vitest, and production build gates
 were rerun afterward.
 
 No known concerns remain for this task's interface.
+
+## Enum ACL hardening follow-up
+
+The three team enums originally retained PostgreSQL's default `PUBLIC` usage,
+which made that privilege effective for `anon` and `service_role` despite the
+otherwise explicit team grants. The migration now revokes `USAGE` on
+`team_category`, `team_status`, and `member_status` from `PUBLIC`, `anon`,
+`authenticated`, and `service_role`, then grants non-grantable `USAGE` only to
+`authenticated`, the role that supplies and receives those enum values through
+the public team RPCs.
+
+### Follow-up RED
+
+```text
+npx supabase test db tests/integration/teams.sql
+Files=1, Tests=67
+Failed 9 tests:
+- PUBLIC, anon, and service_role had effective USAGE on team_category
+- PUBLIC, anon, and service_role had effective USAGE on team_status
+- PUBLIC, anon, and service_role had effective USAGE on member_status
+```
+
+Each enum now has separate pgTAP assertions proving:
+
+- no `PUBLIC` ACL entry grants usage;
+- `anon` has no effective usage;
+- `service_role` has no effective usage;
+- `authenticated` has the usage required by its RPC interface;
+- `authenticated` cannot grant that usage onward.
+
+No `service_role` grant was added because the complete server and database test
+suites prove that server workflows do not require these team enum types.
+
+### Follow-up verification
+
+```text
+npx supabase db reset
+Finished supabase db reset; all migrations and seed applied
+
+npx supabase test db tests/integration/teams.sql
+Files=1, Tests=67
+Result: PASS
+
+npx supabase test db tests/integration/*.sql
+Files=4, Tests=181
+Result: PASS
+
+npx supabase db lint --local --schema public,private --level warning --fail-on error
+No schema errors found
+
+npx supabase db advisors --local --type all --level warn --fail-on error
+No issues found
+
+npx vitest run tests/unit/team.test.ts
+Test Files  1 passed (1)
+Tests       2 passed (2)
+
+npx vitest run
+Test Files  12 passed (12)
+Tests       41 passed (41)
+
+npm run build
+Nuxt production client and Nitro server build complete
+```

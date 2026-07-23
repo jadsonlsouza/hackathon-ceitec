@@ -3,7 +3,7 @@ begin;
 create extension if not exists pgtap with schema extensions;
 set local search_path = extensions, public;
 
-select plan(52);
+select plan(67);
 
 select has_table('public', 'teams', 'teams table exists');
 select has_table('public', 'team_members', 'team members table exists');
@@ -126,6 +126,138 @@ select ok(
     'execute'
   ),
   'authenticated callers can use the remaining team wrappers'
+);
+
+select ok(
+  not exists (
+    select 1
+    from pg_type as type
+    cross join lateral aclexplode(
+      coalesce(type.typacl, acldefault('T', type.typowner))
+    ) as privilege
+    where type.oid = 'public.team_category'::regtype
+      and privilege.grantee = 0
+      and privilege.privilege_type = 'USAGE'
+  ),
+  'PUBLIC has no usage on team_category'
+);
+select ok(
+  not has_type_privilege('anon', 'public.team_category', 'USAGE'),
+  'anon has no usage on team_category'
+);
+select ok(
+  not has_type_privilege('service_role', 'public.team_category', 'USAGE'),
+  'service_role has no usage on team_category'
+);
+select ok(
+  has_type_privilege('authenticated', 'public.team_category', 'USAGE'),
+  'authenticated can use team_category for create_team'
+);
+select ok(
+  not exists (
+    select 1
+    from pg_type as type
+    cross join lateral aclexplode(
+      coalesce(type.typacl, acldefault('T', type.typowner))
+    ) as privilege
+    where type.oid = 'public.team_category'::regtype
+      and privilege.grantee = (
+        select role.oid
+        from pg_roles as role
+        where role.rolname = 'authenticated'
+      )
+      and privilege.privilege_type = 'USAGE'
+      and privilege.is_grantable
+  ),
+  'authenticated cannot grant team_category usage'
+);
+
+select ok(
+  not exists (
+    select 1
+    from pg_type as type
+    cross join lateral aclexplode(
+      coalesce(type.typacl, acldefault('T', type.typowner))
+    ) as privilege
+    where type.oid = 'public.team_status'::regtype
+      and privilege.grantee = 0
+      and privilege.privilege_type = 'USAGE'
+  ),
+  'PUBLIC has no usage on team_status'
+);
+select ok(
+  not has_type_privilege('anon', 'public.team_status', 'USAGE'),
+  'anon has no usage on team_status'
+);
+select ok(
+  not has_type_privilege('service_role', 'public.team_status', 'USAGE'),
+  'service_role has no usage on team_status'
+);
+select ok(
+  has_type_privilege('authenticated', 'public.team_status', 'USAGE'),
+  'authenticated can use team_status for decide_team'
+);
+select ok(
+  not exists (
+    select 1
+    from pg_type as type
+    cross join lateral aclexplode(
+      coalesce(type.typacl, acldefault('T', type.typowner))
+    ) as privilege
+    where type.oid = 'public.team_status'::regtype
+      and privilege.grantee = (
+        select role.oid
+        from pg_roles as role
+        where role.rolname = 'authenticated'
+      )
+      and privilege.privilege_type = 'USAGE'
+      and privilege.is_grantable
+  ),
+  'authenticated cannot grant team_status usage'
+);
+
+select ok(
+  not exists (
+    select 1
+    from pg_type as type
+    cross join lateral aclexplode(
+      coalesce(type.typacl, acldefault('T', type.typowner))
+    ) as privilege
+    where type.oid = 'public.member_status'::regtype
+      and privilege.grantee = 0
+      and privilege.privilege_type = 'USAGE'
+  ),
+  'PUBLIC has no usage on member_status'
+);
+select ok(
+  not has_type_privilege('anon', 'public.member_status', 'USAGE'),
+  'anon has no usage on member_status'
+);
+select ok(
+  not has_type_privilege('service_role', 'public.member_status', 'USAGE'),
+  'service_role has no usage on member_status'
+);
+select ok(
+  has_type_privilege('authenticated', 'public.member_status', 'USAGE'),
+  'authenticated can read member_status RPC results'
+);
+select ok(
+  not exists (
+    select 1
+    from pg_type as type
+    cross join lateral aclexplode(
+      coalesce(type.typacl, acldefault('T', type.typowner))
+    ) as privilege
+    where type.oid = 'public.member_status'::regtype
+      and privilege.grantee = (
+        select role.oid
+        from pg_roles as role
+        where role.rolname = 'authenticated'
+      )
+      and privilege.privilege_type = 'USAGE'
+      and privilege.is_grantable
+  ),
+  'authenticated cannot grant member_status usage'
 );
 
 select ok(
