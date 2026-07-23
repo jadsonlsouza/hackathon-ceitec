@@ -275,8 +275,52 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      decide_role_request: {
+        Args: {
+          decision: Database["public"]["Enums"]["request_status"]
+          request_id: string
+        }
+        Returns: {
+          created_at: string
+          decided_at: string | null
+          decided_by: string | null
+          event_id: string
+          id: string
+          requested_role: Database["public"]["Enums"]["event_role"]
+          status: Database["public"]["Enums"]["request_status"]
+          user_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "role_requests"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       is_event_professor: { Args: { target_event: string }; Returns: boolean }
       is_global_admin: { Args: never; Returns: boolean }
+      request_role: {
+        Args: {
+          target_event?: string
+          target_role: Database["public"]["Enums"]["event_role"]
+        }
+        Returns: {
+          created_at: string
+          decided_at: string | null
+          decided_by: string | null
+          event_id: string
+          id: string
+          requested_role: Database["public"]["Enums"]["event_role"]
+          status: Database["public"]["Enums"]["request_status"]
+          user_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "role_requests"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
     }
     Enums: {
       event_role: "professor" | "monitor" | "evaluator"

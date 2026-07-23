@@ -348,8 +348,8 @@ select is(
 
 select is(
   (select count(*)::integer from public.profiles),
-  1,
-  'event professor cannot read unrelated profiles'
+  2,
+  'event professor reads only self and pending applicants for their event'
 );
 
 reset role;

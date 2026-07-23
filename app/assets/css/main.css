@@ -25,4 +25,22 @@ button, input, select, textarea { font: inherit; }
 .form-error { color: #fca5a5; margin: .75rem 0 0; }
 .form-success { color: #86efac; line-height: 1.5; }
 .field-help { color: #94a3b8; font-size: .9rem; margin: .25rem 0; }
+.requests-page { margin: 0 auto; max-width: 70rem; min-height: 100vh; padding: 3rem 1.5rem; }
+.requests-header { max-width: 42rem; }
+.requests-header h1 { font-size: clamp(2rem, 5vw, 3.25rem); margin: 0; }
+.request-status { background: #111827; border: 1px solid #334155; border-radius: .75rem; color: #cbd5e1; padding: 1rem; }
+.request-list { display: grid; gap: 1rem; list-style: none; margin: 2rem 0 0; padding: 0; }
+.request-card { align-items: center; background: #111827; border: 1px solid #334155; border-radius: 1rem; display: flex; gap: 1.5rem; justify-content: space-between; padding: 1.5rem; }
+.request-card h2 { margin: 0 0 .25rem; }
+.request-card p { color: #cbd5e1; margin: 0; }
+.request-card dl { display: flex; flex-wrap: wrap; gap: 1.5rem; margin: 1rem 0 0; }
+.request-card dt { color: #94a3b8; font-size: .8rem; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; }
+.request-card dd { margin: .2rem 0 0; }
+.request-actions { display: flex; gap: .75rem; }
+.request-actions button { background: #0284c7; border: 0; border-radius: .5rem; color: #fff; cursor: pointer; font-weight: 700; min-height: 2.75rem; padding: .65rem 1rem; }
+.request-actions button:hover:not(:disabled) { background: #0369a1; }
+.request-actions button:disabled { cursor: wait; opacity: .6; }
+.request-actions .danger-button { background: #991b1b; }
+.request-actions .danger-button:hover:not(:disabled) { background: #7f1d1d; }
 @media (max-width: 32rem) { .auth-card { padding: 1.5rem; } .auth-links { flex-direction: column; gap: .75rem; } }
+@media (max-width: 42rem) { .request-card { align-items: stretch; flex-direction: column; } .request-actions button { flex: 1; } }
