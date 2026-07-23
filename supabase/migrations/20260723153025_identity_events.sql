@@ -73,7 +73,7 @@ create index role_requests_decided_by_idx on public.role_requests (decided_by);
 
 create table public.audit_log (
   id bigint generated always as identity primary key,
-  event_id uuid references public.events(id),
+  event_id uuid not null references public.events(id),
   actor_id uuid references public.profiles(id),
   action text not null,
   entity_type text not null,
@@ -128,6 +128,7 @@ begin
       'pending'::public.request_status
     from public.events as event
     where event.id = requested_event_text::uuid
+      and event.status <> 'archived'
     on conflict (user_id, event_id, requested_role)
       where status = 'pending'
       do nothing;
@@ -242,20 +243,23 @@ create policy "global admins create events"
 on public.events
 for insert
 to authenticated
-with check ((select public.is_global_admin()));
+with check (
+  (select public.is_global_admin())
+  and status <> 'archived'
+);
 
 create policy "global admins update events"
 on public.events
 for update
 to authenticated
-using ((select public.is_global_admin()))
-with check ((select public.is_global_admin()));
-
-create policy "global admins delete events"
-on public.events
-for delete
-to authenticated
-using ((select public.is_global_admin()));
+using (
+  (select public.is_global_admin())
+  and status <> 'archived'
+)
+with check (
+  (select public.is_global_admin())
+  and status <> 'archived'
+);
 
 create policy "roles visible to owner and admins"
 on public.event_roles
@@ -276,6 +280,12 @@ with check (
   and status = 'pending'
   and decided_by is null
   and decided_at is null
+  and exists (
+    select 1
+    from public.events as requested_event
+    where requested_event.id = role_requests.event_id
+      and requested_event.status <> 'archived'
+  )
 );
 
 create policy "requests visible to decision makers"
@@ -306,7 +316,7 @@ revoke all on table
 from public, anon, authenticated, service_role;
 
 grant select on table public.profiles to authenticated;
-grant select, insert, update, delete on table public.events to authenticated;
+grant select, insert, update on table public.events to authenticated;
 grant select on table public.event_roles to authenticated;
 grant select, insert on table public.role_requests to authenticated;
 grant select on table public.audit_log to authenticated;

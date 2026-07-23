@@ -3,7 +3,7 @@ begin;
 create extension if not exists pgtap with schema extensions;
 set local search_path = extensions, public;
 
-select plan(27);
+select plan(34);
 
 select is(
   (
@@ -84,6 +84,40 @@ values (
   '00000000-0000-4000-8000-000000000001'
 );
 
+insert into public.events (
+  id,
+  name,
+  slug,
+  status,
+  archived_at,
+  created_by
+)
+values
+  (
+    '10000000-0000-4000-8000-000000000003',
+    'Archived Signup Event',
+    'archived-signup-event',
+    'archived',
+    now(),
+    '00000000-0000-4000-8000-000000000001'
+  ),
+  (
+    '10000000-0000-4000-8000-000000000004',
+    'Archived Immutable Event',
+    'archived-immutable-event',
+    'archived',
+    now(),
+    '00000000-0000-4000-8000-000000000001'
+  ),
+  (
+    '10000000-0000-4000-8000-000000000005',
+    'Deletable Event',
+    'deletable-event',
+    'draft',
+    null,
+    '00000000-0000-4000-8000-000000000001'
+  );
+
 insert into public.event_roles (
   event_id,
   user_id,
@@ -116,6 +150,17 @@ values (
     "full_name":"Untrusted Metadata",
     "requested_role":"professor",
     "event_id":"not-a-valid-uuid"
+  }'::jsonb
+);
+
+insert into auth.users (id, email, raw_user_meta_data)
+values (
+  '00000000-0000-4000-8000-000000000005',
+  'archived-applicant@example.test',
+  '{
+    "full_name":"Archived Event Applicant",
+    "requested_role":"monitor",
+    "event_id":"10000000-0000-4000-8000-000000000003"
   }'::jsonb
 );
 
@@ -183,6 +228,16 @@ select is(
   ),
   0,
   'invalid signup metadata is ignored without granting access'
+);
+
+select is(
+  (
+    select count(*)::integer
+    from public.role_requests
+    where user_id = '00000000-0000-4000-8000-000000000005'
+  ),
+  0,
+  'signup metadata cannot request a role for an archived event'
 );
 
 select ok(
@@ -313,7 +368,7 @@ select is(
 
 select is(
   (select count(*)::integer from public.profiles),
-  4,
+  5,
   'global admin can read all profiles'
 );
 
@@ -330,7 +385,86 @@ select lives_ok(
   'global admin can create an event'
 );
 
+select throws_ok(
+  $$
+    update public.events
+    set status = 'archived', archived_at = now()
+    where id = '10000000-0000-4000-8000-000000000002'
+  $$,
+  '42501',
+  'new row violates row-level security policy for table "events"',
+  'global admin cannot archive an event directly'
+);
+
+select is_empty(
+  $$
+    update public.events
+    set status = 'draft', archived_at = null
+    where id = '10000000-0000-4000-8000-000000000003'
+    returning id
+  $$,
+  'global admin cannot unarchive an event directly'
+);
+
+select is_empty(
+  $$
+    update public.events
+    set name = 'Mutated Archived Event'
+    where id = '10000000-0000-4000-8000-000000000004'
+    returning id
+  $$,
+  'global admin cannot mutate an archived event'
+);
+
+select throws_ok(
+  $$
+    insert into public.role_requests (
+      user_id,
+      event_id,
+      requested_role
+    )
+    values (
+      '00000000-0000-4000-8000-000000000001',
+      '10000000-0000-4000-8000-000000000004',
+      'monitor'
+    )
+  $$,
+  '42501',
+  'new row violates row-level security policy for table "role_requests"',
+  'global admin cannot request a role for an archived event'
+);
+
+select throws_ok(
+  $$
+    delete from public.events
+    where id = '10000000-0000-4000-8000-000000000005'
+  $$,
+  '42501',
+  'permission denied for table events',
+  'global admin cannot delete an event'
+);
+
 reset role;
+
+select throws_ok(
+  $$
+    insert into public.audit_log (
+      actor_id,
+      action,
+      entity_type,
+      entity_id
+    )
+    values (
+      '00000000-0000-4000-8000-000000000001',
+      'eventless_action',
+      'event',
+      'missing-event'
+    )
+  $$,
+  '23502',
+  'null value in column "event_id" of relation "audit_log" violates not-null constraint',
+  'audit records must belong to an event'
+);
 
 select * from finish();
 rollback;

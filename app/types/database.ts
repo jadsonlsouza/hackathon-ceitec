@@ -41,7 +41,7 @@ export type Database = {
           created_at: string
           entity_id: string
           entity_type: string
-          event_id: string | null
+          event_id: string
           id: number
           payload: Json
         }
@@ -51,7 +51,7 @@ export type Database = {
           created_at?: string
           entity_id: string
           entity_type: string
-          event_id?: string | null
+          event_id: string
           id?: never
           payload?: Json
         }
@@ -61,7 +61,7 @@ export type Database = {
           created_at?: string
           entity_id?: string
           entity_type?: string
-          event_id?: string | null
+          event_id?: string
           id?: never
           payload?: Json
         }
