@@ -1,5 +1,5 @@
 import { flushPromises, mount, type VueWrapper } from '@vue/test-utils'
-import { computed, defineComponent, h, nextTick, ref, Suspense } from 'vue'
+import { computed, defineComponent, h, nextTick, ref, Suspense, watch } from 'vue'
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 
 const EVENT_ID = '10000000-0000-4000-8000-000000000001'
@@ -51,12 +51,11 @@ describe('team page interactions', () => {
       from(table: string) {
         void table
         return {
-          select: () => ({
+      select: () => ({
             eq: () => ({
-              eq: () => ({
-                maybeSingle: testState.teamFetch,
-                order: testState.queueFetch,
-              }),
+              maybeSingle: testState.teamFetch,
+              order: testState.queueFetch,
+              eq: () => ({ order: testState.queueFetch }),
             }),
           }),
         }
@@ -66,6 +65,7 @@ describe('team page interactions', () => {
     vi.stubGlobal('definePageMeta', vi.fn())
     vi.stubGlobal('nextTick', nextTick)
     vi.stubGlobal('ref', ref)
+    vi.stubGlobal('watch', watch)
     vi.stubGlobal('useRoute', () => ({ params: { eventId: EVENT_ID } }))
     vi.stubGlobal('useNuxtApp', () => ({ $supabase: supabase }))
     vi.stubGlobal('useCurrentAccess', () => ({
@@ -165,6 +165,78 @@ describe('team page interactions', () => {
     await flushPromises()
 
     expect(testState.rpc).toHaveBeenCalledWith('decide_team_join', { member_id: 'member-1', approve: true })
+  })
+
+  it('shows a matching reserved invitation and requests entry once while processing', async () => {
+    profile.value = {
+      id: 'invitee-id', email: 'convidado@example.test', display_name: 'Convidado', global_role: 'student',
+      created_at: '2026-07-23T00:00:00.000Z', updated_at: '2026-07-23T00:00:00.000Z',
+    }
+    testState.teamFetch.mockResolvedValueOnce({
+      data: {
+        id: 'team-1', event_id: EVENT_ID, leader_id: USER_ID, name: 'Equipe Átomo', category: 'junior', status: 'pending',
+        created_at: '2026-07-23T00:00:00.000Z', decided_at: null, decided_by: null,
+        members: [
+          { id: 'leader-member', name: 'Líder', email: 'lider@example.test', enrollment: 'M-1', status: 'active', event_id: EVENT_ID, team_id: 'team-1', user_id: USER_ID, approved_by: USER_ID, created_at: '2026-07-23T00:00:00.000Z' },
+          { id: 'invitee-member', name: 'Convidado', email: 'convidado@example.test', enrollment: 'M-2', status: 'invited', event_id: EVENT_ID, team_id: 'team-1', user_id: null, approved_by: null, created_at: '2026-07-23T00:00:00.000Z' },
+        ],
+      }, error: null,
+    })
+    const pending = deferred<{ data: null, error: null }>()
+    testState.rpc.mockReturnValueOnce(pending.promise)
+    const wrapper = await mountPage(TeamPage)
+
+    expect(wrapper.text()).toContain('Convite reservado')
+    expect(wrapper.find('form').exists()).toBe(false)
+    await wrapper.get('[data-member-action="request-join"]').trigger('click')
+    await wrapper.get('[data-member-action="request-join"]').trigger('click')
+    await flushPromises()
+
+    expect(testState.rpc).toHaveBeenCalledOnce()
+    expect(testState.rpc).toHaveBeenCalledWith('request_team_join', { member_id: 'invitee-member' })
+    expect(wrapper.get('[data-member-action="request-join"]').attributes()).toHaveProperty('disabled')
+
+    pending.resolve({ data: null, error: null })
+    await flushPromises()
+    expect(wrapper.get('[role="status"]').text()).toContain('Solicitação de entrada enviada')
+    expect(testState.refresh).toHaveBeenCalled()
+  })
+
+  it('maps invitation failures without exposing the backend message', async () => {
+    profile.value = {
+      id: 'invitee-id', email: 'convidado@example.test', display_name: 'Convidado', global_role: 'student',
+      created_at: '2026-07-23T00:00:00.000Z', updated_at: '2026-07-23T00:00:00.000Z',
+    }
+    testState.teamFetch.mockResolvedValueOnce({
+      data: {
+        id: 'team-1', event_id: EVENT_ID, leader_id: USER_ID, name: 'Equipe Átomo', category: 'junior', status: 'pending',
+        created_at: '2026-07-23T00:00:00.000Z', decided_at: null, decided_by: null,
+        members: [{ id: 'invitee-member', name: 'Convidado', email: 'convidado@example.test', enrollment: 'M-2', status: 'invited', event_id: EVENT_ID, team_id: 'team-1', user_id: null, approved_by: null, created_at: '2026-07-23T00:00:00.000Z' }],
+      }, error: null,
+    })
+    testState.rpc.mockResolvedValueOnce({ data: null, error: { message: 'event_not_available' } })
+    const wrapper = await mountPage(TeamPage)
+    await wrapper.get('[data-member-action="request-join"]').trigger('click')
+    await flushPromises()
+
+    expect(wrapper.get('[role="alert"]').text()).toContain('não está mais disponível')
+    expect(wrapper.text()).not.toContain('event_not_available')
+  })
+
+  it('keeps the create form for a non-invitee and fills the leader row after late access hydration without overwriting edits', async () => {
+    profile.value = null as never
+    const wrapper = await mountPage(TeamPage)
+    expect(wrapper.find('form').exists()).toBe(true)
+    await wrapper.get('#member-0-name').setValue('Nome digitado')
+
+    profile.value = {
+      id: USER_ID, email: 'lider@example.test', display_name: 'Líder', global_role: 'student',
+      created_at: '2026-07-23T00:00:00.000Z', updated_at: '2026-07-23T00:00:00.000Z',
+    }
+    await nextTick()
+
+    expect(wrapper.get<HTMLInputElement>('#member-0-name').element.value).toBe('Nome digitado')
+    expect(wrapper.get<HTMLInputElement>('#member-0-email').element.value).toBe('lider@example.test')
   })
 
   it('guards the professor queue and requires confirmation before rejection', async () => {

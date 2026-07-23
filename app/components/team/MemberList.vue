@@ -6,11 +6,13 @@ type TeamMember = Database['public']['Tables']['team_members']['Row']
 defineProps<{
   members: TeamMember[]
   isLeader: boolean
+  inviteeMemberId: string | null
   processingId: string | null
 }>()
 
 const emit = defineEmits<{
   decide: [memberId: string, approve: boolean]
+  request: [memberId: string]
 }>()
 
 function statusLabel(status: TeamMember['status']) {
@@ -52,6 +54,16 @@ function statusLabel(status: TeamMember['status']) {
           @click="emit('decide', member.id, false)"
         >
           Recusar entrada
+        </button>
+      </div>
+      <div v-else-if="member.id === inviteeMemberId && member.status === 'invited'" class="member-actions">
+        <button
+          type="button"
+          data-member-action="request-join"
+          :disabled="processingId !== null"
+          @click="emit('request', member.id)"
+        >
+          Solicitar entrada
         </button>
       </div>
     </li>

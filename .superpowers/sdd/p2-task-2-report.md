@@ -20,3 +20,13 @@
 - `git diff --check` — passed.
 
 No database migration changed in this task, so no database regression command was required; the existing typed RPC contracts from Task 1 are consumed unchanged.
+
+## Reviewer follow-up
+
+- The student query now relies on the existing event-scoped RLS visibility rather than filtering on `leader_id`, so a matching reserved e-mail receives the same team record and invitation status.
+- Invitees can request entry once through the existing `request_team_join({ member_id })` RPC. The UI announces success/failure, disables rapid repeats, and revalidates the event-scoped key.
+- Added a shared sanitised error mapper for all known team workflow error codes. Both the student and Professor screens use it; deterministic states describe the corrective action rather than offering a generic retry.
+- The first member row now watches late profile hydration and fills only blank leader name/e-mail fields, preserving edits already made in the form.
+- Added mounted coverage for invite retrieval, exact RPC payload, success, failure, processing protection, non-invitee form rendering, and late-profile hydration; added unit coverage for backend error code mappings.
+
+Follow-up verification: `npx vitest run` passed 15 files / 62 tests; `npm run build` and `git diff --check` passed.

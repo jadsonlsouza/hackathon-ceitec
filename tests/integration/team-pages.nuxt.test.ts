@@ -33,7 +33,9 @@ describe('team pages', async () => {
 
     expect(teamPage).toContain('teamPageKey(eventId.value)')
     expect(teamPage).toContain("'create_team'")
+    expect(teamPage).toContain("'request_team_join'")
     expect(teamPage).toContain("'decide_team_join'")
+    expect(teamPage).not.toContain(".eq('leader_id'")
     expect(queuePage).toContain('pendingTeamsKey(eventId.value)')
     expect(queuePage).toContain('canManageEventRoleRequests')
     expect(queuePage).toContain("'decide_team'")

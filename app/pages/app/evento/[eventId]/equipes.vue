@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { Database } from '~/types/database'
 import { canManageEventRoleRequests } from '../../../../utils/role-request-workflow'
+import { teamRpcErrorMessage } from '../../../../utils/team-rpc-error'
 
 definePageMeta({ middleware: 'auth' })
 
@@ -49,17 +50,6 @@ function categoryLabel(category: Team['category']) {
   return category === 'junior' ? 'Júnior' : 'Sênior'
 }
 
-function decisionMessage(error: unknown) {
-  const text = error instanceof Error
-    ? error.message.toLowerCase()
-    : typeof error === 'object' && error && 'message' in error
-      ? String(error.message).toLowerCase()
-      : ''
-  if (text.includes('authentication_required')) return 'Sua sessão expirou. Entre novamente para continuar.'
-  if (text.includes('forbidden')) return 'Você não tem autorização para decidir equipes deste evento.'
-  return 'Não foi possível registrar a decisão. Tente novamente.'
-}
-
 async function decide(teamId: string, decision: 'approved' | 'rejected') {
   if (!isAuthorized.value || processingId.value) return
   if (decision === 'rejected' && !confirm('Deseja recusar esta equipe? Esta decisão será registrada.')) return
@@ -73,7 +63,10 @@ async function decide(teamId: string, decision: 'approved' | 'rejected') {
       decision,
     })
     if (rpcError) {
-      decisionError.value = decisionMessage(rpcError)
+      decisionError.value = teamRpcErrorMessage(
+        rpcError,
+        'Não foi possível registrar a decisão. Tente novamente.',
+      )
       return
     }
     successMessage.value = decision === 'approved'
@@ -82,7 +75,10 @@ async function decide(teamId: string, decision: 'approved' | 'rejected') {
     await refreshNuxtData(pendingTeamsKey(eventId.value))
   }
   catch (rpcError: unknown) {
-    decisionError.value = decisionMessage(rpcError)
+    decisionError.value = teamRpcErrorMessage(
+      rpcError,
+      'Não foi possível registrar a decisão. Tente novamente.',
+    )
   }
   finally {
     processingId.value = null

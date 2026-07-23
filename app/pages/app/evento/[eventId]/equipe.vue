@@ -2,6 +2,7 @@
 import { z } from 'zod'
 import type { Database } from '~/types/database'
 import MemberList from '../../../../components/team/MemberList.vue'
+import { teamRpcErrorMessage } from '../../../../utils/team-rpc-error'
 
 definePageMeta({ middleware: 'auth' })
 
@@ -39,6 +40,13 @@ const memberRows = ref<FormMember[]>(Array.from({ length: 6 }, (_, index) => ({
   enrollment: '',
 })))
 
+watch(profile, (currentProfile) => {
+  if (!currentProfile) return
+  const leader = memberRows.value[0]
+  if (!leader.name.trim()) leader.name = currentProfile.display_name
+  if (!leader.email.trim()) leader.email = currentProfile.email
+}, { immediate: true })
+
 function teamPageKey(targetEventId: string) {
   return `event-team:${targetEventId}`
 }
@@ -47,13 +55,10 @@ const teamKey = computed(() => teamPageKey(eventId.value))
 const { data: team, pending, error } = await useAsyncData(
   teamKey,
   async () => {
-    if (!profile.value) return null
-
     const { data, error: teamError } = await $supabase
       .from('teams')
       .select('*, members:team_members(*)')
       .eq('event_id', eventId.value)
-      .eq('leader_id', profile.value.id)
       .maybeSingle()
 
     if (teamError) throw teamError
@@ -67,28 +72,13 @@ const { data: team, pending, error } = await useAsyncData(
 )
 
 const isLeader = computed(() => team.value?.leader_id === profile.value?.id)
-
-function messageForRpcError(error: unknown) {
-  const text = error instanceof Error
-    ? error.message.toLowerCase()
-    : typeof error === 'object' && error && 'message' in error
-      ? String(error.message).toLowerCase()
-      : ''
-
-  if (text.includes('member_already_reserved') || text.includes('duplicate') || text.includes('unique')) {
-    return 'Este e-mail ou matrícula já está em uso neste evento.'
-  }
-  if (text.includes('team_size_out_of_range')) {
-    return 'Uma equipe deve ter de 1 a 6 integrantes.'
-  }
-  if (text.includes('authentication_required')) {
-    return 'Sua sessão expirou. Entre novamente para continuar.'
-  }
-  if (text.includes('forbidden') || text.includes('reserved_email_mismatch')) {
-    return 'Você não tem autorização para realizar esta ação.'
-  }
-  return 'Não foi possível concluir a operação. Tente novamente.'
-}
+const inviteeMemberId = computed(() => {
+  const email = profile.value?.email.trim().toLowerCase()
+  if (!email) return null
+  return team.value?.members.find(member => (
+    member.email.trim().toLowerCase() === email && member.status === 'invited'
+  ))?.id ?? null
+})
 
 function clearFieldError(field: string) {
   if (!fieldErrors.value[field]) return
@@ -158,14 +148,14 @@ async function createTeam() {
       members: input.members,
     })
     if (createError) {
-      pageError.value = messageForRpcError(createError)
+      pageError.value = teamRpcErrorMessage(createError)
       return
     }
     successMessage.value = 'Equipe criada e enviada para validação do Professor.'
     await refreshNuxtData(teamPageKey(eventId.value))
   }
   catch (error: unknown) {
-    pageError.value = messageForRpcError(error)
+    pageError.value = teamRpcErrorMessage(error)
   }
   finally {
     creating.value = false
@@ -184,7 +174,7 @@ async function decideJoin(memberId: string, approve: boolean) {
       approve,
     })
     if (decisionError) {
-      pageError.value = messageForRpcError(decisionError)
+      pageError.value = teamRpcErrorMessage(decisionError)
       return
     }
     successMessage.value = approve
@@ -193,7 +183,32 @@ async function decideJoin(memberId: string, approve: boolean) {
     await refreshNuxtData(teamPageKey(eventId.value))
   }
   catch (error: unknown) {
-    pageError.value = messageForRpcError(error)
+    pageError.value = teamRpcErrorMessage(error)
+  }
+  finally {
+    processingMemberId.value = null
+  }
+}
+
+async function requestJoin(memberId: string) {
+  if (processingMemberId.value) return
+
+  processingMemberId.value = memberId
+  pageError.value = null
+  successMessage.value = null
+  try {
+    const { error: requestError } = await $supabase.rpc('request_team_join', {
+      member_id: memberId,
+    })
+    if (requestError) {
+      pageError.value = teamRpcErrorMessage(requestError)
+      return
+    }
+    successMessage.value = 'Solicitação de entrada enviada ao líder da equipe.'
+    await refreshNuxtData(teamPageKey(eventId.value))
+  }
+  catch (error: unknown) {
+    pageError.value = teamRpcErrorMessage(error)
   }
   finally {
     processingMemberId.value = null
@@ -221,8 +236,10 @@ async function decideJoin(memberId: string, approve: boolean) {
       <MemberList
         :members="team.members"
         :is-leader="isLeader"
+        :invitee-member-id="inviteeMemberId"
         :processing-id="processingMemberId"
         @decide="decideJoin"
+        @request="requestJoin"
       />
     </section>
 
