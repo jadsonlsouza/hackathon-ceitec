@@ -3,7 +3,7 @@ begin;
 create extension if not exists pgtap with schema extensions;
 set local search_path = extensions, public;
 
-select plan(58);
+select plan(69);
 
 select has_table('public', 'canvas_templates', 'Canvas templates exist');
 select has_table('public', 'canvas_template_blocks', 'template blocks exist');
@@ -233,6 +233,89 @@ values
     now() - interval '1 hour', now() + interval '1 hour', false, false,
     '00000000-0000-4000-8000-000000000103');
 
+select throws_ok(
+  $$
+    insert into public.canvas_activities (
+      event_id, title, instructions, categories, opens_at, due_at,
+      published, is_primary, created_by
+    )
+    values (
+      '10000000-0000-4000-8000-000000000101',
+      'Overlapping Primary Canvas',
+      '',
+      array['junior', 'senior']::public.team_category[],
+      now() - interval '1 hour',
+      now() + interval '1 hour',
+      true,
+      true,
+      '00000000-0000-4000-8000-000000000103'
+    )
+  $$,
+  'P0001',
+  'primary_activity_category_conflict',
+  'primary activities cannot overlap an existing event category'
+);
+
+select lives_ok(
+  $$
+    insert into public.canvas_activities (
+      event_id, title, instructions, categories, opens_at, due_at,
+      published, is_primary, created_by
+    )
+    values (
+      '10000000-0000-4000-8000-000000000101',
+      'Senior Primary Canvas',
+      '',
+      array['senior']::public.team_category[],
+      now() - interval '1 hour',
+      now() + interval '1 hour',
+      true,
+      true,
+      '00000000-0000-4000-8000-000000000103'
+    )
+  $$,
+  'different categories may each have one primary activity'
+);
+
+insert into public.canvas_activities (
+  event_id, title, instructions, categories, opens_at, due_at,
+  published, is_primary, created_by
+)
+values (
+  '10000000-0000-4000-8000-000000000102',
+  'Other Event Primary Canvas',
+  '',
+  array['junior', 'senior']::public.team_category[],
+  now() - interval '1 hour',
+  now() + interval '1 hour',
+  true,
+  true,
+  '00000000-0000-4000-8000-000000000106'
+);
+
+select throws_ok(
+  $$
+    insert into public.canvas_activities (
+      event_id, title, instructions, categories, opens_at, due_at,
+      published, is_primary, created_by
+    )
+    values (
+      '10000000-0000-4000-8000-000000000102',
+      'Reordered Other Primary Canvas',
+      '',
+      array['senior', 'junior']::public.team_category[],
+      now() - interval '1 hour',
+      now() + interval '1 hour',
+      true,
+      true,
+      '00000000-0000-4000-8000-000000000106'
+    )
+  $$,
+  'P0001',
+  'primary_activity_category_conflict',
+  'reordering categories cannot bypass primary uniqueness'
+);
+
 select is(
   (
     select count(*)::integer from public.canvas_blocks
@@ -280,6 +363,18 @@ values
     '10000000-0000-4000-8000-000000000101',
     '40000000-0000-4000-8000-000000000104',
     '20000000-0000-4000-8000-000000000101');
+
+insert into public.submission_answers (
+  submission_id, block_id, content, updated_by
+)
+select
+  '50000000-0000-4000-8000-000000000103',
+  block.id,
+  '{"items":["Private draft answer"]}'::jsonb,
+  '00000000-0000-4000-8000-000000000101'
+from public.canvas_blocks as block
+where block.activity_id = '40000000-0000-4000-8000-000000000102'
+  and block.key = 'problem';
 
 set local role authenticated;
 select set_config('request.jwt.claim.sub',
@@ -405,6 +500,31 @@ select is(
 );
 reset role;
 
+delete from public.event_roles
+where event_id = '10000000-0000-4000-8000-000000000101'
+  and user_id = '00000000-0000-4000-8000-000000000104'
+  and role = 'monitor';
+
+set local role authenticated;
+select set_config('request.jwt.claim.sub',
+  '00000000-0000-4000-8000-000000000104', true);
+select throws_ok(
+  $$select public.decide_submission(
+    '50000000-0000-4000-8000-000000000101',
+    'approved', null)$$,
+  'P0001', 'forbidden',
+  'a Monitor whose role was revoked cannot decide an active claim'
+);
+reset role;
+
+insert into public.event_roles (event_id, user_id, role, approved_by)
+values (
+  '10000000-0000-4000-8000-000000000101',
+  '00000000-0000-4000-8000-000000000104',
+  'monitor',
+  '00000000-0000-4000-8000-000000000103'
+);
+
 set local role authenticated;
 select set_config('request.jwt.claim.sub',
   '00000000-0000-4000-8000-000000000103', true);
@@ -429,6 +549,51 @@ select is(
   '00000000-0000-4000-8000-000000000103'::uuid,
   'an expired claim can be replaced'
 );
+reset role;
+
+update public.events
+set professor_id = '00000000-0000-4000-8000-000000000106'
+where id = '10000000-0000-4000-8000-000000000101';
+
+set local role authenticated;
+select set_config('request.jwt.claim.sub',
+  '00000000-0000-4000-8000-000000000103', true);
+select throws_ok(
+  $$select public.decide_submission(
+    '50000000-0000-4000-8000-000000000101',
+    'approved', null)$$,
+  'P0001', 'forbidden',
+  'a replaced Professor cannot decide an active claim'
+);
+reset role;
+
+update public.events
+set professor_id = '00000000-0000-4000-8000-000000000103'
+where id = '10000000-0000-4000-8000-000000000101';
+
+update public.submissions
+set claimed_at = now() - interval '16 minutes'
+where id = '50000000-0000-4000-8000-000000000101';
+
+set local role authenticated;
+select set_config('request.jwt.claim.sub',
+  '00000000-0000-4000-8000-000000000103', true);
+select throws_ok(
+  $$select public.decide_submission(
+    '50000000-0000-4000-8000-000000000101',
+    'approved', null)$$,
+  'P0001', 'review_claim_expired',
+  'an expired claimant cannot decide the submission'
+);
+reset role;
+
+update public.submissions
+set claimed_at = now()
+where id = '50000000-0000-4000-8000-000000000101';
+
+set local role authenticated;
+select set_config('request.jwt.claim.sub',
+  '00000000-0000-4000-8000-000000000103', true);
 select is(
   (select (public.decide_submission(
     '50000000-0000-4000-8000-000000000101',
@@ -585,6 +750,24 @@ select is(
 select is(
   (
     select count(*)::integer from public.submissions
+    where id = '50000000-0000-4000-8000-000000000103'
+      and status = 'draft'
+  ),
+  1,
+  'a team member can read their own draft'
+);
+select is(
+  (
+    select count(*)::integer
+    from public.submission_answers
+    where submission_id = '50000000-0000-4000-8000-000000000103'
+  ),
+  1,
+  'a team member can read answers from their own draft'
+);
+select is(
+  (
+    select count(*)::integer from public.submissions
     where id = '50000000-0000-4000-8000-000000000102'
   ),
   0,
@@ -606,8 +789,17 @@ select is(
     select count(*)::integer from public.submissions
     where event_id = '10000000-0000-4000-8000-000000000101'
   ),
-  5,
-  'an event Monitor can read submissions for review'
+  1,
+  'an event Monitor can read only submitted or historical submissions'
+);
+select is(
+  (
+    select count(*)::integer
+    from public.submission_answers
+    where submission_id = '50000000-0000-4000-8000-000000000103'
+  ),
+  0,
+  'an event Monitor cannot read draft answers'
 );
 select throws_ok(
   $$insert into public.canvas_templates (
@@ -624,6 +816,24 @@ reset role;
 set local role authenticated;
 select set_config('request.jwt.claim.sub',
   '00000000-0000-4000-8000-000000000103', true);
+select is(
+  (
+    select count(*)::integer from public.submissions
+    where status = 'draft'
+      and event_id = '10000000-0000-4000-8000-000000000101'
+  ),
+  0,
+  'an event Professor cannot read team drafts'
+);
+select is(
+  (
+    select count(*)::integer
+    from public.submission_answers
+    where submission_id = '50000000-0000-4000-8000-000000000103'
+  ),
+  0,
+  'an event Professor cannot read draft answers'
+);
 select lives_ok(
   $$insert into public.canvas_templates (
       event_id, name, instructions

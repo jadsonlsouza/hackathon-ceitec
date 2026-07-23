@@ -7,6 +7,14 @@
 - RED (database): `npx supabase test db tests/integration/canvas.sql` failed
   on 2026-07-23 with the eight Canvas tables and five RPCs absent; pgTAP
   reached the expected missing-schema failure before fixture setup.
+- RED (review hardening): after review, the expanded pgTAP suite reproduced
+  exact-array primary uniqueness accepting overlapping/reordered category sets
+  and a revoked Monitor deciding an active claim. The unauthorized decision
+  advanced the fixture state, proving the missing current-role revalidation.
+  With the state-machine fixes held constant and only the old reviewer policies
+  restored, four dedicated assertions also failed: Monitor and Professor could
+  each read draft submissions and draft answers. Restoring the scoped policies
+  returned all 69 assertions to GREEN.
 
 ## Migration ordering adaptation
 
@@ -20,8 +28,8 @@ correct order.
 
 - `npx supabase db reset`: PASS; all five migrations applied in order,
   including `20260723192206_canvas.sql`.
-- `npx supabase test db tests/integration/canvas.sql`: PASS, 58 assertions.
-- `npx supabase test db tests/integration`: PASS, 237 assertions across five
+- `npx supabase test db tests/integration/canvas.sql`: PASS, 69 assertions.
+- `npx supabase test db tests/integration`: PASS, 250 assertions across five
   pgTAP files.
 - `npx vitest run tests/unit/submission.test.ts`: PASS, 6 tests.
 - `npx vitest run`: PASS, 68 tests across 16 files.
@@ -40,7 +48,13 @@ correct order.
   claim, reviewer, version, and audit fields are writable only through the
   authenticated workflow RPCs.
 - Review claims lock the submission row, expire after 15 minutes, and can be
-  replaced only after expiry.
+  replaced only after expiry. Decisions revalidate the claimant's current,
+  event-scoped Professor/Monitor authority under the same row lock.
+- Professor and Monitor policies exclude team drafts and their answers while
+  preserving submitted, in-review, returned, resubmitted, and approved history.
+- Primary activities reserve `(event_id, category)` rows transactionally, so
+  overlapping multi-category arrays and reordered arrays cannot bypass
+  uniqueness.
 - Approval and return feedback remain nullable. Reopen normalizes and requires
   a nonblank reason.
 - Event membership, review roles, Professor authority, category, archive,

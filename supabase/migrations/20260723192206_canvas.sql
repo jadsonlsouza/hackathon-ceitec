@@ -82,9 +82,65 @@ create index canvas_activities_created_by_idx
 create index canvas_activities_visible_idx
   on public.canvas_activities (event_id, opens_at, due_at)
   where published;
-create unique index one_primary_canvas_activity_per_event_category_set
-  on public.canvas_activities (event_id, categories)
-  where is_primary;
+
+create table private.canvas_primary_categories (
+  event_id uuid not null,
+  category public.team_category not null,
+  activity_id uuid not null,
+  primary key (event_id, category),
+  constraint canvas_primary_categories_activity_category_key
+    unique (activity_id, category),
+  constraint canvas_primary_categories_activity_event_fkey
+    foreign key (activity_id, event_id)
+    references public.canvas_activities(id, event_id)
+    on delete cascade
+);
+
+revoke all on table private.canvas_primary_categories
+from public, anon, authenticated, service_role;
+
+create function private.sync_canvas_primary_categories()
+returns trigger
+language plpgsql
+security definer
+set search_path = ''
+as $$
+begin
+  if tg_op in ('UPDATE', 'DELETE') then
+    delete from private.canvas_primary_categories as reservation
+    where reservation.activity_id = old.id;
+  end if;
+
+  if tg_op in ('INSERT', 'UPDATE') and new.is_primary then
+    begin
+      insert into private.canvas_primary_categories (
+        event_id, category, activity_id
+      )
+      select distinct
+        new.event_id,
+        category.value,
+        new.id
+      from unnest(new.categories) as category(value);
+    exception
+      when unique_violation then
+        raise exception using
+          errcode = 'P0001',
+          message = 'primary_activity_category_conflict';
+    end;
+  end if;
+
+  if tg_op = 'DELETE' then
+    return old;
+  end if;
+
+  return new;
+end;
+$$;
+
+create trigger sync_canvas_primary_categories
+after insert or update of event_id, categories, is_primary
+or delete on public.canvas_activities
+for each row execute function private.sync_canvas_primary_categories();
 
 create table public.canvas_blocks (
   id uuid primary key default gen_random_uuid(),
@@ -511,10 +567,13 @@ using (
       and access.event_id = submissions.event_id
       and access.user_id = (select auth.uid())
   )
-  or exists (
+  or (
+    status <> 'draft'
+    and exists (
     select 1 from private.current_canvas_review_access as access
     where access.event_id = submissions.event_id
       and access.user_id = (select auth.uid())
+    )
   )
 );
 
@@ -548,8 +607,22 @@ create policy "answers visible to teams and reviewers"
 on public.submission_answers for select to authenticated
 using (
   exists (
-    select 1 from public.submissions as submission
+    select 1
+    from public.submissions as submission
+    join private.current_canvas_team_access as access
+      on access.team_id = submission.team_id
+      and access.event_id = submission.event_id
+      and access.user_id = (select auth.uid())
     where submission.id = submission_answers.submission_id
+  )
+  or exists (
+    select 1
+    from public.submissions as submission
+    join private.current_canvas_review_access as access
+      on access.event_id = submission.event_id
+      and access.user_id = (select auth.uid())
+    where submission.id = submission_answers.submission_id
+      and submission.status <> 'draft'
   )
 );
 
@@ -976,6 +1049,21 @@ begin
   ) then
     raise exception using errcode = 'P0001', message = 'event_not_available';
   end if;
+  if not (
+    exists (
+      select 1 from public.events as event
+      where event.id = target.event_id
+        and event.professor_id = caller_id
+    )
+    or exists (
+      select 1 from public.event_roles as role_assignment
+      where role_assignment.event_id = target.event_id
+        and role_assignment.user_id = caller_id
+        and role_assignment.role = 'monitor'
+    )
+  ) then
+    raise exception using errcode = 'P0001', message = 'forbidden';
+  end if;
   if target.status <> 'in_review'
     or target.claimed_by is distinct from caller_id
   then
@@ -1259,6 +1347,7 @@ $$;
 
 revoke all on function
   private.set_canvas_creator(),
+  private.sync_canvas_primary_categories(),
   private.copy_canvas_template_blocks(),
   private.assert_canvas_answer_scope(),
   private.save_canvas_answer_impl(uuid, uuid, jsonb, integer),
