@@ -210,7 +210,9 @@ describe('event administration interactions', () => {
       archivedEventId: string
       newEventId: string
     }>()
+    const pendingRefresh = deferred<void>()
     testState.archiveFetch.mockReturnValueOnce(pendingArchive.promise)
+    testState.refresh.mockReturnValueOnce(pendingRefresh.promise)
     const wrapper = await mountPage()
     const dialog = await openReadyArchiveDialog(wrapper)
 
@@ -241,7 +243,34 @@ describe('event administration interactions', () => {
     expect(dialog.attributes()).not.toHaveProperty('open')
     expect(wrapper.get<HTMLInputElement>('#archive-secret').element.value)
       .toBe('')
+
+    pendingRefresh.resolve()
+    await flushPromises()
   })
+
+  it.each(['Cancel', 'Escape', 'backdrop'] as const)(
+    'clears the secret when %s dismisses before a request',
+    async (dismissal) => {
+      const wrapper = await mountPage()
+      const dialog = await openReadyArchiveDialog(wrapper)
+
+      if (dismissal === 'Cancel') {
+        await wrapper.get('.dialog-actions .secondary-button').trigger('click')
+      }
+      else if (dismissal === 'Escape') {
+        dialog.element.dispatchEvent(new Event('cancel', { cancelable: true }))
+        await nextTick()
+      }
+      else {
+        await dialog.trigger('click')
+      }
+
+      expect(dialog.attributes()).not.toHaveProperty('open')
+      expect(wrapper.get<HTMLInputElement>('#archive-secret').element.value)
+        .toBe('')
+      expect(testState.archiveFetch).not.toHaveBeenCalled()
+    },
+  )
 
   it('keeps the dialog open, clears the secret, and announces archive errors inside it', async () => {
     testState.archiveFetch.mockRejectedValueOnce(new Error('archive failed'))

@@ -160,6 +160,7 @@ async function archiveEvent() {
       },
     })
 
+    archiveSecret.value = ''
     archiveMessage.value =
       'Evento arquivado e novo rascunho principal criado.'
     archiveDialog.value?.close()

@@ -177,3 +177,61 @@ The component gate mounts the real administration page with Vue Test Utils in
 `happy-dom`; it verifies whitespace validation and focus, accessible errors,
 all in-flight user dismissal paths, and secret clearing on both success and
 failure. Source-text scanning was removed from the endpoint unit suite.
+
+## Final focused P1 follow-up
+
+### RED
+
+```text
+npx supabase test db tests/integration/event-lifecycle.sql
+Failed test 17: the database rejects tab-only event names
+Failed test 18: the database rejects newline-only event names
+
+npx vitest run tests/component/event-admin-ui.test.ts --config vitest.config.ts
+Test Files  1 failed (1)
+Tests       1 failed | 5 passed (6)
+Failure: the archive secret remained populated while refreshNuxtData was pending
+```
+
+The pre-request Cancel, Escape, and backdrop cases passed in the RED cycle,
+confirming and preserving the existing cleanup behavior through mounted
+interactions.
+
+### GREEN
+
+```text
+npx supabase db reset --local
+Applied migration 20260723172343_event_lifecycle.sql
+Finished supabase db reset
+
+npx supabase test db tests/integration/event-lifecycle.sql
+Files=1, Tests=39
+Result: PASS
+
+npx vitest run tests/component/event-admin-ui.test.ts --config vitest.config.ts
+Test Files  1 passed (1)
+Tests       6 passed (6)
+
+npx supabase test db tests/integration/*.sql
+Files=3, Tests=114
+Result: PASS
+
+npx supabase db lint --local --schema public,private --fail-on warning
+No schema errors found
+
+npx supabase db advisors --local --type all --level warn --fail-on warn
+No issues found
+
+npx vitest run --config vitest.config.ts
+Test Files  11 passed (11)
+Tests       39 passed (39)
+
+npm run build
+Nuxt 4.5.0 production client and Nitro server build complete
+```
+
+The database constraint now rejects names matching only PostgreSQL's POSIX
+`[[:space:]]` class, including tabs and newlines, while ordinary event names
+continue through the lifecycle tests. On successful archival, the browser
+clears the secret immediately after the request settles and before refreshing
+event data; `finally` remains as defense-in-depth for every error path.

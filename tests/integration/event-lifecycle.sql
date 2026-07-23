@@ -3,7 +3,7 @@ begin;
 create extension if not exists pgtap with schema extensions;
 set local search_path = extensions, public;
 
-select plan(37);
+select plan(39);
 
 select has_function(
   'public',
@@ -164,6 +164,34 @@ select throws_ok(
   '23514',
   null,
   'the database rejects whitespace-only event names'
+);
+
+select throws_ok(
+  $$
+    insert into public.events (name, slug, created_by)
+    values (
+      E'\t\t',
+      'tab-only-event-name',
+      '00000000-0000-4000-8000-000000000001'
+    )
+  $$,
+  '23514',
+  null,
+  'the database rejects tab-only event names'
+);
+
+select throws_ok(
+  $$
+    insert into public.events (name, slug, created_by)
+    values (
+      E'\n\r\n',
+      'newline-only-event-name',
+      '00000000-0000-4000-8000-000000000001'
+    )
+  $$,
+  '23514',
+  null,
+  'the database rejects newline-only event names'
 );
 
 set local role service_role;
