@@ -22,7 +22,6 @@ interface Team {
   id: string
   name: string
   category: Category
-  canvas_summary: unknown
 }
 
 interface Slot {
@@ -90,7 +89,7 @@ const { data: source, pending, error } = await useAsyncData(
         .eq('evaluator_id', profile.value.id),
       supabase
         .from('teams')
-        .select('id,name,category,canvas_summary')
+        .select('id,name,category')
         .eq('event_id', eventId.value)
         .eq('status', 'approved'),
       supabase
@@ -199,22 +198,7 @@ const queueNavigation = computed(() => {
   }
 })
 
-const summaryText = computed(() => {
-  const values: string[] = []
-  function collect(value: unknown) {
-    if (typeof value === 'string' && value.trim()) {
-      values.push(value.trim())
-    }
-    else if (Array.isArray(value)) {
-      value.forEach(collect)
-    }
-    else if (value && typeof value === 'object') {
-      Object.values(value).forEach(collect)
-    }
-  }
-  collect(presentation.value?.team.canvas_summary)
-  return values.join(' · ')
-})
+
 
 function categoryLabel(category: Category) {
   return category === 'junior' ? 'Júnior' : 'Sênior'
@@ -341,8 +325,6 @@ async function submitEvaluation() {
         <p v-if="presentation.submitted" class="form-success" role="status">
           Avaliação já enviada. Um novo envio substituirá suas notas anteriores.
         </p>
-        <h3>Resumo do Canvas aprovado</h3>
-        <p>{{ summaryText || 'A equipe não possui resumo aprovado disponível.' }}</p>
       </section>
 
       <p v-if="formError" class="form-error" role="alert">
