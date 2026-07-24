@@ -6,27 +6,23 @@ definePageMeta({ middleware: 'auth' })
 
 type Category = 'junior' | 'senior'
 
-interface FrozenCriterion {
-  criterion_id: string
+interface Criterion {
+  id: string
   name: string
   description: string
   position: number
+}
+
+interface Weight {
+  criterion_id: string
   weight: number
 }
 
-interface FrozenTeam {
-  team_id: string
+interface Team {
+  id: string
   name: string
   category: Category
   canvas_summary: unknown
-}
-
-interface Freeze {
-  event_id: string
-  category: Category
-  criteria_snapshot: FrozenCriterion[]
-  evaluator_snapshot: Array<{ evaluator_id: string, display_name: string }>
-  team_snapshot: FrozenTeam[]
 }
 
 interface Slot {
@@ -78,22 +74,25 @@ const { data: source, pending, error } = await useAsyncData(
     if (!isEvaluator.value || !profile.value) {
       return {
         assignments: [] as Array<{ category: Category }>,
-        freezes: [] as Freeze[],
+        teams: [] as Team[],
         slots: [] as Slot[],
         evaluations: [] as Evaluation[],
+        criteria: [] as Criterion[],
+        weights: [] as Weight[],
       }
     }
 
-    const [assignments, freezes, slots, evaluations] = await Promise.all([
+    const [assignments, teams, slots, evaluations, criteria, weights] = await Promise.all([
       supabase
         .from('evaluator_assignments')
         .select('event_id,evaluator_id,category')
         .eq('event_id', eventId.value)
         .eq('evaluator_id', profile.value.id),
       supabase
-        .from('evaluation_freezes')
-        .select('event_id,category,criteria_snapshot,evaluator_snapshot,team_snapshot')
-        .eq('event_id', eventId.value),
+        .from('teams')
+        .select('id,name,category,canvas_summary')
+        .eq('event_id', eventId.value)
+        .eq('status', 'approved'),
       supabase
         .from('presentation_slots')
         .select('event_id,category,team_id,position')
@@ -104,21 +103,34 @@ const { data: source, pending, error } = await useAsyncData(
         .select('event_id,category,team_id,evaluator_id,submitted_at')
         .eq('event_id', eventId.value)
         .eq('evaluator_id', profile.value.id),
+      supabase
+        .from('evaluation_criteria')
+        .select('id,name,description,position')
+        .eq('event_id', eventId.value)
+        .eq('active', true),
+      supabase
+        .from('criterion_weights')
+        .select('criterion_id,category,weight')
+        .eq('event_id', eventId.value),
     ])
 
     const failure = [
       assignments.error,
-      freezes.error,
+      teams.error,
       slots.error,
       evaluations.error,
+      criteria.error,
+      weights.error,
     ].find(Boolean)
     if (failure) throw failure
 
     return {
       assignments: (assignments.data ?? []) as Array<{ category: Category }>,
-      freezes: (freezes.data ?? []) as Freeze[],
+      teams: (teams.data ?? []) as Team[],
       slots: (slots.data ?? []) as Slot[],
       evaluations: (evaluations.data ?? []) as Evaluation[],
+      criteria: (criteria.data ?? []) as Criterion[],
+      weights: (weights.data ?? []) as Weight[],
     }
   },
   {
@@ -126,9 +138,11 @@ const { data: source, pending, error } = await useAsyncData(
     watch: [eventId, teamId, eventRoles, profile],
     default: () => ({
       assignments: [] as Array<{ category: Category }>,
-      freezes: [] as Freeze[],
+      teams: [] as Team[],
       slots: [] as Slot[],
       evaluations: [] as Evaluation[],
+      criteria: [] as Criterion[],
+      weights: [] as Weight[],
     }),
   },
 )
@@ -141,25 +155,47 @@ const presentation = computed(() => {
     return null
   }
 
-  const frozen = source.value.freezes.find(item => (
-    item.category === slot.category
-    && item.evaluator_snapshot.some(
-      evaluator => evaluator.evaluator_id === evaluatorId,
-    )
-  ))
-  const team = frozen?.team_snapshot.find(item => item.team_id === teamId.value)
-  if (!frozen || !team) return null
+  const team = source.value.teams.find(item => item.id === teamId.value)
+  if (!team) return null
+
+  const categoryWeights = new Set(
+    source.value.weights
+      .filter(w => w.category === team.category)
+      .map(w => w.criterion_id),
+  )
+
+  const activeCriteria = source.value.criteria
+    .filter(c => categoryWeights.has(c.id))
+    .sort((left, right) => left.position - right.position)
+    .map(c => ({
+      criterion_id: c.id,
+      name: c.name,
+      description: c.description,
+      position: c.position,
+    }))
 
   return {
     slot,
-    frozen,
     team,
-    criteria: [...frozen.criteria_snapshot].sort(
-      (left, right) => left.position - right.position,
-    ),
+    criteria: activeCriteria,
     submitted: source.value.evaluations.some(
       evaluation => evaluation.team_id === teamId.value,
     ),
+  }
+})
+
+const queueNavigation = computed(() => {
+  if (!presentation.value) return { prev: null, next: null }
+  
+  const categorySlots = source.value.slots
+    .filter(s => s.category === presentation.value!.slot.category)
+    .sort((a, b) => a.position - b.position)
+    
+  const currentIndex = categorySlots.findIndex(s => s.team_id === teamId.value)
+  
+  return {
+    prev: currentIndex > 0 ? categorySlots[currentIndex - 1] : null,
+    next: currentIndex >= 0 && currentIndex < categorySlots.length - 1 ? categorySlots[currentIndex + 1] : null,
   }
 })
 
@@ -193,7 +229,7 @@ async function submitEvaluation() {
   if (!isEvaluator.value || submitting.value || !presentation.value) return
   const payloadScores = presentation.value.criteria.map(criterion => ({
     criterion_id: criterion.criterion_id,
-    score: scores.value[criterion.criterion_id],
+    score: scores.value[criterion.criterion_id] || 0,
   }))
   if (payloadScores.some(score => !score.score)) {
     formError.value = 'Informe uma nota para todos os critérios.'
@@ -222,27 +258,11 @@ async function submitEvaluation() {
       return
     }
 
-    const completed = new Set(
-      source.value.evaluations.map(evaluation => evaluation.team_id),
-    )
-    completed.add(teamId.value)
-    const frozenTeamIds = new Set(
-      presentation.value.frozen.team_snapshot.map(team => team.team_id),
-    )
-    const next = source.value.slots
-      .filter(slot => (
-        slot.category === presentation.value?.slot.category
-        && frozenTeamIds.has(slot.team_id)
-        && slot.position > (presentation.value?.slot.position ?? 0)
-        && !completed.has(slot.team_id)
-      ))
-      .sort((left, right) => left.position - right.position)[0]
-
-    await navigateTo(
-      next
-        ? `/app/evento/${eventId.value}/avaliacao/${next.team_id}`
-        : `/app/evento/${eventId.value}/avaliacao`,
-    )
+    if (queueNavigation.value.next) {
+      await navigateTo(`/app/evento/${eventId.value}/avaliacao/${queueNavigation.value.next.team_id}`)
+    } else {
+      await navigateTo(`/app/evento/${eventId.value}/avaliacao`)
+    }
   }
   catch (submitError: unknown) {
     formError.value = evaluationRpcErrorMessage(
@@ -262,9 +282,37 @@ async function submitEvaluation() {
       <p class="eyebrow">Avaliador</p>
       <h1>Avaliar apresentação</h1>
       <p class="intro">
-        As notas usam os critérios e pesos congelados pelo Professor.
+        Dê suas notas com base nos critérios estabelecidos.
       </p>
     </header>
+
+    <div class="evaluation-navigation-actions" style="margin-bottom: 2rem; display: flex; gap: 1rem;">
+      <NuxtLink
+        :to="`/app/evento/${eventId}/avaliacao`"
+        class="nav-button list-button"
+        style="padding: 0.5rem 1rem; border: 1px solid currentColor; border-radius: 4px; text-decoration: none;"
+      >
+        Ver lista de equipes
+      </NuxtLink>
+      <div style="margin-left: auto; display: flex; gap: 0.5rem;">
+        <NuxtLink
+          v-if="queueNavigation.prev"
+          :to="`/app/evento/${eventId}/avaliacao/${queueNavigation.prev.team_id}`"
+          class="nav-button prev-button"
+          style="padding: 0.5rem 1rem; border: 1px solid currentColor; border-radius: 4px; text-decoration: none;"
+        >
+          Anterior
+        </NuxtLink>
+        <NuxtLink
+          v-if="queueNavigation.next"
+          :to="`/app/evento/${eventId}/avaliacao/${queueNavigation.next.team_id}`"
+          class="nav-button next-button"
+          style="padding: 0.5rem 1rem; border: 1px solid currentColor; border-radius: 4px; text-decoration: none;"
+        >
+          Próximo
+        </NuxtLink>
+      </div>
+    </div>
 
     <p v-if="accessPending || (isEvaluator && pending)" class="request-status">
       Carregando apresentação…
@@ -280,7 +328,7 @@ async function submitEvaluation() {
       É necessário possuir um perfil de Avaliador ativo neste evento.
     </p>
     <p v-else-if="!presentation" class="form-error" role="alert">
-      Esta equipe não pertence à sua ordem de avaliação congelada.
+      Esta equipe não pertence à sua ordem de avaliação ou não possui uma posição definida.
     </p>
 
     <template v-else>
@@ -320,7 +368,7 @@ async function submitEvaluation() {
           maxlength="4000"
         />
         <button type="submit" :disabled="submitting">
-          {{ submitting ? 'Salvando…' : 'Salvar avaliação' }}
+          {{ submitting ? 'Salvando…' : 'Salvar avaliação e ir para o próximo' }}
         </button>
       </form>
     </template>

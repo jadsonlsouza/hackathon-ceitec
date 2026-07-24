@@ -33,10 +33,13 @@ interface ExistingActivity {
 const route = useRoute()
 const eventId = computed(() => String(route.params.eventId))
 const { $supabase } = useNuxtApp()
-const { eventRoles, pending: accessPending, error: accessError } = useCurrentAccess()
-const isProfessor = computed(() => eventRoles.value.some(role => (
-  role.event_id === eventId.value && role.role === 'professor'
-)))
+const { profile, eventRoles, pending: accessPending, error: accessError } = useCurrentAccess()
+const isProfessor = computed(() => 
+  profile.value?.global_role === 'global_admin' ||
+  eventRoles.value.some(role => (
+    role.event_id === eventId.value && role.role === 'professor'
+  ))
+)
 const saving = ref(false)
 const formError = ref<string | null>(null)
 const successMessage = ref<string | null>(null)

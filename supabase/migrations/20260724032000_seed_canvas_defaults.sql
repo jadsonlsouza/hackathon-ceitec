@@ -1,4 +1,4 @@
-create function private.seed_event_canvas_defaults(target_event uuid)
+create or replace function private.seed_event_canvas_defaults(target_event uuid)
 returns void
 language plpgsql
 security definer
@@ -31,7 +31,7 @@ begin
     target_event,
     'Canvas Hackathon',
     'Preencha as informações do seu projeto. Seja claro e objetivo. As respostas serão visíveis para os avaliadores.',
-    array['junior'::public.team_category, 'senior'::public.team_category],
+    '{junior, senior}',
     now(),
     now() + interval '10 years',
     true,
@@ -70,7 +70,7 @@ $$;
 revoke all on function private.seed_event_canvas_defaults(uuid)
 from public, anon, authenticated, service_role;
 
-create function private.seed_new_event_canvas_defaults()
+create or replace function private.seed_new_event_canvas_defaults()
 returns trigger
 language plpgsql
 security definer

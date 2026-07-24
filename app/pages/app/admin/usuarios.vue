@@ -41,7 +41,7 @@ const { data: users, pending, error, refresh } = await useAsyncData(
         display_name,
         email,
         global_role,
-        event_roles!event_roles_user_id_fkey (
+        event_roles!event_roles_profile_id_fkey (
           event_id,
           role,
           event:events!event_roles_event_id_fkey(name)
@@ -149,7 +149,7 @@ async function saveRole(userId: string) {
       Carregando usuários…
     </p>
     <p v-else-if="accessError || (isAuthorized && error)" class="form-error" role="alert">
-      Não foi possível carregar os usuários.
+      Não foi possível carregar os usuários: {{ error?.message || error }}
     </p>
     <p v-else-if="!isAuthorized" class="form-error" role="alert">
       Você não tem autorização para gerenciar usuários.

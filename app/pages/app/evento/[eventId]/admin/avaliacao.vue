@@ -76,9 +76,12 @@ const processingAction = ref<string | null>(null)
 const actionError = ref<string | null>(null)
 const successMessage = ref<string | null>(null)
 
-const isProfessor = computed(() => eventRoles.value.some(role => (
-  role.event_id === eventId.value && role.role === 'professor'
-)))
+const isProfessor = computed(() => 
+  profile.value?.global_role === 'global_admin' ||
+  eventRoles.value.some(role => (
+    role.event_id === eventId.value && role.role === 'professor'
+  ))
+)
 
 function evaluationAdminKey(targetEventId: string) {
   return `evaluation-admin:${targetEventId}`
@@ -506,7 +509,7 @@ async function freeze(category: Category) {
           />
           <button
             type="submit"
-            :disabled="processingAction !== null || source.freezes.length > 0"
+            :disabled="processingAction !== null"
           >
             Adicionar critério
           </button>
@@ -527,7 +530,7 @@ async function freeze(category: Category) {
               <input
                 :id="`criterion-edit-name-${criterion.id}`"
                 v-model="criterionDrafts[criterion.id].name"
-                :disabled="source.freezes.length > 0 || processingAction !== null"
+                :disabled="processingAction !== null"
               >
               <label
                 class="sr-only"
@@ -539,20 +542,20 @@ async function freeze(category: Category) {
                 :id="`criterion-edit-description-${criterion.id}`"
                 v-model="criterionDrafts[criterion.id].description"
                 rows="2"
-                :disabled="source.freezes.length > 0 || processingAction !== null"
+                :disabled="processingAction !== null"
               />
               <label>
                 <input
                   v-model="criterionDrafts[criterion.id].active"
                   type="checkbox"
-                  :disabled="source.freezes.length > 0 || processingAction !== null"
+                  :disabled="processingAction !== null"
                 >
                 Critério ativo
               </label>
               <button
                 type="button"
                 :data-action="`save-criterion-${criterion.id}`"
-                :disabled="source.freezes.length > 0 || processingAction !== null"
+                :disabled="processingAction !== null"
                 @click="saveCriterion(criterion.id)"
               >
                 {{ processingAction === `criterion:${criterion.id}`
@@ -573,7 +576,7 @@ async function freeze(category: Category) {
                 min="0"
                 step="0.01"
                 :value="weightFor(criterion.id, category)"
-                :disabled="Boolean(frozenCategory(category)) || processingAction !== null"
+                :disabled="processingAction !== null"
                 @change="saveWeight(
                   criterion.id,
                   category,
@@ -600,7 +603,7 @@ async function freeze(category: Category) {
               <input
                 type="checkbox"
                 :checked="isAssigned(evaluator.user_id, category)"
-                :disabled="Boolean(frozenCategory(category)) || processingAction !== null"
+                :disabled="processingAction !== null"
                 @change="toggleAssignment(
                   evaluator.user_id,
                   category,
@@ -641,20 +644,8 @@ async function freeze(category: Category) {
               @click="shuffle(category)"
             >
               {{ processingAction === `shuffle:${category}`
-                ? 'Sorteando…'
-                : 'Sortear ordem' }}
-            </button>
-            <button
-              type="button"
-              :data-action="`freeze-${category}`"
-              :disabled="processingAction !== null || Boolean(frozenCategory(category))"
-              @click="freeze(category)"
-            >
-              {{ processingAction === `freeze:${category}`
-                ? 'Congelando…'
-                : frozenCategory(category)
-                  ? 'Configuração congelada'
-                  : 'Congelar categoria' }}
+                ? 'Randomizando…'
+                : 'Randomizar ordem' }}
             </button>
           </div>
         </article>

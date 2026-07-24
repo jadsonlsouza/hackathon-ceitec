@@ -48,6 +48,7 @@ const eventId = computed(() => String(route.params.eventId))
 const { $supabase } = useNuxtApp()
 const supabase = $supabase as any
 const {
+  profile,
   eventRoles,
   pending: accessPending,
   error: accessError,
@@ -56,9 +57,12 @@ const processingAction = ref<string | null>(null)
 const actionError = ref<string | null>(null)
 const successMessage = ref<string | null>(null)
 
-const isProfessor = computed(() => eventRoles.value.some(role => (
-  role.event_id === eventId.value && role.role === 'professor'
-)))
+const isProfessor = computed(() => 
+  profile.value?.global_role === 'global_admin' ||
+  eventRoles.value.some(role => (
+    role.event_id === eventId.value && role.role === 'professor'
+  ))
+)
 
 const resultKey = computed(() => `result-admin:${eventId.value}`)
 const {

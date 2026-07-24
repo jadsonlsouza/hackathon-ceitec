@@ -9,18 +9,10 @@ interface Assignment {
   category: Category
 }
 
-interface FrozenTeam {
-  team_id: string
+interface Team {
+  id: string
   name: string
   category: Category
-  canvas_summary: unknown
-}
-
-interface Freeze {
-  event_id: string
-  category: Category
-  evaluator_snapshot: Array<{ evaluator_id: string, display_name: string }>
-  team_snapshot: FrozenTeam[]
 }
 
 interface Slot {
@@ -80,22 +72,23 @@ const { data: queueSource, pending, error } = await useAsyncData(
     if (!isEvaluator.value || !profile.value) {
       return {
         assignments: [] as Assignment[],
-        freezes: [] as Freeze[],
+        teams: [] as Team[],
         slots: [] as Slot[],
         evaluations: [] as Evaluation[],
       }
     }
 
-    const [assignments, freezes, slots, evaluations] = await Promise.all([
+    const [assignments, teams, slots, evaluations] = await Promise.all([
       supabase
         .from('evaluator_assignments')
         .select('event_id,evaluator_id,category')
         .eq('event_id', eventId.value)
         .eq('evaluator_id', profile.value.id),
       supabase
-        .from('evaluation_freezes')
-        .select('event_id,category,evaluator_snapshot,team_snapshot')
-        .eq('event_id', eventId.value),
+        .from('teams')
+        .select('id,name,category')
+        .eq('event_id', eventId.value)
+        .eq('status', 'approved'),
       supabase
         .from('presentation_slots')
         .select('event_id,category,team_id,position')
@@ -110,7 +103,7 @@ const { data: queueSource, pending, error } = await useAsyncData(
 
     const failure = [
       assignments.error,
-      freezes.error,
+      teams.error,
       slots.error,
       evaluations.error,
     ].find(Boolean)
@@ -118,7 +111,7 @@ const { data: queueSource, pending, error } = await useAsyncData(
 
     return {
       assignments: (assignments.data ?? []) as Assignment[],
-      freezes: (freezes.data ?? []) as Freeze[],
+      teams: (teams.data ?? []) as Team[],
       slots: (slots.data ?? []) as Slot[],
       evaluations: (evaluations.data ?? []) as Evaluation[],
     }
@@ -128,7 +121,7 @@ const { data: queueSource, pending, error } = await useAsyncData(
     watch: [eventId, eventRoles, profile],
     default: () => ({
       assignments: [] as Assignment[],
-      freezes: [] as Freeze[],
+      teams: [] as Team[],
       slots: [] as Slot[],
       evaluations: [] as Evaluation[],
     }),
@@ -140,16 +133,11 @@ const queues = computed<CategoryQueue[]>(() => {
   if (!evaluatorId) return []
 
   return queueSource.value.assignments.flatMap((assignment) => {
-    const frozen = queueSource.value.freezes.find(item => (
-      item.category === assignment.category
-      && item.evaluator_snapshot.some(
-        evaluator => evaluator.evaluator_id === evaluatorId,
-      )
-    ))
-    if (!frozen) return []
+    const categoryTeams = queueSource.value.teams.filter(t => t.category === assignment.category)
+    if (categoryTeams.length === 0) return []
 
-    const teams = new Map(
-      frozen.team_snapshot.map(team => [team.team_id, team]),
+    const teamsMap = new Map(
+      categoryTeams.map(team => [team.id, team]),
     )
     const completedIds = new Set(
       queueSource.value.evaluations
@@ -158,12 +146,12 @@ const queues = computed<CategoryQueue[]>(() => {
     )
     const items = queueSource.value.slots
       .filter(slot => (
-        slot.category === assignment.category && teams.has(slot.team_id)
+        slot.category === assignment.category && teamsMap.has(slot.team_id)
       ))
       .sort((left, right) => left.position - right.position)
       .map((slot): QueueItem => ({
         teamId: slot.team_id,
-        name: teams.get(slot.team_id)?.name ?? 'Equipe',
+        name: teamsMap.get(slot.team_id)?.name ?? 'Equipe',
         position: slot.position,
         submitted: completedIds.has(slot.team_id),
       }))
