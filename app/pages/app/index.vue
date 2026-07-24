@@ -22,6 +22,7 @@ const {
   profile,
   eventRoles,
   userId,
+  reconciliationRevision,
   pending: accessPending,
   error: accessError,
   teamEventIds,
@@ -102,7 +103,13 @@ const summary = useAsyncData(
       evaluations: 0,
       activities: 0,
     }),
-    watch: [profile, eventRoles, currentEventId, teamEventIds],
+    watch: [
+      profile,
+      eventRoles,
+      currentEventId,
+      teamEventIds,
+      reconciliationRevision,
+    ],
   },
 )
 watch(userId, () => {

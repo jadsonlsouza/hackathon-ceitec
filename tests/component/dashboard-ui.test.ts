@@ -8,6 +8,7 @@ const routePath = ref('/app')
 const profile = ref<{ global_role: 'student' | 'global_admin' }>({ global_role: 'student' })
 const eventRoles = ref<Array<{ event_id: string, role: 'professor' | 'monitor' | 'evaluator' }>>([])
 const accessUserId = ref<string | null>('dashboard-test-user')
+const reconciliationRevision = ref(0)
 const accessPending = ref(false)
 const accessError = ref<unknown>(null)
 const contextData = ref({ teamEventIds: [] as string[] })
@@ -62,6 +63,7 @@ describe('dashboard UI', () => {
       profile,
       eventRoles,
       userId: accessUserId,
+      reconciliationRevision,
       pending: accessPending,
       error: accessError,
     }))
@@ -97,6 +99,7 @@ describe('dashboard UI', () => {
     profile.value = { global_role: 'student' }
     eventRoles.value = []
     accessUserId.value = 'dashboard-test-user'
+    reconciliationRevision.value = 0
     accessPending.value = false
     accessError.value = null
     contextData.value = { teamEventIds: [] }

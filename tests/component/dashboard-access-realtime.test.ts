@@ -8,6 +8,7 @@ import { useDashboardEventContext } from '../../app/composables/useDashboardEven
 
 const EVENT_A = '10000000-0000-4000-8000-000000000901'
 const EVENT_B = '10000000-0000-4000-8000-000000000902'
+let lastAsyncWatchSources: unknown[] = []
 
 interface FakeRole {
   event_id: string
@@ -26,6 +27,7 @@ interface ChannelHandler {
 
 function makeClient() {
   let currentUserId: string | null = 'user-a'
+  let globalRole: 'student' | 'global_admin' = 'student'
   const roles = new Map<string, FakeRole[]>()
   const teamEvents = new Map<string, string[]>()
   const teamStatuses = new Map<string, 'pending' | 'approved' | 'rejected'>()
@@ -44,6 +46,7 @@ function makeClient() {
   let deferNetwork = false
   let deferredResolvers: Array<() => void> = []
   let getUserCount = 0
+  const failures = new Map<string, number>()
 
   roles.set('user-a', [])
   roles.set('user-b', [])
@@ -57,7 +60,7 @@ function makeClient() {
       id: userId,
       email: emails.get(userId) ?? `${userId}@example.test`,
       display_name: userId,
-      global_role: 'student',
+      global_role: globalRole,
       created_at: '2026-07-23T00:00:00Z',
       updated_at: '2026-07-23T00:00:00Z',
     }
@@ -73,6 +76,13 @@ function makeClient() {
       single: () => promise,
       then: promise.then.bind(promise),
     }
+  }
+
+  function takeFailure(table: string) {
+    const remaining = failures.get(table) ?? 0
+    if (remaining === 0) return null
+    failures.set(table, remaining - 1)
+    return new Error(`transient ${table} failure`)
   }
 
   const client = {
@@ -102,22 +112,34 @@ function makeClient() {
       return {
         select() {
           selectCounts.set(table, (selectCounts.get(table) ?? 0) + 1)
+          const transientError = takeFailure(table)
           if (table === 'teams') {
             return resolved({
-              data: (teamEvents.get(currentUserId ?? '') ?? []).map(event_id => ({
-                id: `team-${event_id}`,
-                event_id,
-                status: teamStatuses.get(event_id) ?? 'approved',
-              })),
-              error: null,
+              data: transientError
+                ? null
+                : (teamEvents.get(currentUserId ?? '') ?? []).map(event_id => ({
+                    id: `team-${event_id}`,
+                    event_id,
+                    status: teamStatuses.get(event_id) ?? 'approved',
+                  })),
+              error: transientError,
+            })
+          }
+          if (table === 'events') {
+            return resolved({
+              data: null,
+              count: transientError ? null : 1,
+              error: transientError,
             })
           }
           return {
             eq() {
               return resolved(
-                table === 'profiles'
-                  ? { data: currentUserId ? profileFor(currentUserId) : null, error: null }
-                  : { data: [...(roles.get(currentUserId ?? '') ?? [])], error: null },
+                transientError
+                  ? { data: null, error: transientError }
+                  : table === 'profiles'
+                    ? { data: currentUserId ? profileFor(currentUserId) : null, error: null }
+                    : { data: [...(roles.get(currentUserId ?? '') ?? [])], error: null },
               )
             },
           }
@@ -170,6 +192,12 @@ function makeClient() {
       const resolvers = deferredResolvers
       deferredResolvers = []
       for (const resolve of resolvers) resolve()
+    },
+    failNext(table: string) {
+      failures.set(table, (failures.get(table) ?? 0) + 1)
+    },
+    setGlobalRole(role: 'student' | 'global_admin') {
+      globalRole = role
     },
     async emit(table: string, event: 'INSERT' | 'UPDATE' | 'DELETE') {
       for (const channel of channels) {
@@ -229,6 +257,8 @@ function dashboardShellHarness() {
       return () => h('div', [
         context.pending.value || context.contextPending.value
           ? h('p', { 'data-loading': '' }, 'Carregando')
+          : context.error.value || context.contextError.value
+            ? h('p', { 'data-error': '' }, 'Falha')
           : h(DashboardNavigation, {
               profile: context.profile.value,
               eventRoles: context.eventRoles.value,
@@ -252,18 +282,23 @@ describe('dashboard access lifecycle', () => {
     fake = makeClient()
     route.path = '/app'
     delete route.params.eventId
+    lastAsyncWatchSources = []
     vi.stubGlobal('useNuxtApp', () => ({ $supabase: fake.client }))
     vi.stubGlobal('useRoute', () => route)
     vi.stubGlobal('useCurrentAccess', useCurrentAccess)
     vi.stubGlobal('computed', computed)
-    vi.stubGlobal('useAsyncData', (_key: string, handler: () => Promise<unknown>, options: {
+    vi.stubGlobal('definePageMeta', vi.fn())
+    vi.stubGlobal('useAsyncData', (key: string, handler: () => Promise<unknown>, options: {
       default: () => unknown
+      watch?: unknown[]
     }) => {
+      if (key === 'dashboard-summary') lastAsyncWatchSources = options.watch ?? []
       const data = ref(options.default())
       const pending = ref(true)
       const error = ref<unknown>(null)
       const refresh = async () => {
         pending.value = true
+        error.value = null
         try {
           data.value = await handler()
         }
@@ -274,6 +309,7 @@ describe('dashboard access lifecycle', () => {
           pending.value = false
         }
       }
+      if (options.watch) watch(options.watch as never, () => { void refresh() })
       void refresh()
       return { data, pending, error, refresh }
     })
@@ -510,6 +546,71 @@ describe('dashboard access lifecycle', () => {
     window.dispatchEvent(new Event('focus'))
     await flushPromises()
     expect(changes).toEqual({ profile: 0, roles: 0, teams: 0 })
+    wrapper.unmount()
+  })
+
+  it('clears transient access and team errors after a successful mounted reconciliation', async () => {
+    fake.roles.set('user-a', [{
+      event_id: EVENT_A,
+      role: 'monitor',
+      user_id: 'user-a',
+      categories: [],
+      approved_by: 'admin',
+      approved_at: '2026-07-23T00:00:00Z',
+    }])
+    fake.teamEvents.set('user-a', [EVENT_A])
+    fake.failNext('profiles')
+    fake.failNext('teams')
+    const wrapper = mount(dashboardShellHarness(), { global: { stubs: { NuxtLink } } })
+    await flushPromises()
+    expect(wrapper.find('[data-error]').exists()).toBe(true)
+
+    window.dispatchEvent(new Event('focus'))
+    await flushPromises()
+    expect(wrapper.find('[data-error]').exists()).toBe(false)
+    expect(wrapper.text()).toContain('Revisões')
+    expect(wrapper.text()).toContain('Minha equipe')
+    wrapper.unmount()
+  })
+
+  it('does not let an old successful response clear the next user error', async () => {
+    const wrapper = mount(dashboardShellHarness(), { global: { stubs: { NuxtLink } } })
+    await flushPromises()
+
+    fake.deferNetwork()
+    window.dispatchEvent(new Event('focus'))
+    await Promise.resolve()
+    fake.failNext('profiles')
+    void fake.setUser('user-b')
+    await Promise.resolve()
+    fake.releaseNetwork()
+    await flushPromises()
+
+    expect(wrapper.find('[data-error]').exists()).toBe(true)
+    expect(wrapper.findAll('[data-dashboard-link]')).toHaveLength(0)
+    wrapper.unmount()
+  })
+
+  it('retries a failed dashboard summary on successful unchanged reconciliation', async () => {
+    fake.setGlobalRole('global_admin')
+    fake.failNext('events')
+    const DashboardPage = (await import('../../app/pages/app/index.vue')).default
+    const wrapper = mount(DashboardPage, { global: { stubs: { NuxtLink } } })
+    await flushPromises()
+    expect(wrapper.text()).toContain('Não foi possível carregar')
+    const failedAttempts = fake.selectCounts.get('events') ?? 0
+    const beforeGetUser = fake.getUserCount
+    const revision = lastAsyncWatchSources[4] as { value: number }
+    const beforeRevision = revision.value
+
+    window.dispatchEvent(new Event('focus'))
+    await flushPromises()
+    await nextTick()
+    await flushPromises()
+    expect(fake.getUserCount).toBe(beforeGetUser + 1)
+    expect(revision.value).toBe(beforeRevision + 1)
+    expect(fake.selectCounts.get('events')).toBe(failedAttempts + 1)
+    expect(wrapper.text()).not.toContain('Não foi possível carregar')
     wrapper.unmount()
   })
 

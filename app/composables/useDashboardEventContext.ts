@@ -114,6 +114,7 @@ function createTeamContextController(
         ) {
           data.value = nextData
         }
+        error.value = null
       }
       catch (caught) {
         if (

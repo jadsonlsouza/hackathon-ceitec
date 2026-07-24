@@ -22,6 +22,7 @@ interface CurrentAccessController {
   profile: Ref<Profile | null>
   eventRoles: Ref<EventRole[]>
   userId: Ref<string | null>
+  reconciliationRevision: Ref<number>
   pending: Ref<boolean>
   error: Ref<unknown>
   retain: () => void
@@ -62,6 +63,7 @@ export function createCurrentAccessController(
   const profile = ref<Profile | null>(null)
   const eventRoles = ref<EventRole[]>([])
   const userId = ref<string | null>(null)
+  const reconciliationRevision = ref(0)
   const pending = ref(false)
   const error = ref<unknown>(null)
   let accessChannel: ReturnType<typeof supabase.channel> | null = null
@@ -70,7 +72,7 @@ export function createCurrentAccessController(
   let active = false
   let generation = 0
   let authEpoch = 0
-  let reloadPromise: Promise<void> | null = null
+  let reloadPromise: Promise<boolean> | null = null
   let refreshPromise: Promise<void> | null = null
   let stopReconciliation: (() => void) | null = null
 
@@ -172,23 +174,26 @@ export function createCurrentAccessController(
         if (
           expectedGeneration !== generation
           || expectedUserId !== userId.value
-        ) return
+        ) return false
         if (!sameProfile(profile.value, loaded.profile)) {
           profile.value = loaded.profile
         }
         if (!sameEventRoles(eventRoles.value, loaded.eventRoles)) {
           eventRoles.value = loaded.eventRoles
         }
+        error.value = null
+        return true
       }
       catch (caught) {
         if (
           expectedGeneration !== generation
           || expectedUserId !== userId.value
-        ) return
+        ) return false
         if (!silent) {
           clearAccess()
           error.value = caught
         }
+        return false
       }
       finally {
         if (
@@ -200,7 +205,7 @@ export function createCurrentAccessController(
     })()
     reloadPromise = currentPromise
     try {
-      await currentPromise
+      return await currentPromise
     }
     finally {
       if (reloadPromise === currentPromise) reloadPromise = null
@@ -220,9 +225,9 @@ export function createCurrentAccessController(
     }
     if (!nextUserId) {
       pending.value = false
-      return
+      return true
     }
-    await reloadCurrent(changed ? false : silent)
+    return reloadCurrent(changed ? false : silent)
   }
 
   async function refresh(silent = false) {
@@ -234,7 +239,14 @@ export function createCurrentAccessController(
         const { data, error: authError } = await supabase.auth.getUser()
         if (expectedAuthEpoch !== authEpoch) return
         if (authError) throw authError
-        await changeUser(data.user?.id ?? null, silent)
+        const nextUserId = data.user?.id ?? null
+        const succeeded = await changeUser(nextUserId, silent)
+        if (
+          silent
+          && succeeded
+          && nextUserId
+          && expectedAuthEpoch === authEpoch
+        ) reconciliationRevision.value += 1
       }
       catch (caught) {
         if (expectedAuthEpoch !== authEpoch || silent) return
@@ -291,6 +303,7 @@ export function createCurrentAccessController(
     profile,
     eventRoles,
     userId,
+    reconciliationRevision,
     pending,
     error,
     retain() {
@@ -312,6 +325,7 @@ export function useCurrentAccess() {
       profile: computed(() => null as Profile | null),
       eventRoles: computed(() => [] as EventRole[]),
       userId: computed(() => null as string | null),
+      reconciliationRevision: ref(0),
       pending: ref(false),
       error: ref<unknown>(null),
       refresh: async () => {},
@@ -332,6 +346,7 @@ export function useCurrentAccess() {
     profile: computed(() => access.profile.value),
     eventRoles: computed(() => access.eventRoles.value),
     userId: computed(() => access.userId.value),
+    reconciliationRevision: access.reconciliationRevision,
     pending: access.pending,
     error: access.error,
     refresh: access.refresh,
