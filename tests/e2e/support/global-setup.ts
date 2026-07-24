@@ -1,8 +1,9 @@
 import { execFileSync } from 'node:child_process'
-import { mkdir, readFile, writeFile } from 'node:fs/promises'
+import { mkdir, readFile } from 'node:fs/promises'
 import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { createClient, type Session } from '@supabase/supabase-js'
+import { chromium } from '@playwright/test'
+import { createClient } from '@supabase/supabase-js'
 import { localSupabaseEnvironment } from './local-supabase'
 
 export const E2E_PASSWORD = 'Ceitec-E2E-2026!'
@@ -30,18 +31,8 @@ export const E2E_USERS = {
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '../../..')
 const authDir = resolve(root, 'tests/e2e/.auth')
 
-function storageState(session: Session, apiUrl: string) {
-  const storageKey = `sb-${new URL(apiUrl).hostname.split('.')[0]}-auth-token`
-  return {
-    cookies: [],
-    origins: [{
-      origin: 'http://127.0.0.1:3000',
-      localStorage: [{ name: storageKey, value: JSON.stringify(session) }],
-    }],
-  }
-}
-
 export default async function globalSetup() {
+  if (process.env.PLAYWRIGHT_REUSE_FIXTURE === '1') return
   const local = localSupabaseEnvironment()
   execFileSync('npx', ['supabase', 'db', 'reset'], {
     cwd: root,
@@ -69,20 +60,22 @@ export default async function globalSetup() {
   )
 
   await mkdir(authDir, { recursive: true })
-  const client = createClient(local.apiUrl, local.publishableKey, {
-    auth: { autoRefreshToken: false, persistSession: false },
-  })
+  const browser = await chromium.launch()
   for (const [profile, [email]] of Object.entries(E2E_USERS)) {
-    const { data, error } = await client.auth.signInWithPassword({
-      email,
-      password: E2E_PASSWORD,
-    })
-    if (error || !data.session) throw error ?? new Error(`Sessão ausente para ${profile}`)
-    await writeFile(
-      resolve(authDir, `${profile}.json`),
-      JSON.stringify(storageState(data.session, local.apiUrl)),
-      { mode: 0o600 },
-    )
-    await client.auth.signOut()
+    const context = await browser.newContext()
+    const page = await context.newPage()
+    await page.goto('http://127.0.0.1:3000/login')
+    await page.waitForFunction(() => Boolean(
+      (document.querySelector('form') as HTMLFormElement & {
+        __vueParentComponent?: unknown
+      } | null)?.__vueParentComponent,
+    ))
+    await page.getByLabel('E-mail').fill(email)
+    await page.getByLabel('Senha').fill(E2E_PASSWORD)
+    await page.getByRole('button', { name: 'Entrar com e-mail' }).click()
+    await page.waitForURL('**/app')
+    await context.storageState({ path: resolve(authDir, `${profile}.json`) })
+    await context.close()
   }
+  await browser.close()
 }

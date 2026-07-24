@@ -197,6 +197,12 @@ async function submitEvaluation() {
   }))
   if (payloadScores.some(score => !score.score)) {
     formError.value = 'Informe uma nota para todos os critérios.'
+    await nextTick()
+    document
+      .querySelector<HTMLButtonElement>(
+        '.evaluation-form [role="radio"][tabindex="0"]',
+      )
+      ?.focus()
     return
   }
 

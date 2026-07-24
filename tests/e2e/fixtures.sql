@@ -149,6 +149,8 @@ begin
     (event_a, evaluator_senior_id, 'senior', professor_a_id)
   on conflict do nothing;
 
+  perform set_config('request.jwt.claim.sub', professor_a_id::text, true);
+
   insert into public.presentation_slots (
     event_id, category, team_id, position
   )
@@ -165,15 +167,15 @@ begin
   values
     (
       event_a, 'junior', professor_a_id,
-      (select jsonb_agg(jsonb_build_object('id', id, 'name', name, 'position', position)) from public.evaluation_criteria where event_id = event_a and active),
-      jsonb_build_array(jsonb_build_object('evaluatorId', evaluator_junior_id)),
-      jsonb_build_array(jsonb_build_object('teamId', team_a), jsonb_build_object('teamId', team_a2))
+      (select jsonb_agg(jsonb_build_object('criterion_id', criterion.id, 'name', criterion.name, 'description', criterion.description, 'position', criterion.position, 'weight', weight.weight) order by criterion.position) from public.evaluation_criteria criterion join public.criterion_weights weight on weight.criterion_id = criterion.id and weight.category = 'junior' where criterion.event_id = event_a and criterion.active),
+      jsonb_build_array(jsonb_build_object('evaluator_id', evaluator_junior_id, 'display_name', 'Avaliador Júnior')),
+      jsonb_build_array(jsonb_build_object('team_id', team_a, 'name', 'Equipe Aurora', 'category', 'junior', 'canvas_summary', '{"problema":"Solução sustentável"}'), jsonb_build_object('team_id', team_a2, 'name', 'Equipe Horizonte', 'category', 'junior', 'canvas_summary', '{}'))
     ),
     (
       event_a, 'senior', professor_a_id,
-      (select jsonb_agg(jsonb_build_object('id', id, 'name', name, 'position', position)) from public.evaluation_criteria where event_id = event_a and active),
-      jsonb_build_array(jsonb_build_object('evaluatorId', evaluator_senior_id)),
-      jsonb_build_array(jsonb_build_object('teamId', team_senior))
+      (select jsonb_agg(jsonb_build_object('criterion_id', criterion.id, 'name', criterion.name, 'description', criterion.description, 'position', criterion.position, 'weight', weight.weight) order by criterion.position) from public.evaluation_criteria criterion join public.criterion_weights weight on weight.criterion_id = criterion.id and weight.category = 'senior' where criterion.event_id = event_a and criterion.active),
+      jsonb_build_array(jsonb_build_object('evaluator_id', evaluator_senior_id, 'display_name', 'Avaliador Sênior')),
+      jsonb_build_array(jsonb_build_object('team_id', team_senior, 'name', 'Equipe Órbita', 'category', 'senior', 'canvas_summary', '{}'))
     )
   on conflict do nothing;
 
