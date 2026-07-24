@@ -33,6 +33,7 @@ const navigationByCapability: Record<Capability, NavigationDefinition[]> = {
     { label: 'Auditoria', to: '/app/admin/auditoria' },
   ],
   manage_event: [
+    { label: 'Todas as equipes', to: 'admin/equipes', eventRelative: true },
     { label: 'Equipes', to: 'equipes', eventRelative: true },
     { label: 'Solicitações', to: 'solicitacoes', eventRelative: true },
     { label: 'Canvas', to: 'admin/canvas', eventRelative: true },

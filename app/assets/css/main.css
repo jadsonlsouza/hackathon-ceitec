@@ -360,3 +360,16 @@ button, input, select, textarea { font: inherit; }
   .dashboard-nav-list.is-open { display: grid; }
   .dashboard-page { padding: 2rem 1rem 5rem; }
 }
+
+/* ── Modal ─────────────────────────────────────────────────────────────────── */
+.modal-overlay { align-items: flex-start; background: rgba(0,0,0,.7); bottom: 0; display: flex; justify-content: center; left: 0; overflow-y: auto; padding: 2rem 1rem; position: fixed; right: 0; top: 0; z-index: 100; }
+.modal-panel { background: #111827; border: 1px solid #334155; border-radius: 1rem; max-width: 48rem; padding: 2rem; width: 100%; }
+.modal-header { align-items: center; display: flex; justify-content: space-between; margin-bottom: 1.5rem; }
+.modal-header h2 { margin: 0; }
+.modal-close { background: transparent; border: 1px solid #475569; border-radius: .5rem; color: #cbd5e1; cursor: pointer; font-size: 1rem; line-height: 1; padding: .4rem .7rem; }
+.modal-close:hover { background: #1e293b; }
+.modal-footer { display: flex; gap: 1rem; justify-content: flex-end; margin-top: 1.5rem; }
+.modal-footer button { background: #1e293b; border: 1px solid #475569; border-radius: .5rem; color: #e2e8f0; cursor: pointer; font-weight: 600; padding: .65rem 1.25rem; }
+.modal-footer button[type="submit"] { background: #0369a1; border-color: #0369a1; color: #fff; }
+.modal-footer button[type="submit"]:hover:not(:disabled) { background: #075985; }
+.modal-footer button:disabled { cursor: wait; opacity: .6; }
