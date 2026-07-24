@@ -4,7 +4,7 @@ definePageMeta({ middleware: 'auth' })
 interface EnrollmentRow {
   user_id: string
   team_id: string
-  profile: { name: string, email: string }
+  profile: { display_name: string, email: string }
   team: { name: string }
 }
 
@@ -80,7 +80,7 @@ const { data: workshops, pending, error } = await useAsyncData(
     if (!isProfessor.value) return []
     const { data, error: wError } = await $supabase
       .from('workshops')
-      .select('id,title,description,starts_at,ends_at,capacity,enrollments:workshop_enrollments(count),enrollment_details:workshop_enrollments(user_id,team_id,profile:profiles!workshop_enrollments_user_id_fkey(name,email),team:teams(name))')
+      .select('id,title,description,starts_at,ends_at,capacity,enrollments:workshop_enrollments(count),enrollment_details:workshop_enrollments(user_id,team_id,profile:profiles!workshop_enrollments_user_id_fkey(display_name,email),team:teams(name))')
       .eq('event_id', eventId.value)
       .order('starts_at')
     
@@ -261,7 +261,7 @@ function getEnrollmentCount(w: ExistingWorkshop) {
                 </thead>
                 <tbody>
                   <tr v-for="en in w.enrollment_details" :key="en.user_id">
-                    <td>{{ (en.profile as any)?.name ?? '—' }}</td>
+                    <td>{{ (en.profile as any)?.display_name ?? '—' }}</td>
                     <td>{{ (en.profile as any)?.email ?? '—' }}</td>
                     <td>{{ (en.team as any)?.name ?? '—' }}</td>
                   </tr>
