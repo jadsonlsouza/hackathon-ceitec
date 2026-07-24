@@ -124,7 +124,7 @@ function setButtonRef(element: Element | null, index: number) {
 }
 
 .score-option.is-selected {
-  background: #0284c7;
+  background: #0369a1;
   border-color: #7dd3fc;
   box-shadow: 0 0 0 2px #38bdf855;
 }

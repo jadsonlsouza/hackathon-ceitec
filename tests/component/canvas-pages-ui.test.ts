@@ -389,6 +389,32 @@ describe('Professor Canvas builder', () => {
 })
 
 describe('review queue', () => {
+  it('renders a safe fallback when a related team is unavailable', async () => {
+    eventRoles.value = [{ event_id: EVENT_ID, role: 'monitor' }]
+    results.set(resultKey('submissions'), {
+      data: [{
+        id: SUBMISSION_ID,
+        event_id: EVENT_ID,
+        status: 'submitted',
+        revision: 1,
+        team: null,
+        activity: {
+          id: ACTIVITY_ID,
+          title: 'Canvas principal',
+          blocks: [],
+        },
+        revisions: [{ revision: 1, snapshot: {} }],
+      }],
+      error: null,
+    })
+
+    const ReviewPage = (await import('../../app/pages/app/evento/[eventId]/revisoes.vue')).default
+    const wrapper = await mountPage(ReviewPage)
+
+    expect(wrapper.text()).toContain('Equipe indisponível')
+    expect(wrapper.get('[data-action="claim-review"]').exists()).toBe(true)
+  })
+
   it('filters, claims atomically once, and opens the immutable submitted revision', async () => {
     eventRoles.value = [{ event_id: EVENT_ID, role: 'monitor' }]
     results.set(resultKey('submissions'), {

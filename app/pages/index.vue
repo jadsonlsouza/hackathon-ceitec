@@ -28,7 +28,7 @@ useHead({
         :registration-open="event.registration_open"
       />
 
-      <main id="conteudo-principal">
+      <main id="conteudo-principal" tabindex="-1">
         <AboutSection :presentation="event.presentation" :objectives="event.objectives" />
         <CategoriesSection />
 

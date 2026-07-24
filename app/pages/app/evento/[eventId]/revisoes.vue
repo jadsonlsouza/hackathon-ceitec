@@ -10,7 +10,7 @@ interface ReviewItem {
   event_id: string
   status: 'submitted' | 'resubmitted' | 'in_review'
   revision: number
-  team: { id: string, name: string, category: 'junior' | 'senior' }
+  team: { id: string, name: string, category: 'junior' | 'senior' } | null
   activity: {
     id: string
     title: string
@@ -59,7 +59,10 @@ const { data: submissions, pending, error } = await useAsyncData(
 )
 
 const filteredSubmissions = computed(() => submissions.value.filter(item => (
-  (categoryFilter.value === 'all' || item.team.category === categoryFilter.value)
+  (
+    categoryFilter.value === 'all'
+    || item.team?.category === categoryFilter.value
+  )
   && (statusFilter.value === 'all' || item.status === statusFilter.value)
 )))
 const selectedRevision = computed(() => {
@@ -139,8 +142,16 @@ useEventRealtime(eventId, computed(() => (
       <ul v-else class="request-list">
         <li v-for="item in filteredSubmissions" :key="item.id" class="request-card">
           <div>
-            <h2>{{ item.team.name }}</h2>
-            <p>{{ item.activity.title }} · {{ item.team.category === 'junior' ? 'Júnior' : 'Sênior' }} · {{ item.status }}</p>
+            <h2>{{ item.team?.name || 'Equipe indisponível' }}</h2>
+            <p>
+              {{ item.activity.title }} ·
+              {{
+                item.team
+                  ? (item.team.category === 'junior' ? 'Júnior' : 'Sênior')
+                  : 'Categoria indisponível'
+              }}
+              · {{ item.status }}
+            </p>
           </div>
           <div class="request-actions">
             <button

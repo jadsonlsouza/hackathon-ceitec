@@ -3,7 +3,7 @@ begin;
 create extension if not exists pgtap with schema extensions;
 set local search_path = extensions, public;
 
-select plan(70);
+select plan(71);
 
 select has_table('public', 'canvas_templates', 'Canvas templates exist');
 select has_table('public', 'canvas_template_blocks', 'template blocks exist');
@@ -375,6 +375,20 @@ select
 from public.canvas_blocks as block
 where block.activity_id = '40000000-0000-4000-8000-000000000102'
   and block.key = 'problem';
+
+set local role authenticated;
+select set_config('request.jwt.claim.sub',
+  '00000000-0000-4000-8000-000000000104', true);
+select is(
+  (
+    select count(*)::integer
+    from public.teams
+    where event_id = '10000000-0000-4000-8000-000000000101'
+  ),
+  2,
+  'an event Monitor can identify teams in the scoped review queue'
+);
+reset role;
 
 set local role authenticated;
 select set_config('request.jwt.claim.sub',

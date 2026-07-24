@@ -8,7 +8,16 @@ import {
 
 const authState = (profile: string) => `tests/e2e/.auth/${profile}.json`
 
+async function waitForNuxtHydration(page: Page) {
+  await page.waitForFunction(() => Boolean(
+    (document.querySelector('main') as HTMLElement & {
+      __vueParentComponent?: unknown
+    } | null)?.__vueParentComponent,
+  ))
+}
+
 async function expectAccessible(page: Page) {
+  await waitForNuxtHydration(page)
   const result = await new AxeBuilder({ page })
     .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'])
     .analyze()
@@ -34,6 +43,7 @@ test.describe('páginas públicas', () => {
 
   test('skip link alcança o conteúdo principal', async ({ page }) => {
     await page.goto('/')
+    await waitForNuxtHydration(page)
     await page.keyboard.press('Tab')
     const skipLink = page.getByRole('link', { name: 'Pular para o conteúdo' })
     await expect(skipLink).toBeFocused()
@@ -43,6 +53,7 @@ test.describe('páginas públicas', () => {
 
   test('validação leva o foco ao primeiro campo inválido', async ({ page }) => {
     await page.goto('/login')
+    await waitForNuxtHydration(page)
     await page.getByRole('button', { name: 'Entrar com e-mail' }).click()
     await expect(page.locator('#login-email')).toBeFocused()
     await expect(page.locator('#login-email')).toHaveAttribute('aria-invalid', 'true')
