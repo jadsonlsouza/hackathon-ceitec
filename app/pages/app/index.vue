@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { watch } from 'vue'
 import StatusCard from '../../components/dashboard/StatusCard.vue'
+import StudentDashboard from '../../components/dashboard/StudentDashboard.vue'
 import { useDashboardEventContext } from '../../composables/useDashboardEventContext'
 import {
   capabilitiesForAccess,
@@ -235,5 +236,11 @@ const cards = computed(() => capabilities.value.flatMap((capability) => {
         :action-to="card.actionTo"
       />
     </section>
+
+    <!-- Student dashboard panel (collaborate capability) -->
+    <StudentDashboard
+      v-if="capabilities.includes('collaborate') && currentEventId"
+      :event-id="currentEventId"
+    />
   </main>
 </template>

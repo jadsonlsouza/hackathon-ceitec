@@ -373,3 +373,56 @@ button, input, select, textarea { font: inherit; }
 .modal-footer button[type="submit"] { background: #0369a1; border-color: #0369a1; color: #fff; }
 .modal-footer button[type="submit"]:hover:not(:disabled) { background: #075985; }
 .modal-footer button:disabled { cursor: wait; opacity: .6; }
+
+/* ── Student Dashboard ──────────────────────────────────────────────────────── */
+.student-dashboard { margin-top: 2.5rem; }
+.sd-team-banner { background: linear-gradient(135deg, #0f2044 0%, #1e3a5f 100%); border: 1px solid #2563eb44; border-radius: 1rem; padding: 1.75rem 2rem; }
+.sd-team-info h2 { font-size: 1.6rem; margin: .25rem 0 .6rem; }
+.sd-team-meta { align-items: center; color: #94a3b8; display: flex; flex-wrap: wrap; gap: .5rem; margin: 0; }
+.sd-dot { color: #475569; }
+.sd-columns { display: grid; gap: 1.5rem; grid-template-columns: 1fr 1.6fr; margin-top: 1.5rem; }
+.sd-col { display: flex; flex-direction: column; gap: 1.5rem; }
+.sd-section { background: #111827; border: 1px solid #1e293b; border-radius: 1rem; padding: 1.5rem; }
+.sd-section-title { align-items: center; display: flex; font-size: 1rem; font-weight: 700; gap: .5rem; letter-spacing: .02em; margin: 0 0 1.25rem; text-transform: uppercase; color: #94a3b8; }
+.sd-section-icon { font-size: 1.15rem; }
+.sd-empty { color: #64748b; font-size: .9rem; margin: 0; }
+
+/* Chips */
+.chip { border-radius: 99px; display: inline-block; font-size: .75rem; font-weight: 700; letter-spacing: .04em; padding: .2rem .65rem; text-transform: uppercase; }
+.chip--gray { background: #1e293b; color: #94a3b8; }
+.chip--blue { background: #1e3a5f; color: #60a5fa; }
+.chip--yellow { background: #3b2f0e; color: #fbbf24; }
+.chip--green { background: #052e16; color: #4ade80; }
+.chip--red { background: #3b0a0a; color: #f87171; }
+
+/* Slot */
+.sd-slot-card { align-items: center; background: #0f172a; border: 1px solid #1e293b; border-radius: .75rem; display: flex; flex-direction: column; gap: .25rem; padding: 1.5rem 1rem; text-align: center; }
+.sd-slot-label { color: #64748b; font-size: .8rem; font-weight: 600; letter-spacing: .04em; margin: 0; text-transform: uppercase; }
+.sd-slot-number { color: #60a5fa; font-size: 3.5rem; font-weight: 800; line-height: 1; margin: 0; }
+
+/* Evaluation progress */
+.sd-eval-header { align-items: center; display: flex; flex-wrap: wrap; gap: .75rem; justify-content: space-between; margin-bottom: .75rem; }
+.sd-progress-bar { background: #1e293b; border-radius: 99px; height: .5rem; overflow: hidden; }
+.sd-progress-fill { background: linear-gradient(90deg, #2563eb, #38bdf8); border-radius: 99px; height: 100%; transition: width .5s ease; }
+.sd-next-queue { color: #94a3b8; font-size: .875rem; margin: .75rem 0 0; }
+.sd-next-icon { color: #60a5fa; margin-right: .25rem; }
+
+/* Canvas list */
+.sd-canvas-list { display: flex; flex-direction: column; gap: 1rem; list-style: none; margin: 0; padding: 0; }
+.sd-canvas-card { background: #0f172a; border: 1px solid #1e293b; border-radius: .75rem; padding: 1.1rem 1.25rem; }
+.sd-canvas-header { align-items: flex-start; display: flex; gap: .75rem; justify-content: space-between; margin-bottom: .6rem; }
+.sd-canvas-info { flex: 1; min-width: 0; }
+.sd-canvas-title { font-size: .95rem; font-weight: 600; margin: 0 0 .15rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sd-canvas-due { color: #64748b; font-size: .8rem; margin: 0; }
+.sd-canvas-link { color: #38bdf8; font-size: .85rem; font-weight: 600; text-decoration: none; }
+.sd-canvas-link:hover { text-decoration: underline; }
+
+/* Review feedback toggle */
+.sd-review-block { border-top: 1px solid #1e293b; margin: .75rem 0; padding-top: .75rem; }
+.sd-review-toggle { align-items: center; background: none; border: none; color: #94a3b8; cursor: pointer; display: flex; font-size: .825rem; gap: .5rem; justify-content: space-between; padding: 0; width: 100%; }
+.sd-review-toggle:hover { color: #e2e8f0; }
+.sd-review-body { color: #cbd5e1; font-size: .875rem; line-height: 1.55; margin-top: .6rem; }
+
+@media (max-width: 52rem) {
+  .sd-columns { grid-template-columns: 1fr; }
+}
