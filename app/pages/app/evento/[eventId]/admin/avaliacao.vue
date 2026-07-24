@@ -129,7 +129,7 @@ const {
         .eq('event_id', eventId.value),
       supabase
         .from('event_roles')
-        .select('event_id,user_id,role,profile:profiles(display_name)')
+        .select('event_id,user_id,role,profile:profiles!event_roles_user_id_fkey(display_name)')
         .eq('event_id', eventId.value)
         .eq('role', 'evaluator'),
       supabase
@@ -478,12 +478,8 @@ async function freeze(category: Category) {
     <p v-if="accessPending || (isProfessor && pending)" class="request-status">
       Carregando configuração…
     </p>
-    <p
-      v-else-if="accessError || (isProfessor && error)"
-      class="form-error"
-      role="alert"
-    >
-      Não foi possível carregar a configuração da avaliação.
+    <p v-else-if="accessError || (isProfessor && error)" class="form-error" role="alert">
+      Não foi possível carregar a configuração da avaliação: {{ error?.message || error }}
     </p>
     <p v-else-if="!isProfessor" class="form-error" role="alert">
       Somente o Professor responsável pode gerenciar esta avaliação.
