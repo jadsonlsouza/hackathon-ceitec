@@ -52,17 +52,17 @@ const { data, pending, error } = await useAsyncData(
     // 2. Fetch team info
     const { data: tData, error: tError } = await $supabase
       .from('teams')
-      .select('id, leader_id, members:team_members(user_id, name, status)')
+      .select('id, leader_id, members:team_members(id, user_id, name, status)')
       .eq('event_id', eventId.value)
       .maybeSingle()
     if (tError) throw tError
 
     // 3. Fetch team enrollments (RLS limits this to my team's enrollments)
-    let enrollments: Array<{ workshop_id: string, user_id: string }> = []
+    let enrollments: Array<{ workshop_id: string, member_id: string }> = []
     if (tData) {
       const { data: eData, error: eError } = await $supabase
         .from('workshop_enrollments')
-        .select('workshop_id, user_id')
+        .select('workshop_id, member_id')
       if (eError) throw eError
       enrollments = eData ?? []
     }
@@ -90,8 +90,8 @@ function getAvailableSeats(w: Workshop) {
   return Math.max(0, w.capacity - count)
 }
 
-function isEnrolled(workshopId: string, userId: string) {
-  return enrollments.value.some(e => e.workshop_id === workshopId && e.user_id === userId)
+function isEnrolled(workshopId: string, memberId: string) {
+  return enrollments.value.some(e => e.workshop_id === workshopId && e.member_id === memberId)
 }
 
 
@@ -107,7 +107,7 @@ function toggleEnrollmentPanel(id: string) {
   }
 }
 
-async function enroll(workshopId: string, userId: string) {
+async function enroll(workshopId: string, memberId: string) {
   if (saving.value) return
   saving.value = true
   pageError.value = null
@@ -116,7 +116,7 @@ async function enroll(workshopId: string, userId: string) {
   try {
     const { error: err } = await $supabase.rpc('enroll_in_workshop', {
       p_workshop_id: workshopId,
-      p_user_id: userId,
+      p_member_id: memberId,
     })
     if (err) throw err
     
@@ -135,7 +135,7 @@ async function enroll(workshopId: string, userId: string) {
   }
 }
 
-async function unenroll(workshopId: string, userId: string) {
+async function unenroll(workshopId: string, memberId: string) {
   if (saving.value) return
   saving.value = true
   pageError.value = null
@@ -144,7 +144,7 @@ async function unenroll(workshopId: string, userId: string) {
   try {
     const { error: err } = await $supabase.rpc('unenroll_from_workshop', {
       p_workshop_id: workshopId,
-      p_user_id: userId,
+      p_member_id: memberId,
     })
     if (err) throw err
     
@@ -238,23 +238,23 @@ async function unenroll(workshopId: string, userId: string) {
                 <span class="member-name">
                   {{ member.name }}
                   <span v-if="member.user_id === profile?.id">(Você)</span>
-                  <span v-else-if="member.status !== 'active'" style="color: #fca5a5; font-size: 0.8rem; margin-left: 0.5rem;">(Pendente)</span>
+                  
                 </span>
                 
                 <button
-                  v-if="isEnrolled(w.id, member.user_id!)"
+                  v-if="isEnrolled(w.id, member.id!)"
                   class="action-button secondary compact-btn"
                   :disabled="saving"
-                  @click="unenroll(w.id, member.user_id!)"
+                  @click="unenroll(w.id, member.id!)"
                 >
                   Cancelar Inscrição
                 </button>
                 <button
                   v-else
                   class="action-button compact-btn"
-                  :disabled="saving || getAvailableSeats(w) === 0 || member.status !== 'active' || !member.user_id"
-                  @click="if (member.user_id) enroll(w.id, member.user_id)"
-                  :title="member.status !== 'active' ? 'Membro precisa aceitar o convite e criar conta primeiro' : ''"
+                  :disabled="saving || getAvailableSeats(w) === 0"
+                  @click="enroll(w.id, member.id!)"
+                  
                 >
                   Inscrever
                 </button>

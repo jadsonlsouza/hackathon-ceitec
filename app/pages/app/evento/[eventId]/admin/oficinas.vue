@@ -80,7 +80,7 @@ const { data: workshops, pending, error } = await useAsyncData(
     if (!isProfessor.value) return []
     const { data, error: wError } = await $supabase
       .from('workshops')
-      .select('id,title,description,starts_at,ends_at,capacity,enrollments:workshop_enrollments(count),enrollment_details:workshop_enrollments(user_id,team_id,profile:profiles!workshop_enrollments_user_id_fkey(display_name,email),team:teams(name))')
+      .select('id,title,description,starts_at,ends_at,capacity,enrollments:workshop_enrollments(count),enrollment_details:workshop_enrollments(member_id,team_id,member:team_members(name,email),team:teams(name))')
       .eq('event_id', eventId.value)
       .order('starts_at')
     
@@ -260,9 +260,9 @@ function getEnrollmentCount(w: ExistingWorkshop) {
                   </tr>
                 </thead>
                 <tbody>
-                  <tr v-for="en in w.enrollment_details" :key="en.user_id">
-                    <td>{{ (en.profile as any)?.display_name ?? '—' }}</td>
-                    <td>{{ (en.profile as any)?.email ?? '—' }}</td>
+                  <tr v-for="en in w.enrollment_details" :key="en.member_id">
+                    <td>{{ (en.member as any)?.name ?? '—' }}</td>
+                    <td>{{ (en.member as any)?.email ?? '—' }}</td>
                     <td>{{ (en.team as any)?.name ?? '—' }}</td>
                   </tr>
                   <tr v-if="!w.enrollment_details?.length">
