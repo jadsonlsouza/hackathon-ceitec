@@ -9,7 +9,15 @@ export interface SignUpInput {
   eventId?: string
 }
 
-export function createAuthActions(supabase: SupabaseClient<Database>, origin: string) {
+function currentOrigin(customOrigin?: string) {
+  if (customOrigin) return customOrigin
+  if (import.meta.client && typeof window !== 'undefined' && window.location?.origin) {
+    return window.location.origin
+  }
+  return 'https://hackathon-ceitec.vercel.app'
+}
+
+export function createAuthActions(supabase: SupabaseClient<Database>, origin?: string) {
   const signInWithPassword = (email: string, password: string) =>
     supabase.auth.signInWithPassword({ email, password })
 
@@ -30,12 +38,12 @@ export function createAuthActions(supabase: SupabaseClient<Database>, origin: st
   const signInWithGoogle = () =>
     supabase.auth.signInWithOAuth({
       provider: 'google',
-      options: { redirectTo: `${origin}/app` },
+      options: { redirectTo: `${currentOrigin(origin)}/app` },
     })
 
   const sendPasswordReset = (email: string) =>
     supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${origin}/redefinir-senha`,
+      redirectTo: `${currentOrigin(origin)}/redefinir-senha`,
     })
 
   const signOut = () => supabase.auth.signOut()
@@ -45,6 +53,5 @@ export function createAuthActions(supabase: SupabaseClient<Database>, origin: st
 
 export function useAuth() {
   const { $supabase } = useNuxtApp()
-  const origin = import.meta.client ? location.origin : ''
-  return createAuthActions($supabase, origin)
+  return createAuthActions($supabase)
 }
