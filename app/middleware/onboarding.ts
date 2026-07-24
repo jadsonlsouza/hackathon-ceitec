@@ -9,6 +9,15 @@ export default defineNuxtRouteMiddleware(async (to) => {
   const { data: { user } } = await $supabase.auth.getUser()
   if (!user) return navigateTo('/login')
 
+  // Global admins never need onboarding — they manage the system.
+  const profileResult = await $supabase
+    .from('profiles')
+    .select('global_role')
+    .eq('id', user.id)
+    .single()
+
+  if (profileResult.data?.global_role === 'global_admin') return
+
   // If user already has any role_request or event_role, skip onboarding.
   const [roleRequestsResult, eventRolesResult] = await Promise.all([
     $supabase
@@ -24,10 +33,11 @@ export default defineNuxtRouteMiddleware(async (to) => {
   const hasRoleRequest = (roleRequestsResult.count ?? 0) > 0
   const hasEventRole = (eventRolesResult.count ?? 0) > 0
 
-  // Check user metadata for a completed onboarding flag
+  // Check user metadata for a completed onboarding flag (set for students)
   const onboardingDone = user.user_metadata?.onboarding_done === true
 
   if (!hasRoleRequest && !hasEventRole && !onboardingDone) {
     return navigateTo('/onboarding')
   }
 })
+
