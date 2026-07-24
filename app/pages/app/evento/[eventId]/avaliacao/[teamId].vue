@@ -32,11 +32,19 @@ interface Slot {
 }
 
 interface Evaluation {
+  id: string
   event_id: string
   category: Category
   team_id: string
   evaluator_id: string
+  comment: string | null
   submitted_at: string
+}
+
+interface EvaluationScore {
+  evaluation_id: string
+  criterion_id: string
+  score: number
 }
 
 const route = useRoute()
@@ -78,6 +86,7 @@ const { data: source, pending, error } = await useAsyncData(
         evaluations: [] as Evaluation[],
         criteria: [] as Criterion[],
         weights: [] as Weight[],
+        existingScores: [] as EvaluationScore[],
       }
     }
 
@@ -99,7 +108,7 @@ const { data: source, pending, error } = await useAsyncData(
         .order('position'),
       supabase
         .from('evaluations')
-        .select('event_id,category,team_id,evaluator_id,submitted_at')
+        .select('id,event_id,category,team_id,evaluator_id,comment,submitted_at')
         .eq('event_id', eventId.value)
         .eq('evaluator_id', profile.value.id),
       supabase
@@ -123,6 +132,20 @@ const { data: source, pending, error } = await useAsyncData(
     ].find(Boolean)
     if (failure) throw failure
 
+    // Load existing scores for this team's evaluation (if already submitted)
+    const thisTeamEvaluation = (evaluations.data ?? []).find(
+      (e: Evaluation) => e.team_id === teamId.value,
+    )
+    let existingScores: EvaluationScore[] = []
+    if (thisTeamEvaluation) {
+      const { data: scoresData, error: scoresError } = await supabase
+        .from('evaluation_scores')
+        .select('evaluation_id,criterion_id,score')
+        .eq('evaluation_id', thisTeamEvaluation.id)
+      if (scoresError) throw scoresError
+      existingScores = (scoresData ?? []) as EvaluationScore[]
+    }
+
     return {
       assignments: (assignments.data ?? []) as Array<{ category: Category }>,
       teams: (teams.data ?? []) as Team[],
@@ -130,6 +153,7 @@ const { data: source, pending, error } = await useAsyncData(
       evaluations: (evaluations.data ?? []) as Evaluation[],
       criteria: (criteria.data ?? []) as Criterion[],
       weights: (weights.data ?? []) as Weight[],
+      existingScores,
     }
   },
   {
@@ -142,8 +166,29 @@ const { data: source, pending, error } = await useAsyncData(
       evaluations: [] as Evaluation[],
       criteria: [] as Criterion[],
       weights: [] as Weight[],
+      existingScores: [] as EvaluationScore[],
     }),
   },
+)
+
+// Pre-populate scores and comment when existing evaluation data loads
+watch(
+  () => source.value.existingScores,
+  (newScores) => {
+    if (newScores.length === 0) return
+    const populated: Record<string, number> = {}
+    for (const s of newScores) populated[s.criterion_id] = s.score
+    scores.value = populated
+  },
+  { immediate: true },
+)
+watch(
+  () => source.value.evaluations,
+  (evals) => {
+    const thisEval = evals.find(e => e.team_id === teamId.value)
+    if (thisEval?.comment) comment.value = thisEval.comment
+  },
+  { immediate: true },
 )
 
 const presentation = computed(() => {
