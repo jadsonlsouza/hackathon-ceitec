@@ -272,19 +272,124 @@ async function unpublishCategory(category: Category) {
     processingAction.value = null
   }
 }
+const isExporting = ref(false)
+
+async function exportToCsv() {
+  if (isExporting.value) return
+  isExporting.value = true
+  
+  try {
+    const { data: criteria } = await supabase
+      .from('evaluation_criteria')
+      .select('id, name')
+      .eq('event_id', eventId.value)
+      .order('position')
+      
+    const { data: evaluations } = await supabase
+      .from('evaluations')
+      .select(`
+        id,
+        category,
+        comment,
+        submitted_at,
+        team:teams(name),
+        evaluator:profiles!evaluations_evaluator_id_fkey(display_name, email),
+        scores:evaluation_scores(criterion_id, score)
+      `)
+      .eq('event_id', eventId.value)
+      .order('submitted_at')
+
+    if (!evaluations || !criteria) return
+
+    const rows = []
+    
+    // Header
+    const header = [
+      'Data da Avaliação',
+      'Categoria',
+      'Equipe',
+      'Avaliador (Nome)',
+      'Avaliador (Email)'
+    ]
+    criteria.forEach(c => header.push(`Nota: ${c.name}`))
+    header.push('Nota Total')
+    header.push('Comentário')
+    
+    rows.push(header)
+
+    // Data
+    for (const ev of evaluations) {
+      const finalScore = (ev.scores as any[]).reduce((sum, s) => sum + s.score, 0)
+      const row = [
+        new Date(ev.submitted_at).toLocaleString('pt-BR'),
+        ev.category === 'junior' ? 'Júnior' : 'Sênior',
+        (ev.team as any)?.name ?? '',
+        (ev.evaluator as any)?.display_name ?? '',
+        (ev.evaluator as any)?.email ?? '',
+      ]
+      
+      // add criteria scores
+      criteria.forEach(c => {
+        const score = (ev.scores as any[]).find(s => s.criterion_id === c.id)
+        row.push(score ? score.score : '')
+      })
+      
+      row.push(finalScore)
+      row.push(ev.comment ?? '')
+      
+      rows.push(row)
+    }
+
+    const csvContent = rows.map(row => 
+      row.map(cell => {
+        const cellStr = String(cell ?? '')
+        if (cellStr.includes(',') || cellStr.includes('\n') || cellStr.includes('"')) {
+          return `"${cellStr.replace(/"/g, '""')}"`
+        }
+        return cellStr
+      }).join(',')
+    ).join('\n')
+
+    const blob = new Blob(['\ufeff' + csvContent], { type: 'text/csv;charset=utf-8;' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `avaliacoes_${source.value.eventSlug || eventId.value}.csv`
+    a.click()
+    URL.revokeObjectURL(url)
+  } catch (err) {
+    console.error('Failed to export CSV', err)
+    alert('Erro ao exportar dados.')
+  } finally {
+    isExporting.value = false
+  }
+}
 </script>
 
 <template>
   <main class="results-admin-page">
     <header class="results-header">
-      <p class="eyebrow">
-        Administração
-      </p>
-      <h1>Resultados e desempates</h1>
-      <p class="intro">
-        Confira a completude, colabore com os avaliadores nos empates e publique
-        cada categoria separadamente.
-      </p>
+      <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem;">
+        <div>
+          <p class="eyebrow">
+            Administração
+          </p>
+          <h1>Resultados e desempates</h1>
+          <p class="intro" style="margin-bottom: 0;">
+            Confira a completude, colabore com os avaliadores nos empates e publique
+            cada categoria separadamente.
+          </p>
+        </div>
+        <button
+          type="button"
+          class="secondary-button"
+          :disabled="isExporting"
+          @click="exportToCsv"
+          style="white-space: nowrap;"
+        >
+          {{ isExporting ? 'Exportando...' : 'Exportar CSV' }}
+        </button>
+      </div>
     </header>
 
     <p v-if="accessPending || pending" class="request-status" role="status">
