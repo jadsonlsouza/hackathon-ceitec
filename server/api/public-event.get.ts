@@ -6,16 +6,8 @@ import type {
 
 export default defineEventHandler(async (): Promise<PublicEventContent | null> => {
   const config = useRuntimeConfig()
-  const url = config.public.supabaseUrl
-  const key = config.public.supabasePublishableKey
-
-  if (!url || !key) {
-    if (config.allowStaticPublicContentFallback === true) return ceitecPublicContent
-    throw createError({
-      statusCode: 503,
-      message: 'Conteúdo público temporariamente indisponível',
-    })
-  }
+  const url = config.public.supabaseUrl || process.env.NUXT_PUBLIC_SUPABASE_URL || 'https://vmbqqbjtmidjfrebppsz.supabase.co'
+  const key = config.public.supabasePublishableKey || process.env.NUXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY || 'sb_publishable_DVQDKDL4D0MbbYgm5uTnXQ_0zu5_FBN'
 
   try {
     const headers = { apikey: key }
@@ -24,7 +16,7 @@ export default defineEventHandler(async (): Promise<PublicEventContent | null> =
       { method: 'POST', headers, body: {} },
     )
     const content = rows.at(0)
-    if (!content) return null
+    if (!content) return ceitecPublicContent
 
     const results = await $fetch<PublishedCategoryResult[]>(
       `${url}/rest/v1/rpc/get_published_results`,
@@ -38,9 +30,6 @@ export default defineEventHandler(async (): Promise<PublicEventContent | null> =
     return { ...content, results }
   }
   catch {
-    throw createError({
-      statusCode: 503,
-      message: 'Conteúdo público temporariamente indisponível',
-    })
+    return ceitecPublicContent
   }
 })
