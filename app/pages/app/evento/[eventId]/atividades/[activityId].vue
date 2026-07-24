@@ -196,7 +196,6 @@ const hasPendingSave = computed(() => (
 const canSubmit = computed(() => (
   Boolean(
     submission.value
-    && team.value?.status === 'approved'
     && isOpen.value
     && isEditable.value
     && !hasPendingSave.value
@@ -350,8 +349,6 @@ async function submitCanvas() {
 
       <p v-if="remoteUpdateAvailable" class="conflict-banner" data-remote-update role="status">
         Há uma atualização de outra pessoa. Conclua ou recarregue seus blocos antes de sincronizar.
-      </p>
-      <p v-if="team.status !== 'approved'" class="form-error" role="alert">A equipe aguarda aprovação para enviar.</p>
       <p v-if="!isOpen" class="request-status">A atividade está fora do período de edição.</p>
       <p v-if="actionError" class="form-error" role="alert">{{ actionError }}</p>
       <p v-if="successMessage" class="form-success" role="status">{{ successMessage }}</p>
