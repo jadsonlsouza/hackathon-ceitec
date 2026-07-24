@@ -29,6 +29,7 @@ const navigationByCapability: Record<Capability, NavigationDefinition[]> = {
   manage_events: [
     { label: 'Eventos', to: '/app/admin/eventos' },
     { label: 'Professores', to: '/app/admin/solicitacoes' },
+    { label: 'Usuários', to: '/app/admin/usuarios' },
     { label: 'Auditoria', to: '/app/admin/auditoria' },
   ],
   manage_event: [
