@@ -29,10 +29,13 @@ async function submit() {
   errorMessage.value = ''
   try {
     const { error } = await signUp({ ...form })
-    if (error) return void (errorMessage.value = 'Não foi possível criar sua conta. Tente novamente.')
+    if (error) {
+      errorMessage.value = error.message || 'Não foi possível criar sua conta. Tente novamente.'
+      return
+    }
     success.value = true
-  } catch {
-    errorMessage.value = 'Não foi possível criar sua conta. Tente novamente.'
+  } catch (err: any) {
+    errorMessage.value = err?.message || 'Não foi possível criar sua conta. Tente novamente.'
   } finally {
     pending.value = false
   }

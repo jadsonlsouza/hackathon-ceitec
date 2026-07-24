@@ -206,6 +206,7 @@ describe('POST /api/admin/archive-event', () => {
       target_event: EVENT_ID,
       confirmed_name: 'Hackathon CEITEC',
       actor: USER_ID,
+      copy_config: false,
     })
   })
 })

@@ -12,8 +12,8 @@ export default defineNuxtConfig({
     eventArchiveSecret: '',
     allowStaticPublicContentFallback: process.env.NODE_ENV !== 'production',
     public: {
-      supabaseUrl: '',
-      supabasePublishableKey: '',
+      supabaseUrl: process.env.NUXT_PUBLIC_SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://vmbqqbjtmidjfrebppsz.supabase.co',
+      supabasePublishableKey: process.env.NUXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY || 'sb_publishable_DVQDKDL4D0MbbYgm5uTnXQ_0zu5_FBN',
     },
   },
   typescript: { strict: true },

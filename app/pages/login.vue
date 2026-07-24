@@ -20,14 +20,25 @@ async function submitPassword() {
 
   pending.value = true
   errorMessage.value = ''
+  let successLogin = false
   try {
     const { error } = await signInWithPassword(email.value, password.value)
-    if (error) return void (errorMessage.value = 'E-mail ou senha inválidos.')
-    await navigateTo('/app')
-  } catch {
-    errorMessage.value = 'Não foi possível entrar. Tente novamente.'
+    if (error) {
+      errorMessage.value = error.message === 'Invalid login credentials' 
+        ? 'E-mail ou senha inválidos.' 
+        : (error.message || 'E-mail ou senha inválidos.')
+      return
+    }
+    successLogin = true
+  } catch (err: any) {
+    errorMessage.value = err?.message || 'Não foi possível entrar. Tente novamente.'
+    return
   } finally {
     pending.value = false
+  }
+
+  if (successLogin) {
+    await navigateTo('/app')
   }
 }
 
@@ -36,9 +47,9 @@ async function submitGoogle() {
   errorMessage.value = ''
   try {
     const { error } = await signInWithGoogle()
-    if (error) errorMessage.value = 'Não foi possível iniciar o login com Google.'
-  } catch {
-    errorMessage.value = 'Não foi possível iniciar o login com Google.'
+    if (error) errorMessage.value = error.message || 'Não foi possível iniciar o login com Google.'
+  } catch (err: any) {
+    errorMessage.value = err?.message || 'Não foi possível iniciar o login com Google.'
   } finally {
     pending.value = false
   }

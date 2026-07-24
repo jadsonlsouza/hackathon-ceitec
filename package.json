@@ -12,6 +12,7 @@
     "test:security": "playwright test tests/e2e/authorization.spec.ts"
   },
   "dependencies": {
+    "@supabase/ssr": "^0.12.3",
     "@supabase/supabase-js": "^2.110.8",
     "nuxt": "^4.5.0",
     "vue": "^3.5.40",
