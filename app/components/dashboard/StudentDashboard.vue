@@ -26,7 +26,7 @@ interface EvaluationInfo {
 }
 
 interface StudentDashboardData {
-  event: { slug: string, status: string } | null
+  event: { slug: string, status: string, category_published: boolean } | null
   team: { id: string, name: string, category: 'junior' | 'senior', status: string } | null
   slot: { position: number } | null
   canvas: CanvasItem[]
@@ -115,7 +115,7 @@ const evalProgress = computed(() => {
 
     <template v-else-if="data.team">
       <!-- ── Header de Resultados ────────────────────────────────────────────── -->
-      <div v-if="data.event?.status === 'results_published'" class="sd-results-banner">
+      <div v-if="data.event?.category_published" class="sd-results-banner">
         <div>
           <h2>Resultados oficiais publicados!</h2>
           <p>Confira a classificação final da sua categoria.</p>
