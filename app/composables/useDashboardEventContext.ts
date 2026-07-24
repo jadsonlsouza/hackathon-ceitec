@@ -232,14 +232,27 @@ export function useDashboardEventContext() {
     onScopeDispose(teamAccess.release)
   }
 
+  const { data: featuredEvent, pending: featuredEventPending } = useAsyncData(
+    'context-featured-event',
+    () => $fetch('/api/featured-event'),
+    { server: false }
+  )
+
   const teamEventIds = computed(
     () => teamAccess?.data.value.teamEventIds ?? [],
   )
 
-  const authorizedEventIds = computed(() => new Set([
-    ...access.eventRoles.value.map(role => role.event_id),
-    ...teamEventIds.value,
-  ]))
+  const authorizedEventIds = computed(() => {
+    const ids = new Set([
+      ...access.eventRoles.value.map(role => role.event_id),
+      ...teamEventIds.value,
+    ])
+    if (featuredEvent.value?.id) {
+      ids.add(featuredEvent.value.id)
+    }
+    return ids
+  })
+
   const currentEventId = computed(() => {
     if (routeEventId.value) {
       return authorizedEventIds.value.has(routeEventId.value)
@@ -248,15 +261,17 @@ export function useDashboardEventContext() {
     }
     return access.eventRoles.value[0]?.event_id
       ?? teamEventIds.value[0]
+      ?? featuredEvent.value?.id
       ?? null
   })
 
   return {
     ...access,
     teamEventIds,
-    contextPending: teamAccess.pending,
+    contextPending: computed(() => teamAccess!.pending.value || featuredEventPending.value),
     contextError: teamAccess.error,
     refreshTeamContext: teamAccess.refresh,
     currentEventId,
   }
 }
+
