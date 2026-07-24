@@ -80,7 +80,7 @@ const { data: workshops, pending, error } = await useAsyncData(
     if (!isProfessor.value) return []
     const { data, error: wError } = await $supabase
       .from('workshops')
-      .select('id,title,description,starts_at,ends_at,capacity,enrollments:workshop_enrollments(count),enrollment_details:workshop_enrollments(user_id,team_id,profile:profiles(name,email),team:teams(name))')
+      .select('id,title,description,starts_at,ends_at,capacity,enrollments:workshop_enrollments(count),enrollment_details:workshop_enrollments(user_id,team_id,profile:profiles!workshop_enrollments_user_id_fkey(name,email),team:teams(name))')
       .eq('event_id', eventId.value)
       .order('starts_at')
     
