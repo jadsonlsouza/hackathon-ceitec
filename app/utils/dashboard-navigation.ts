@@ -71,7 +71,11 @@ export function capabilitiesForAccess(
     if (assignment.role === 'evaluator') capabilities.add('evaluate_teams')
   }
   const isStaffForEvent = eventRoles.some(r => r.event_id === currentEventId)
-  if (teamEventIds.includes(currentEventId) || (!isStaffForEvent && profile?.global_role !== 'global_admin')) {
+  const isEvaluatorForEvent = eventRoles.some(r => r.event_id === currentEventId && r.role === 'evaluator')
+  if (
+    !isEvaluatorForEvent
+    && (teamEventIds.includes(currentEventId) || (!isStaffForEvent && profile?.global_role !== 'global_admin'))
+  ) {
     capabilities.add('collaborate')
   }
 

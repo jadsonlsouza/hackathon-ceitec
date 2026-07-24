@@ -254,7 +254,10 @@ function evaluationPath(teamId: string) {
           :class="{ submitted: item.submitted }"
         >
           <span>{{ item.position }}. {{ item.name }}</span>
-          <span>{{ item.submitted ? 'Enviada' : 'Pendente' }}</span>
+          <NuxtLink v-if="item.submitted" :to="evaluationPath(item.teamId)">
+            Editar avaliação
+          </NuxtLink>
+          <span v-else>Pendente</span>
         </li>
       </ol>
     </section>
