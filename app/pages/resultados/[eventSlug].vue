@@ -88,7 +88,6 @@ function categoryLabel(category: 'junior' | 'senior') {
         <li v-for="team in result.ranking" :key="team.team_id">
           <span class="public-position">{{ team.position }}º</span>
           <strong>{{ team.team_name }}</strong>
-          <span class="public-score">{{ Number(team.score).toFixed(2) }}</span>
         </li>
       </ol>
     </section>
