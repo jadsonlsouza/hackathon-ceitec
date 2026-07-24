@@ -43,6 +43,7 @@ const navigationByCapability: Record<Capability, NavigationDefinition[]> = {
     { label: 'Avaliadores', to: 'admin/avaliacao', eventRelative: true },
     { label: 'Resultados', to: 'admin/resultados', eventRelative: true },
     { label: 'Professores', to: 'admin/professores', eventRelative: true },
+    { label: 'Presença', to: 'admin/presenca', eventRelative: true },
   ],
   review_submissions: [
     { label: 'Revisões', to: 'revisoes', eventRelative: true },
@@ -54,6 +55,7 @@ const navigationByCapability: Record<Capability, NavigationDefinition[]> = {
     { label: 'Minha equipe', to: 'equipe', eventRelative: true },
     { label: 'Atividades', to: 'atividades', eventRelative: true },
     { label: 'Oficinas', to: 'oficinas', eventRelative: true },
+    { label: 'Presença', to: 'presenca', eventRelative: true },
   ],
 }
 
