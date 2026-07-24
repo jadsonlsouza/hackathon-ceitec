@@ -215,11 +215,11 @@ function getEnrollmentCount(w: ExistingWorkshop) {
         <label for="w-capacity">Capacidade (vagas)</label>
         <input id="w-capacity" v-model.number="capacity" type="number" min="1">
 
-        <div class="form-actions" style="display: flex; gap: var(--space-4); margin-top: var(--space-6);">
+        <div class="form-actions" style="display: flex; gap: 1rem; margin-top: 1.5rem;">
           <button type="submit" :disabled="saving">
             {{ saving ? 'Salvando…' : editingWorkshopId ? 'Salvar alterações' : 'Criar Oficina' }}
           </button>
-          <button v-if="editingWorkshopId" type="button" class="secondary-button" :disabled="saving" @click="cancelEdit">
+          <button v-if="editingWorkshopId" type="button" class="action-button secondary" :disabled="saving" @click="cancelEdit">
             Cancelar edição
           </button>
         </div>
@@ -241,9 +241,9 @@ function getEnrollmentCount(w: ExistingWorkshop) {
                   Vagas: {{ getEnrollmentCount(w) }} / {{ w.capacity }} ocupadas
                 </p>
               </div>
-              <div style="display: flex; gap: var(--space-2);">
-                <button type="button" class="secondary-button" @click="editWorkshop(w)">Editar</button>
-                <button type="button" class="secondary-button" @click="toggleEnrollments(w.id)">
+              <div style="display: flex; gap: 0.5rem;">
+                <button type="button" class="action-button secondary" @click="editWorkshop(w)">Editar</button>
+                <button type="button" class="action-button secondary" @click="toggleEnrollments(w.id)">
                   {{ expandedWorkshop === w.id ? 'Ocultar inscritos' : 'Ver inscritos' }}
                 </button>
                 <button type="button" class="danger-button" @click="deleteWorkshop(w.id)">Excluir</button>
@@ -282,18 +282,19 @@ function getEnrollmentCount(w: ExistingWorkshop) {
 .builder-page {
   max-width: 800px;
   margin: 0 auto;
+  padding: 3rem 1.5rem 6rem;
 }
 .builder-header {
-  margin-bottom: var(--space-8);
+  margin-bottom: 2rem;
 }
 .builder-form {
   display: flex;
   flex-direction: column;
-  gap: var(--space-4);
-  background-color: var(--color-gray-900);
-  padding: var(--space-6);
-  border-radius: var(--radius-lg);
-  border: 1px solid var(--color-gray-800);
+  gap: 1rem;
+  background-color: #111827;
+  padding: 1.5rem;
+  border-radius: 1rem;
+  border: 1px solid #334155;
 }
 .builder-form label {
   font-weight: 500;
@@ -302,29 +303,29 @@ function getEnrollmentCount(w: ExistingWorkshop) {
 .builder-form input,
 .builder-form textarea {
   width: 100%;
-  padding: var(--space-3);
-  border-radius: var(--radius-md);
+  padding: 0.75rem;
+  border-radius: 0.5rem;
   border: 1px solid var(--color-gray-700);
-  background-color: var(--color-gray-950);
-  color: var(--color-white);
+  background-color: #070b14;
+  color: #f8fafc;
 }
 .date-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: var(--space-4);
+  gap: 1rem;
 }
 .activity-list {
   list-style: none;
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: var(--space-4);
+  gap: 1rem;
 }
 .activity-card {
-  background-color: var(--color-gray-900);
-  padding: var(--space-6);
-  border-radius: var(--radius-lg);
-  border: 1px solid var(--color-gray-800);
+  background-color: #111827;
+  padding: 1.5rem;
+  border-radius: 1rem;
+  border: 1px solid #334155;
 }
 .activity-card-header {
   display: flex;
@@ -332,21 +333,21 @@ function getEnrollmentCount(w: ExistingWorkshop) {
   align-items: flex-start;
 }
 .activity-card-header h3 {
-  margin: 0 0 var(--space-2);
-  color: var(--color-white);
+  margin: 0 0 0.5rem;
+  color: #f8fafc;
 }
 .field-help {
   font-size: 0.875rem;
-  color: var(--color-gray-400);
+  color: #94a3b8;
 }
 .locked-structure {
   font-size: 0.875rem;
   font-weight: 500;
-  color: var(--color-primary-400);
+  color: #7dd3fc;
 }
 .submission-viewer {
-  border-top: 1px solid var(--color-gray-800);
-  padding-top: var(--space-4);
+  border-top: 1px solid #334155;
+  padding-top: 1rem;
 }
 .submission-table {
   width: 100%;
@@ -354,29 +355,36 @@ function getEnrollmentCount(w: ExistingWorkshop) {
 }
 .submission-table th,
 .submission-table td {
-  padding: var(--space-3);
+  padding: 0.75rem;
   text-align: left;
-  border-bottom: 1px solid var(--color-gray-800);
+  border-bottom: 1px solid #334155;
   font-size: 0.875rem;
 }
 .submission-table th {
   font-weight: 600;
-  color: var(--color-gray-300);
+  color: #cbd5e1;
 }
 .submission-table td {
   color: var(--color-gray-100);
 }
 .danger-button {
-  background-color: var(--color-gray-800);
-  color: var(--color-red-400);
+  background-color: #334155;
+  color: #f87171;
   border: 1px solid var(--color-gray-700);
-  padding: var(--space-2) var(--space-4);
-  border-radius: var(--radius-md);
+  padding: 0.5rem 1rem;
+  border-radius: 0.5rem;
   cursor: pointer;
   font-weight: 500;
 }
 .danger-button:hover {
-  background-color: var(--color-red-900);
+  background-color: #7f1d1d;
   border-color: var(--color-red-700);
 }
+
+.action-button { background: #0369a1; border: 0; border-radius: .5rem; color: #fff; cursor: pointer; font-weight: 700; padding: .65rem 1rem; text-decoration: none; display: inline-block; text-align: center; }
+.action-button:hover:not(:disabled) { background: #0284c7; }
+.action-button:disabled { cursor: wait; opacity: .6; }
+.action-button.secondary { background: transparent; border: 1px solid #475569; }
+.action-button.secondary:hover:not(:disabled) { background: #1e293b; }
+.compact-btn { padding: 0.35rem 0.75rem; font-size: 0.85rem; }
 </style>

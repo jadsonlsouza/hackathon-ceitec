@@ -94,9 +94,7 @@ function isEnrolled(workshopId: string, userId: string) {
   return enrollments.value.some(e => e.workshop_id === workshopId && e.user_id === userId)
 }
 
-function hasActiveMembers() {
-  return teamInfo.value?.members.some(m => m.status === 'active' && m.user_id) ?? false
-}
+
 
 const expandedWorkshop = ref<string | null>(null)
 function toggleEnrollmentPanel(id: string) {
@@ -204,7 +202,7 @@ async function unenroll(workshopId: string, userId: string) {
               <!-- Líder: Painel de membros -->
               <button
                 v-if="isLeader"
-                class="primary-button"
+                class="action-button"
                 @click="toggleEnrollmentPanel(w.id)"
               >
                 {{ expandedWorkshop === w.id ? 'Fechar' : 'Inscrever equipe' }}
@@ -214,7 +212,7 @@ async function unenroll(workshopId: string, userId: string) {
               <template v-else-if="profile">
                 <button
                   v-if="isEnrolled(w.id, profile.id)"
-                  class="secondary-button"
+                  class="action-button secondary"
                   :disabled="saving"
                   @click="unenroll(w.id, profile.id)"
                 >
@@ -222,7 +220,7 @@ async function unenroll(workshopId: string, userId: string) {
                 </button>
                 <button
                   v-else
-                  class="primary-button"
+                  class="action-button"
                   :disabled="saving || getAvailableSeats(w) === 0"
                   @click="enroll(w.id, profile.id)"
                 >
@@ -235,14 +233,17 @@ async function unenroll(workshopId: string, userId: string) {
           <!-- Painel do Líder -->
           <div v-if="isLeader && expandedWorkshop === w.id" class="leader-panel">
             <h4>Selecione os membros para inscrever</h4>
-            <p v-if="!hasActiveMembers()" class="field-help">Sua equipe ainda não possui membros ativos.</p>
-            <ul v-else class="member-list">
-              <li v-for="member in teamInfo.members.filter(m => m.status === 'active' && m.user_id)" :key="member.user_id!">
-                <span class="member-name">{{ member.name }} <span v-if="member.user_id === profile?.id">(Você)</span></span>
+            <ul class="member-list">
+              <li v-for="member in teamInfo.members" :key="member.user_id || member.name">
+                <span class="member-name">
+                  {{ member.name }}
+                  <span v-if="member.user_id === profile?.id">(Você)</span>
+                  <span v-else-if="member.status !== 'active'" style="color: #fca5a5; font-size: 0.8rem; margin-left: 0.5rem;">(Pendente)</span>
+                </span>
                 
                 <button
                   v-if="isEnrolled(w.id, member.user_id!)"
-                  class="secondary-button compact-btn"
+                  class="action-button secondary compact-btn"
                   :disabled="saving"
                   @click="unenroll(w.id, member.user_id!)"
                 >
@@ -250,9 +251,10 @@ async function unenroll(workshopId: string, userId: string) {
                 </button>
                 <button
                   v-else
-                  class="primary-button compact-btn"
-                  :disabled="saving || getAvailableSeats(w) === 0"
-                  @click="enroll(w.id, member.user_id!)"
+                  class="action-button compact-btn"
+                  :disabled="saving || getAvailableSeats(w) === 0 || member.status !== 'active' || !member.user_id"
+                  @click="if (member.user_id) enroll(w.id, member.user_id)"
+                  :title="member.status !== 'active' ? 'Membro precisa aceitar o convite e criar conta primeiro' : ''"
                 >
                   Inscrever
                 </button>
@@ -269,37 +271,38 @@ async function unenroll(workshopId: string, userId: string) {
 .builder-page {
   max-width: 800px;
   margin: 0 auto;
+  padding: 3rem 1.5rem 6rem;
 }
 .builder-header {
-  margin-bottom: var(--space-8);
+  margin-bottom: 2rem;
 }
 .no-workshops {
-  background-color: var(--color-gray-900);
-  padding: var(--space-8);
-  border-radius: var(--radius-lg);
-  border: 1px solid var(--color-gray-800);
+  background-color: #111827;
+  padding: 2rem;
+  border-radius: 1rem;
+  border: 1px solid #334155;
   text-align: center;
-  color: var(--color-gray-400);
+  color: #94a3b8;
 }
 .workshop-list {
   list-style: none;
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: var(--space-6);
+  gap: 1.5rem;
 }
 .workshop-card {
-  background-color: var(--color-gray-900);
-  border-radius: var(--radius-lg);
-  border: 1px solid var(--color-gray-800);
+  background-color: #111827;
+  border-radius: 1rem;
+  border: 1px solid #334155;
   overflow: hidden;
 }
 .workshop-card-content {
-  padding: var(--space-6);
+  padding: 1.5rem;
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  gap: var(--space-6);
+  gap: 1.5rem;
 }
 @media (max-width: 600px) {
   .workshop-card-content {
@@ -310,74 +313,81 @@ async function unenroll(workshopId: string, userId: string) {
   flex: 1;
 }
 .workshop-info h3 {
-  margin: 0 0 var(--space-2);
-  color: var(--color-white);
+  margin: 0 0 0.5rem;
+  color: #f8fafc;
   font-size: 1.25rem;
 }
 .workshop-time {
   font-size: 0.875rem;
-  color: var(--color-primary-400);
-  margin-bottom: var(--space-2);
+  color: #7dd3fc;
+  margin-bottom: 0.5rem;
   font-weight: 500;
 }
 .workshop-desc {
   font-size: 0.95rem;
-  color: var(--color-gray-300);
+  color: #cbd5e1;
   line-height: 1.5;
-  margin-bottom: var(--space-4);
+  margin-bottom: 1rem;
 }
 .seats-indicator {
   display: inline-block;
-  padding: var(--space-1) var(--space-3);
-  border-radius: var(--radius-full);
-  background-color: var(--color-green-900);
-  color: var(--color-green-400);
+  padding: 0.25rem 0.75rem;
+  border-radius: 9999px;
+  background-color: #064e3b;
+  color: #34d399;
   font-size: 0.75rem;
   font-weight: 600;
-  border: 1px solid var(--color-green-800);
+  border: 1px solid #065f46;
 }
 .seats-indicator.seats-full {
-  background-color: var(--color-red-900);
-  color: var(--color-red-400);
-  border-color: var(--color-red-800);
+  background-color: #7f1d1d;
+  color: #f87171;
+  border-color: #991b1b;
 }
 .workshop-actions {
   display: flex;
   flex-direction: column;
-  gap: var(--space-2);
+  gap: 0.5rem;
   min-width: 150px;
 }
 .leader-panel {
-  background-color: var(--color-gray-950);
-  border-top: 1px solid var(--color-gray-800);
-  padding: var(--space-6);
+  background-color: #070b14;
+  border-top: 1px solid #334155;
+  padding: 1.5rem;
 }
 .leader-panel h4 {
-  margin: 0 0 var(--space-4);
-  color: var(--color-gray-200);
+  margin: 0 0 1rem;
+  color: #e2e8f0;
 }
 .member-list {
   list-style: none;
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: var(--space-3);
+  gap: 0.75rem;
 }
 .member-list li {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: var(--space-3);
-  background-color: var(--color-gray-900);
-  border-radius: var(--radius-md);
-  border: 1px solid var(--color-gray-800);
+  padding: 0.75rem;
+  background-color: #111827;
+  border-radius: 0.5rem;
+  border: 1px solid #334155;
 }
 .member-name {
-  color: var(--color-white);
+  color: #f8fafc;
   font-weight: 500;
 }
 .compact-btn {
-  padding: var(--space-1) var(--space-3);
+  padding: 0.25rem 0.75rem;
   font-size: 0.875rem;
 }
+
+.action-button { background: #0369a1; border: 0; border-radius: .5rem; color: #fff; cursor: pointer; font-weight: 700; padding: .65rem 1rem; text-decoration: none; display: inline-block; text-align: center; }
+.action-button:hover:not(:disabled) { background: #0284c7; }
+.action-button:disabled { cursor: wait; opacity: .6; }
+.action-button.secondary { background: transparent; border: 1px solid #475569; }
+.action-button.secondary:hover:not(:disabled) { background: #1e293b; }
+.compact-btn { padding: 0.35rem 0.75rem; font-size: 0.85rem; }
 </style>
