@@ -266,12 +266,33 @@ button, input, select, textarea { font: inherit; }
 .public-content-form .secondary-button { background: transparent; border: 1px solid #64748b; margin: 0; width: fit-content; }
 .public-content-form .danger-outline { background: transparent; border: 1px solid #ef4444; color: #fecaca; }
 
+
+/* Onboarding (role selection after Google OAuth) */
+.onboarding-page { align-items: center; background: radial-gradient(ellipse at top, #0c2d50 0%, #070b14 60%); display: flex; justify-content: center; min-height: 100vh; padding: 2rem 1.25rem; }
+.onboarding-card { background: #0d1526; border: 1px solid #1e3a5f; border-radius: 1.5rem; box-shadow: 0 32px 80px #000a; max-width: 52rem; padding: clamp(2rem, 6vw, 3.5rem); width: 100%; }
+.onboarding-header { margin-bottom: 2.5rem; }
+.onboarding-header h1 { font-size: clamp(1.8rem, 5vw, 2.8rem); letter-spacing: -.03em; margin: 0 0 .5rem; }
+.role-grid { display: grid; gap: 1rem; grid-template-columns: repeat(2, 1fr); margin-bottom: 2rem; }
+.role-radio { position: absolute; opacity: 0; pointer-events: none; }
+.role-card { background: #111827; border: 2px solid #1e293b; border-radius: 1rem; cursor: pointer; display: flex; flex-direction: column; gap: .4rem; padding: 1.5rem; position: relative; transition: border-color .18s, background .18s, box-shadow .18s; }
+.role-card:hover { background: #162032; border-color: #334155; }
+.role-card.is-selected { background: linear-gradient(145deg, #0c2d50, #0d1b34); border-color: #0ea5e9; box-shadow: 0 0 0 1px #0ea5e9, 0 8px 28px #0ea5e930; }
+.role-icon { font-size: 2rem; line-height: 1; margin-bottom: .25rem; }
+.role-label { font-size: 1.1rem; font-weight: 800; }
+.role-description { color: #94a3b8; font-size: .9rem; line-height: 1.55; }
+.role-note { background: #172033; border-radius: .4rem; color: #7dd3fc; font-size: .8rem; font-weight: 600; margin-top: .5rem; padding: .35rem .65rem; width: fit-content; }
+.onboarding-confirm-btn { background: linear-gradient(135deg, #0369a1, #0284c7); border: 0; border-radius: .75rem; color: #fff; cursor: pointer; font-size: 1.05rem; font-weight: 800; min-height: 52px; padding: .85rem 2rem; transition: opacity .15s, transform .1s; width: 100%; }
+.onboarding-confirm-btn:hover:not(:disabled) { opacity: .92; transform: translateY(-1px); }
+.onboarding-confirm-btn:disabled { background: #1e293b; color: #64748b; cursor: not-allowed; transform: none; }
+
 @media (max-width: 48rem) {
+  .role-grid { grid-template-columns: 1fr; }
   .about-grid, .category-grid, .event-facts, .editor-columns { grid-template-columns: 1fr; }
   .schedule-editor-row { grid-template-columns: 1fr; }
   .hero-actions a { text-align: center; width: 100%; }
   .landing-footer { align-items: flex-start; flex-direction: column; }
 }
+
 
 /* Authenticated dashboard */
 .dashboard-shell { display: grid; grid-template-columns: minmax(15rem, 18rem) 1fr; min-height: 100vh; }

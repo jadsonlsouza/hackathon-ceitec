@@ -7,7 +7,7 @@ import {
   type Capability,
 } from '../../utils/dashboard-navigation'
 
-definePageMeta({ middleware: 'auth' })
+definePageMeta({ middleware: ['auth', 'onboarding'] })
 
 interface DashboardSummary {
   events: number
