@@ -42,6 +42,7 @@ const navigationByCapability: Record<Capability, NavigationDefinition[]> = {
     { label: 'Revisões', to: 'revisoes', eventRelative: true },
     { label: 'Avaliadores', to: 'admin/avaliacao', eventRelative: true },
     { label: 'Resultados', to: 'admin/resultados', eventRelative: true },
+    { label: 'Professores', to: 'admin/professores', eventRelative: true },
   ],
   review_submissions: [
     { label: 'Revisões', to: 'revisoes', eventRelative: true },
