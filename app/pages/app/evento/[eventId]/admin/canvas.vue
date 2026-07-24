@@ -32,9 +32,23 @@ interface SubmissionRow {
 
 interface ExistingActivity {
   id: string
+  template_id: string
   title: string
+  instructions: string
   categories: ('junior' | 'senior')[]
-  blocks?: Array<{ id: string }>
+  opens_at: string
+  due_at: string
+  is_primary: boolean
+  allow_resubmission: boolean
+  published: boolean
+  blocks?: Array<{
+    id: string
+    key: string
+    title: string
+    prompt: string
+    position: number
+    max_items: number | null
+  }>
   submissions?: SubmissionRow[]
 }
 
@@ -61,6 +75,9 @@ const allowResubmission = ref(true)
 const published = ref(false)
 const blocks = ref<BuilderBlock[]>([{ key: 'bloco-1', title: '', prompt: '', maxItems: null }])
 
+const editingActivityId = ref<string | null>(null)
+const editingTemplateId = ref<string | null>(null)
+
 function canvasAdminKey(targetEventId: string) {
   return `canvas-admin:${targetEventId}`
 }
@@ -72,7 +89,7 @@ const { data: activities, pending, error } = await useAsyncData(
     if (!isProfessor.value) return []
     const { data, error: activitiesError } = await $supabase
       .from('canvas_activities')
-      .select('id,title,categories,blocks:canvas_blocks(id),submissions(id,status,revision,submitted_at,team:teams(id,name,category))')
+      .select('id,template_id,title,instructions,categories,opens_at,due_at,is_primary,allow_resubmission,published,blocks:canvas_blocks(id,key,title,prompt,position,max_items),submissions(id,status,revision,submitted_at,team:teams(id,name,category))')
       .eq('event_id', eventId.value)
       .order('created_at')
     if (activitiesError) throw activitiesError
@@ -151,6 +168,8 @@ function validate(): ActivityBuilderInput | null {
 }
 
 function resetForm() {
+  editingActivityId.value = null
+  editingTemplateId.value = null
   title.value = ''
   instructions.value = ''
   categories.value = ['junior']
@@ -162,6 +181,42 @@ function resetForm() {
   blocks.value = [{ key: 'bloco-1', title: '', prompt: '', maxItems: null }]
 }
 
+function toLocalDatetimeString(isoString: string) {
+  const d = new Date(isoString)
+  if (Number.isNaN(d.getTime())) return ''
+  const pad = (n: number) => n.toString().padStart(2, '0')
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
+}
+
+function editActivity(activity: ExistingActivity) {
+  editingActivityId.value = activity.id
+  editingTemplateId.value = activity.template_id
+  title.value = activity.title
+  instructions.value = activity.instructions
+  categories.value = [...activity.categories]
+  opensAt.value = toLocalDatetimeString(activity.opens_at)
+  dueAt.value = toLocalDatetimeString(activity.due_at)
+  isPrimary.value = activity.is_primary
+  allowResubmission.value = activity.allow_resubmission
+  published.value = activity.published
+  
+  if (activity.blocks && activity.blocks.length > 0) {
+    blocks.value = [...activity.blocks].sort((a, b) => a.position - b.position).map(b => ({
+      key: b.key,
+      title: b.title,
+      prompt: b.prompt,
+      maxItems: b.max_items,
+    }))
+  }
+  window.scrollTo({ top: 0, behavior: 'smooth' })
+}
+
+function cancelEdit() {
+  resetForm()
+  formError.value = null
+  successMessage.value = null
+}
+
 async function saveCanvas() {
   if (!isProfessor.value || saving.value) return
   formError.value = null
@@ -171,48 +226,79 @@ async function saveCanvas() {
 
   saving.value = true
   try {
-    const templateResult = await $supabase
-      .from('canvas_templates')
-      .insert({
-        event_id: eventId.value,
-        name: input.title,
-        instructions: input.instructions,
-      })
-      .select('id')
-      .single()
-    if (templateResult.error) throw templateResult.error
+    if (editingActivityId.value) {
+      if (editingTemplateId.value) {
+        const templateResult = await $supabase
+          .from('canvas_templates')
+          .update({
+            name: input.title,
+            instructions: input.instructions,
+          })
+          .eq('id', editingTemplateId.value)
+        if (templateResult.error) throw templateResult.error
+      }
 
-    const blocksResult = await $supabase
-      .from('canvas_template_blocks')
-      .insert(input.blocks.map(block => ({
-        template_id: templateResult.data.id,
-        key: block.key,
-        title: block.title,
-        prompt: block.prompt,
-        position: block.position,
-        max_items: block.maxItems,
-      })))
-    if (blocksResult.error) throw blocksResult.error
+      const activityResult = await $supabase
+        .from('canvas_activities')
+        .update({
+          title: input.title,
+          instructions: input.instructions,
+          categories: input.categories,
+          opens_at: input.opensAt,
+          due_at: input.dueAt,
+          is_primary: input.isPrimary,
+          allow_resubmission: input.allowResubmission,
+          published: input.published,
+        })
+        .eq('id', editingActivityId.value)
+      if (activityResult.error) throw activityResult.error
 
-    const activityResult = await $supabase
-      .from('canvas_activities')
-      .insert({
-        event_id: eventId.value,
-        template_id: templateResult.data.id,
-        title: input.title,
-        instructions: input.instructions,
-        categories: input.categories,
-        opens_at: input.opensAt,
-        due_at: input.dueAt,
-        is_primary: input.isPrimary,
-        allow_resubmission: input.allowResubmission,
-        published: input.published,
-      })
-      .select('id')
-      .single()
-    if (activityResult.error) throw activityResult.error
+      successMessage.value = 'Atividade atualizada com sucesso.'
+    } else {
+      const templateResult = await $supabase
+        .from('canvas_templates')
+        .insert({
+          event_id: eventId.value,
+          name: input.title,
+          instructions: input.instructions,
+        })
+        .select('id')
+        .single()
+      if (templateResult.error) throw templateResult.error
 
-    successMessage.value = 'Template e atividade criados com sucesso.'
+      const blocksResult = await $supabase
+        .from('canvas_template_blocks')
+        .insert(input.blocks.map(block => ({
+          template_id: templateResult.data.id,
+          key: block.key,
+          title: block.title,
+          prompt: block.prompt,
+          position: block.position,
+          max_items: block.maxItems,
+        })))
+      if (blocksResult.error) throw blocksResult.error
+
+      const activityResult = await $supabase
+        .from('canvas_activities')
+        .insert({
+          event_id: eventId.value,
+          template_id: templateResult.data.id,
+          title: input.title,
+          instructions: input.instructions,
+          categories: input.categories,
+          opens_at: input.opensAt,
+          due_at: input.dueAt,
+          is_primary: input.isPrimary,
+          allow_resubmission: input.allowResubmission,
+          published: input.published,
+        })
+        .select('id')
+        .single()
+      if (activityResult.error) throw activityResult.error
+
+      successMessage.value = 'Template e atividade criados com sucesso.'
+    }
+
     resetForm()
     await refreshNuxtData(canvasAdminKey(eventId.value))
   }
@@ -295,24 +381,34 @@ function submissionStatusClass(status: string) {
 
         <fieldset class="builder-blocks">
           <legend>Blocos do template</legend>
+          <p v-if="editingActivityId" class="field-help" style="margin-bottom: var(--space-4);">
+            <strong>Aviso:</strong> A estrutura de blocos não pode ser alterada para atividades existentes, para garantir a integridade das submissões já enviadas.
+          </p>
           <article v-for="(block, index) in blocks" :key="block.key" class="builder-block">
             <h2>Bloco {{ index + 1 }}</h2>
             <label :for="`canvas-block-title-${index}`">Título</label>
-            <input :id="`canvas-block-title-${index}`" v-model="block.title">
+            <input :id="`canvas-block-title-${index}`" v-model="block.title" :disabled="!!editingActivityId">
             <label :for="`canvas-block-prompt-${index}`">Orientação</label>
-            <textarea :id="`canvas-block-prompt-${index}`" v-model="block.prompt" rows="2" />
+            <textarea :id="`canvas-block-prompt-${index}`" v-model="block.prompt" rows="2" :disabled="!!editingActivityId" />
             <label :for="`canvas-block-max-${index}`">Limite de itens (opcional)</label>
-            <input :id="`canvas-block-max-${index}`" v-model.number="block.maxItems" type="number" min="1">
-            <div class="block-actions">
+            <input :id="`canvas-block-max-${index}`" v-model.number="block.maxItems" type="number" min="1" :disabled="!!editingActivityId">
+            <div v-if="!editingActivityId" class="block-actions">
               <button type="button" :disabled="index === 0" @click="moveBlock(index, -1)">Mover para cima</button>
               <button type="button" :disabled="index === blocks.length - 1" @click="moveBlock(index, 1)">Mover para baixo</button>
               <button type="button" class="danger-button" :disabled="blocks.length === 1" @click="removeBlock(index)">Remover bloco</button>
             </div>
           </article>
-          <button type="button" class="secondary-button" @click="addBlock">Adicionar bloco</button>
+          <button v-if="!editingActivityId" type="button" class="secondary-button" @click="addBlock">Adicionar bloco</button>
         </fieldset>
 
-        <button type="submit" :disabled="saving">{{ saving ? 'Criando…' : 'Salvar template e criar atividade' }}</button>
+        <div class="form-actions" style="display: flex; gap: var(--space-4); margin-top: var(--space-6);">
+          <button type="submit" :disabled="saving">
+            {{ saving ? 'Salvando…' : editingActivityId ? 'Salvar alterações' : 'Salvar template e atividade' }}
+          </button>
+          <button v-if="editingActivityId" type="button" class="secondary-button" :disabled="saving" @click="cancelEdit">
+            Cancelar edição
+          </button>
+        </div>
       </form>
 
       <section class="existing-canvases" aria-labelledby="existing-canvases-title">
@@ -325,19 +421,28 @@ function submissionStatusClass(status: string) {
                 <h3>{{ activity.title }}</h3>
                 <p>{{ activity.categories.map(c => c === 'junior' ? 'Júnior' : 'Sênior').join(' e ') }}</p>
                 <p v-if="submissionCount(activity) > 0" class="locked-structure">
-                  {{ submissionCount(activity) }} envio(s) — estrutura bloqueada.
+                  {{ submissionCount(activity) }} envio(s).
                 </p>
-                <p v-else class="field-help">A estrutura ficará bloqueada quando a primeira equipe enviar.</p>
+                <p v-else class="field-help">Nenhum envio recebido ainda.</p>
               </div>
-              <button
-                v-if="submissionCount(activity) > 0"
-                type="button"
-                class="secondary-button"
-                :aria-expanded="expandedActivity === activity.id"
-                @click="toggleSubmissions(activity.id)"
-              >
-                {{ expandedActivity === activity.id ? 'Ocultar envios' : 'Ver envios' }}
-              </button>
+              <div style="display: flex; gap: var(--space-2);">
+                <button
+                  type="button"
+                  class="secondary-button"
+                  @click="editActivity(activity)"
+                >
+                  Editar
+                </button>
+                <button
+                  v-if="submissionCount(activity) > 0"
+                  type="button"
+                  class="secondary-button"
+                  :aria-expanded="expandedActivity === activity.id"
+                  @click="toggleSubmissions(activity.id)"
+                >
+                  {{ expandedActivity === activity.id ? 'Ocultar envios' : 'Ver envios' }}
+                </button>
+              </div>
             </div>
 
             <!-- Submissions table -->
