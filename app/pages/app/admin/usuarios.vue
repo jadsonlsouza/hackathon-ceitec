@@ -41,7 +41,7 @@ const { data: users, pending, error, refresh } = await useAsyncData(
         display_name,
         email,
         global_role,
-        event_roles (
+        event_roles!event_roles_user_id_fkey (
           event_id,
           role,
           event:events!event_roles_event_id_fkey(name)
