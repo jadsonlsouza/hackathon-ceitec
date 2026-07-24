@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 import { flushPromises, mount } from '@vue/test-utils'
-import { computed, defineComponent, h, nextTick, reactive, ref } from 'vue'
+import { computed, defineComponent, h, nextTick, reactive, ref, watch } from 'vue'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import DashboardNavigation from '../../app/components/dashboard/DashboardNavigation.vue'
 import { useCurrentAccess } from '../../app/composables/useCurrentAccess'
@@ -41,6 +41,9 @@ function makeClient() {
   }> = []
   const removed: unknown[] = []
   const unsubscribed = vi.fn()
+  let deferNetwork = false
+  let deferredResolvers: Array<() => void> = []
+  let getUserCount = 0
 
   roles.set('user-a', [])
   roles.set('user-b', [])
@@ -61,7 +64,11 @@ function makeClient() {
   }
 
   function resolved<T>(value: T) {
-    const promise = Promise.resolve(value)
+    const promise = deferNetwork
+      ? new Promise<T>((resolve) => {
+          deferredResolvers.push(() => resolve(value))
+        })
+      : Promise.resolve(value)
     return {
       single: () => promise,
       then: promise.then.bind(promise),
@@ -71,10 +78,11 @@ function makeClient() {
   const client = {
     auth: {
       async getUser() {
-        return {
+        getUserCount += 1
+        return resolved({
           data: { user: currentUserId ? { id: currentUserId } : null },
           error: null,
-        }
+        })
       },
       onAuthStateChange(callback: (event: string, session: unknown) => void) {
         authCallbacks.add(callback)
@@ -109,7 +117,7 @@ function makeClient() {
               return resolved(
                 table === 'profiles'
                   ? { data: currentUserId ? profileFor(currentUserId) : null, error: null }
-                  : { data: roles.get(currentUserId ?? '') ?? [], error: null },
+                  : { data: [...(roles.get(currentUserId ?? '') ?? [])], error: null },
               )
             },
           }
@@ -151,6 +159,18 @@ function makeClient() {
     channels,
     removed,
     unsubscribed,
+    get getUserCount() {
+      return getUserCount
+    },
+    deferNetwork() {
+      deferNetwork = true
+    },
+    releaseNetwork() {
+      deferNetwork = false
+      const resolvers = deferredResolvers
+      deferredResolvers = []
+      for (const resolve of resolvers) resolve()
+    },
     async emit(table: string, event: 'INSERT' | 'UPDATE' | 'DELETE') {
       for (const channel of channels) {
         if (!channel.active) continue
@@ -197,6 +217,25 @@ function dashboardHarness() {
           teamEventIds: context.teamEventIds.value,
           currentPath: '/app',
         }),
+      ])
+    },
+  })
+}
+
+function dashboardShellHarness() {
+  return defineComponent({
+    setup() {
+      const context = useDashboardEventContext()
+      return () => h('div', [
+        context.pending.value || context.contextPending.value
+          ? h('p', { 'data-loading': '' }, 'Carregando')
+          : h(DashboardNavigation, {
+              profile: context.profile.value,
+              eventRoles: context.eventRoles.value,
+              currentEventId: context.currentEventId.value,
+              teamEventIds: context.teamEventIds.value,
+              currentPath: '/app',
+            }),
       ])
     },
   })
@@ -335,6 +374,7 @@ describe('dashboard access lifecycle', () => {
 
   it('deduplicates shared listeners and removes channels and auth listener on cleanup', async () => {
     vi.useFakeTimers()
+    const intervalSpy = vi.spyOn(window, 'setInterval')
     const Parent = defineComponent({
       setup: () => () => h('div', [h(dashboardHarness()), h(dashboardHarness())]),
     })
@@ -342,6 +382,7 @@ describe('dashboard access lifecycle', () => {
     await flushPromises()
 
     expect(fake.channels.filter(channel => channel.name.includes('user-a'))).toHaveLength(2)
+    expect(intervalSpy).toHaveBeenCalledOnce()
 
     const beforeInterval = new Map(fake.selectCounts)
     await vi.advanceTimersByTimeAsync(15_000)
@@ -372,15 +413,124 @@ describe('dashboard access lifecycle', () => {
     expect(fake.selectCounts).toEqual(afterCleanup)
   })
 
+  it('keeps focused navigation mounted during silent single-flight reconciliation', async () => {
+    fake.roles.set('user-a', [{
+      event_id: EVENT_A,
+      role: 'monitor',
+      user_id: 'user-a',
+      categories: [],
+      approved_by: 'admin',
+      approved_at: '2026-07-23T00:00:00Z',
+    }])
+    const wrapper = mount(dashboardShellHarness(), { attachTo: document.body, global: { stubs: { NuxtLink } } })
+    await flushPromises()
+    const originalLink = wrapper.get('[data-dashboard-link]').element as HTMLElement
+    originalLink.focus()
+    expect(document.activeElement).toBe(originalLink)
+
+    fake.deferNetwork()
+    const beforeGetUser = fake.getUserCount
+    window.dispatchEvent(new Event('focus'))
+    await Promise.resolve()
+    window.dispatchEvent(new Event('online'))
+    await Promise.resolve()
+
+    expect(fake.getUserCount).toBe(beforeGetUser + 1)
+    expect(wrapper.find('[data-loading]').exists()).toBe(false)
+    expect(wrapper.get('[data-dashboard-link]').element).toBe(originalLink)
+    expect(document.activeElement).toBe(originalLink)
+
+    fake.releaseNetwork()
+    await flushPromises()
+    wrapper.unmount()
+  })
+
+  it('polls only while visible and online, then reconciles on resume', async () => {
+    vi.useFakeTimers()
+    Object.defineProperty(document, 'visibilityState', {
+      configurable: true,
+      value: 'hidden',
+    })
+    Object.defineProperty(navigator, 'onLine', {
+      configurable: true,
+      value: false,
+    })
+    const wrapper = mount(dashboardHarness(), { global: { stubs: { NuxtLink } } })
+    await flushPromises()
+    const beforeHidden = new Map(fake.selectCounts)
+
+    await vi.advanceTimersByTimeAsync(30_000)
+    expect(fake.selectCounts).toEqual(beforeHidden)
+
+    Object.defineProperty(document, 'visibilityState', {
+      configurable: true,
+      value: 'visible',
+    })
+    document.dispatchEvent(new Event('visibilitychange'))
+    await flushPromises()
+    expect(fake.selectCounts).toEqual(beforeHidden)
+
+    Object.defineProperty(navigator, 'onLine', {
+      configurable: true,
+      value: true,
+    })
+    window.dispatchEvent(new Event('online'))
+    await flushPromises()
+    expect(fake.selectCounts.get('profiles')).toBe((beforeHidden.get('profiles') ?? 0) + 1)
+    expect(fake.selectCounts.get('teams')).toBe((beforeHidden.get('teams') ?? 0) + 1)
+    wrapper.unmount()
+  })
+
+  it('preserves access references when reconciliation returns unchanged data', async () => {
+    fake.roles.set('user-a', [{
+      event_id: EVENT_A,
+      role: 'monitor',
+      user_id: 'user-a',
+      categories: [],
+      approved_by: 'admin',
+      approved_at: '2026-07-23T00:00:00Z',
+    }])
+    fake.teamEvents.set('user-a', [EVENT_A])
+    const changes = { profile: 0, roles: 0, teams: 0 }
+    const Observer = defineComponent({
+      setup() {
+        const context = useDashboardEventContext()
+        watch(context.profile, () => { changes.profile += 1 })
+        watch(context.eventRoles, () => { changes.roles += 1 })
+        watch(context.teamEventIds, () => { changes.teams += 1 })
+        return () => h('div')
+      },
+    })
+    const wrapper = mount(Observer)
+    await flushPromises()
+    changes.profile = 0
+    changes.roles = 0
+    changes.teams = 0
+
+    window.dispatchEvent(new Event('focus'))
+    await flushPromises()
+    expect(changes).toEqual({ profile: 0, roles: 0, teams: 0 })
+    wrapper.unmount()
+  })
+
   it('subscribes to team membership without embedding reserved email characters', async () => {
+    fake.teamEvents.set('user-a', [EVENT_A, EVENT_B])
     const wrapper = mount(dashboardHarness(), { global: { stubs: { NuxtLink } } })
     await flushPromises()
 
-    const teamMemberHandlers = fake.channels
-      .flatMap(channel => channel.handlers)
+    const activeTeamChannel = fake.channels.findLast(
+      channel => channel.active && channel.name.startsWith('dashboard-teams:'),
+    )
+    const teamMemberHandlers = activeTeamChannel?.handlers
       .filter(handler => handler.config.table === 'team_members')
+      ?? []
     expect(teamMemberHandlers).toHaveLength(1)
     expect(teamMemberHandlers[0]?.config).not.toHaveProperty('filter')
+    const teamHandlers = activeTeamChannel?.handlers
+      .filter(handler => handler.config.table === 'teams')
+      ?? []
+    expect(teamHandlers).toHaveLength(1)
+    expect(teamHandlers[0]?.config).not.toHaveProperty('filter')
 
     const roleHandlers = fake.channels
       .flatMap(channel => channel.handlers)

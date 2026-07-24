@@ -41,13 +41,11 @@ function createTeamContextController(
   let active = false
   let generation = 0
   let reloadPromise: Promise<void> | null = null
-  let subscribedTeamIds: string[] = []
   let stopReconciliation: (() => void) | null = null
 
   function stopChannel() {
     const current = channel
     channel = null
-    subscribedTeamIds = []
     if (current) void supabase.removeChannel(current)
   }
 
@@ -63,30 +61,26 @@ function createTeamContextController(
     // This subscription is deliberately unfiltered. Realtime applies the
     // authenticated user's RLS policies, and raw emails may contain filter
     // syntax characters. Revocations are reconciled independently.
-    let nextChannel = supabase
+    channel = supabase
       .channel(`dashboard-teams:${scopedUserId}`)
       .on('postgres_changes', {
         event: '*',
         schema: 'public',
         table: 'team_members',
       }, () => {
-        void refresh()
+        void refresh(true)
       })
-    for (const teamId of data.value.teamIds) {
-      nextChannel = nextChannel.on('postgres_changes', {
+      .on('postgres_changes', {
         event: '*',
         schema: 'public',
         table: 'teams',
-        filter: `id=eq.${teamId}`,
       }, () => {
-        void refresh()
+        void refresh(true)
       })
-    }
-    subscribedTeamIds = [...data.value.teamIds]
-    channel = nextChannel.subscribe()
+      .subscribe()
   }
 
-  async function refresh() {
+  async function refresh(silent = false) {
     const expectedUserId = userId.value
     if (!expectedUserId) {
       data.value = { teamEventIds: [], teamIds: [] }
@@ -95,8 +89,10 @@ function createTeamContextController(
     }
     if (reloadPromise) return reloadPromise
     const expectedGeneration = generation
-    pending.value = true
-    error.value = null
+    if (!silent) {
+      pending.value = true
+      error.value = null
+    }
     const currentPromise = (async () => {
       try {
         const { data: rows, error: teamError } = await supabase
@@ -109,16 +105,14 @@ function createTeamContextController(
         ) return
         const visibleTeams = (rows ?? []).filter(team => team.status !== 'rejected')
         const nextData = {
-          teamEventIds: [...new Set(visibleTeams.map(team => team.event_id))],
-          teamIds: visibleTeams.map(team => team.id),
+          teamEventIds: [...new Set(visibleTeams.map(team => team.event_id))].sort(),
+          teamIds: visibleTeams.map(team => team.id).sort(),
         }
-        const channelShapeChanged = (
-          nextData.teamIds.join(',') !== subscribedTeamIds.join(',')
-        )
-        data.value = nextData
-        if (channelShapeChanged) {
-          stopChannel()
-          startChannel()
+        if (
+          nextData.teamEventIds.join(',') !== data.value.teamEventIds.join(',')
+          || nextData.teamIds.join(',') !== data.value.teamIds.join(',')
+        ) {
+          data.value = nextData
         }
       }
       catch (caught) {
@@ -126,13 +120,16 @@ function createTeamContextController(
           expectedGeneration !== generation
           || expectedUserId !== userId.value
         ) return
-        data.value = { teamEventIds: [], teamIds: [] }
-        error.value = caught
+        if (!silent) {
+          data.value = { teamEventIds: [], teamIds: [] }
+          error.value = caught
+        }
       }
       finally {
         if (
           expectedGeneration === generation
           && expectedUserId === userId.value
+          && !silent
         ) pending.value = false
       }
     })()
@@ -163,11 +160,11 @@ function createTeamContextController(
           return
         }
         startChannel()
-        void refresh()
+        void refresh(false)
       },
       { immediate: true },
     )
-    stopReconciliation = installBrowserReconciliation(refresh)
+    stopReconciliation = installBrowserReconciliation(() => refresh(true))
   }
 
   function stop() {

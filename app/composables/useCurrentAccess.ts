@@ -71,7 +71,40 @@ export function createCurrentAccessController(
   let generation = 0
   let authEpoch = 0
   let reloadPromise: Promise<void> | null = null
+  let refreshPromise: Promise<void> | null = null
   let stopReconciliation: (() => void) | null = null
+
+  function sameProfile(left: Profile | null, right: Profile | null) {
+    if (!left || !right) return left === right
+    return (
+      left.id === right.id
+      && left.email === right.email
+      && left.display_name === right.display_name
+      && left.global_role === right.global_role
+      && left.created_at === right.created_at
+      && left.updated_at === right.updated_at
+    )
+  }
+
+  function roleKey(role: EventRole) {
+    return JSON.stringify([
+      role.event_id,
+      role.role,
+      role.user_id,
+      role.approved_by,
+      role.approved_at,
+      [...role.categories].sort(),
+    ])
+  }
+
+  function sameEventRoles(left: EventRole[], right: EventRole[]) {
+    if (left.length !== right.length) return false
+    const leftKeys = left.map(roleKey).sort()
+    const rightKeys = right.map(roleKey).sort()
+    return leftKeys.every(
+      (key, index) => key === rightKeys[index],
+    )
+  }
 
   function clearAccess() {
     profile.value = null
@@ -95,7 +128,7 @@ export function createCurrentAccessController(
         table: 'profiles',
         filter: `id=eq.${targetUserId}`,
       }, () => {
-        void reloadCurrent()
+        void reloadCurrent(true)
       })
       .on('postgres_changes', {
         event: 'UPDATE',
@@ -103,7 +136,7 @@ export function createCurrentAccessController(
         table: 'profiles',
         filter: `id=eq.${targetUserId}`,
       }, () => {
-        void reloadCurrent()
+        void reloadCurrent(true)
       })
       .on('postgres_changes', {
         event: 'INSERT',
@@ -111,7 +144,7 @@ export function createCurrentAccessController(
         table: 'event_roles',
         filter: `user_id=eq.${targetUserId}`,
       }, () => {
-        void reloadCurrent()
+        void reloadCurrent(true)
       })
       .on('postgres_changes', {
         event: 'UPDATE',
@@ -119,18 +152,20 @@ export function createCurrentAccessController(
         table: 'event_roles',
         filter: `user_id=eq.${targetUserId}`,
       }, () => {
-        void reloadCurrent()
+        void reloadCurrent(true)
       })
       .subscribe()
   }
 
-  async function reloadCurrent() {
+  async function reloadCurrent(silent = false) {
     const expectedUserId = userId.value
     if (!expectedUserId) return
     if (reloadPromise) return reloadPromise
     const expectedGeneration = generation
-    pending.value = true
-    error.value = null
+    if (!silent) {
+      pending.value = true
+      error.value = null
+    }
     const currentPromise = (async () => {
       try {
         const loaded = await loadCurrentAccess(supabase, expectedUserId)
@@ -138,21 +173,28 @@ export function createCurrentAccessController(
           expectedGeneration !== generation
           || expectedUserId !== userId.value
         ) return
-        profile.value = loaded.profile
-        eventRoles.value = loaded.eventRoles
+        if (!sameProfile(profile.value, loaded.profile)) {
+          profile.value = loaded.profile
+        }
+        if (!sameEventRoles(eventRoles.value, loaded.eventRoles)) {
+          eventRoles.value = loaded.eventRoles
+        }
       }
       catch (caught) {
         if (
           expectedGeneration !== generation
           || expectedUserId !== userId.value
         ) return
-        clearAccess()
-        error.value = caught
+        if (!silent) {
+          clearAccess()
+          error.value = caught
+        }
       }
       finally {
         if (
           expectedGeneration === generation
           && expectedUserId === userId.value
+          && !silent
         ) pending.value = false
       }
     })()
@@ -165,8 +207,9 @@ export function createCurrentAccessController(
     }
   }
 
-  async function changeUser(nextUserId: string | null) {
-    if (nextUserId !== userId.value) {
+  async function changeUser(nextUserId: string | null, silent = false) {
+    const changed = nextUserId !== userId.value
+    if (changed) {
       generation += 1
       reloadPromise = null
       stopAccessChannel()
@@ -179,26 +222,36 @@ export function createCurrentAccessController(
       pending.value = false
       return
     }
-    await reloadCurrent()
+    await reloadCurrent(changed ? false : silent)
   }
 
-  async function refresh() {
+  async function refresh(silent = false) {
+    if (refreshPromise) return refreshPromise
     const expectedAuthEpoch = authEpoch
-    pending.value = true
+    if (!silent) pending.value = true
+    const currentPromise = (async () => {
+      try {
+        const { data, error: authError } = await supabase.auth.getUser()
+        if (expectedAuthEpoch !== authEpoch) return
+        if (authError) throw authError
+        await changeUser(data.user?.id ?? null, silent)
+      }
+      catch (caught) {
+        if (expectedAuthEpoch !== authEpoch || silent) return
+        generation += 1
+        stopAccessChannel()
+        userId.value = null
+        clearAccess()
+        error.value = caught
+        pending.value = false
+      }
+    })()
+    refreshPromise = currentPromise
     try {
-      const { data, error: authError } = await supabase.auth.getUser()
-      if (expectedAuthEpoch !== authEpoch) return
-      if (authError) throw authError
-      await changeUser(data.user?.id ?? null)
+      await currentPromise
     }
-    catch (caught) {
-      if (expectedAuthEpoch !== authEpoch) return
-      generation += 1
-      stopAccessChannel()
-      userId.value = null
-      clearAccess()
-      error.value = caught
-      pending.value = false
+    finally {
+      if (refreshPromise === currentPromise) refreshPromise = null
     }
   }
 
@@ -213,7 +266,7 @@ export function createCurrentAccessController(
     authSubscription = data.subscription
     // Filtered DELETE events cannot reliably identify a row after RLS removes
     // access. Reconciliation covers revocations; INSERT/UPDATE stay immediate.
-    stopReconciliation = installBrowserReconciliation(refresh)
+    stopReconciliation = installBrowserReconciliation(() => refresh(true))
     void refresh()
   }
 
@@ -223,6 +276,7 @@ export function createCurrentAccessController(
     authEpoch += 1
     generation += 1
     reloadPromise = null
+    refreshPromise = null
     authSubscription?.unsubscribe()
     authSubscription = null
     stopReconciliation?.()
