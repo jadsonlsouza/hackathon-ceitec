@@ -15,6 +15,7 @@ const ArchiveBody = z.object({
   eventId: z.string().uuid(),
   eventName: z.string().min(1),
   archiveSecret: z.string().min(12),
+  copyConfig: z.boolean().optional().default(false),
 })
 
 interface ArchiveRpcRow {
@@ -45,6 +46,7 @@ interface ArchiveAdminClient {
       target_event: string
       confirmed_name: string
       actor: string
+      copy_config: boolean
     },
   ) => Promise<{
     data: ArchiveRpcRow[] | null
@@ -227,6 +229,7 @@ export async function processArchiveEvent(
       target_event: parsed.data.eventId,
       confirmed_name: parsed.data.eventName,
       actor: userData.user.id,
+      copy_config: parsed.data.copyConfig,
     },
   )
 

@@ -1,0 +1,63 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+
+      - name: Start local Supabase stack
+        run: npx supabase start --exclude edge-runtime,imgproxy,logflare,mailpit,postgres-meta,storage-api,studio,supavisor,vector
+
+      - name: Apply migrations and seed
+        run: npx supabase db reset
+
+      - name: Lint database
+        run: npx supabase db lint
+
+      - name: Run database unit tests (pgTAP)
+        run: npx supabase test db
+
+      - name: Run Vitest unit and integration tests
+        run: npx vitest run
+
+      - name: Run Playwright end-to-end tests
+        run: npx playwright test
+
+      - name: Build production bundle
+        run: npm run build
+        env:
+          NUXT_PUBLIC_SUPABASE_URL: http://127.0.0.1:54321
+          NUXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: placeholder-anon-key
+          NUXT_SUPABASE_SECRET_KEY: placeholder-service-key
+          NUXT_EVENT_ARCHIVE_SECRET: placeholder-archive-secret
+
+      - name: Upload Playwright report on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 7

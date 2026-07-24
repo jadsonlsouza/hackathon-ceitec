@@ -26,6 +26,7 @@ const archiveDialog = ref<HTMLDialogElement | null>(null)
 const selectedEvent = ref<EventRow | null>(null)
 const confirmedName = ref('')
 const archiveSecret = ref('')
+const copyConfig = ref(false)
 const archiving = ref(false)
 const archiveMessage = ref<string | null>(null)
 const archiveError = ref<string | null>(null)
@@ -112,6 +113,7 @@ function openArchiveDialog(event: EventRow) {
   selectedEvent.value = event
   confirmedName.value = ''
   archiveSecret.value = ''
+  copyConfig.value = false
   archiveMessage.value = null
   archiveError.value = null
   archiveDialog.value?.showModal()
@@ -121,6 +123,7 @@ function closeArchiveDialog() {
   if (archiving.value) return
 
   archiveSecret.value = ''
+  copyConfig.value = false
   archiveError.value = null
   confirmedName.value = ''
   selectedEvent.value = null
@@ -157,6 +160,7 @@ async function archiveEvent() {
         eventId: selectedEvent.value.id,
         eventName: confirmedName.value,
         archiveSecret: archiveSecret.value,
+        copyConfig: copyConfig.value,
       },
     })
 
@@ -352,6 +356,16 @@ async function archiveEvent() {
           required
           autocomplete="off"
         >
+
+        <label class="checkbox-field">
+          <input
+            id="copy-config"
+            v-model="copyConfig"
+            type="checkbox"
+            name="copy-config"
+          >
+          Copiar programação, critérios e modelos de Canvas
+        </label>
 
         <div class="dialog-actions">
           <button
