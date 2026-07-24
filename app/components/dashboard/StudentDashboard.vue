@@ -26,6 +26,7 @@ interface EvaluationInfo {
 }
 
 interface StudentDashboardData {
+  event: { slug: string, status: string } | null
   team: { id: string, name: string, category: 'junior' | 'senior', status: string } | null
   slot: { position: number } | null
   canvas: CanvasItem[]
@@ -49,7 +50,7 @@ const { data, pending, error } = await useAsyncData(
     server: false,
     watch: [() => props.eventId],
     default: (): StudentDashboardData => ({
-      team: null, slot: null, canvas: [], evaluation: null,
+      event: null, team: null, slot: null, canvas: [], evaluation: null,
     }),
   },
 )
@@ -113,6 +114,17 @@ const evalProgress = computed(() => {
     <p v-else-if="error" class="form-error" role="alert">Não foi possível carregar o painel.</p>
 
     <template v-else-if="data.team">
+      <!-- ── Header de Resultados ────────────────────────────────────────────── -->
+      <div v-if="data.event?.status === 'results_published'" class="sd-results-banner">
+        <div>
+          <h2>Resultados oficiais publicados!</h2>
+          <p>Confira a classificação final da sua categoria.</p>
+        </div>
+        <NuxtLink :to="`/resultados/${data.event.slug}`" class="primary-button" target="_blank">
+          Ver Classificação Oficial
+        </NuxtLink>
+      </div>
+
       <!-- ── Header da equipe ──────────────────────────────────────────────── -->
       <section class="sd-section sd-team-banner" aria-labelledby="sd-team-title">
         <div class="sd-team-info">

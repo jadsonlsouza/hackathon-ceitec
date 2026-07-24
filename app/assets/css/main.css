@@ -376,6 +376,9 @@ button, input, select, textarea { font: inherit; }
 
 /* ── Student Dashboard ──────────────────────────────────────────────────────── */
 .student-dashboard { margin-top: 2.5rem; }
+.sd-results-banner { align-items: center; background: linear-gradient(135deg, #052e16 0%, #166534 100%); border: 1px solid #4ade8044; border-radius: 1rem; display: flex; flex-wrap: wrap; gap: 1rem; justify-content: space-between; margin-bottom: 1.5rem; padding: 1.5rem 2rem; }
+.sd-results-banner h2 { color: #fff; font-size: 1.4rem; margin: 0 0 .25rem; }
+.sd-results-banner p { color: #bbf7d0; font-size: .9rem; margin: 0; }
 .sd-team-banner { background: linear-gradient(135deg, #0f2044 0%, #1e3a5f 100%); border: 1px solid #2563eb44; border-radius: 1rem; padding: 1.75rem 2rem; }
 .sd-team-info h2 { font-size: 1.6rem; margin: .25rem 0 .6rem; }
 .sd-team-meta { align-items: center; color: #94a3b8; display: flex; flex-wrap: wrap; gap: .5rem; margin: 0; }
@@ -446,3 +449,11 @@ button, input, select, textarea { font: inherit; }
 .canvas-activity-chip { align-items: center; background: #0f172a; border: 1px solid #1e293b; border-radius: .5rem; display: flex; gap: .5rem; padding: .35rem .75rem; }
 .canvas-activity-name { color: #cbd5e1; font-size: .8rem; font-weight: 500; max-width: 10rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
+/* ── Admin Results Tie Audit ────────────────────────────────────────────────── */
+.tie-audit { background: #0f172a; border: 1px solid #1e293b; border-radius: .75rem; padding: 1.5rem; }
+.tie-audit h4 { color: #f8fafc; font-size: 1rem; margin: 0 0 1rem; }
+.tie-audit p { color: #cbd5e1; font-size: .9rem; margin: 0 0 1rem; }
+.tie-audit ol { color: #cbd5e1; font-size: .9rem; margin: 0 0 1rem; padding-left: 1.5rem; }
+.tie-audit li { margin-bottom: .25rem; }
+.tie-audit-meta { color: #64748b !important; font-size: .8rem !important; margin: 0 !important; }
+.publication-actions { display: flex; flex-wrap: wrap; gap: 1rem; margin-top: 1.5rem; }

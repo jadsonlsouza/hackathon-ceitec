@@ -34,6 +34,9 @@ interface Decision {
   event_id: string
   category: Category
   displayed_score: number
+  ordered_team_ids: string[]
+  justification: string
+  created_at: string
 }
 
 interface Publication {
@@ -75,13 +78,15 @@ const {
   async () => {
     if (!isProfessor.value) {
       return {
+        eventSlug: null as string | null,
         progress: [] as ProgressRow[],
         ranking: [] as RankingRow[],
         decisions: [] as Decision[],
         publications: [] as Publication[],
       }
     }
-    const [progress, ranking, decisions, publications] = await Promise.all([
+    const [eventRow, progress, ranking, decisions, publications] = await Promise.all([
+      supabase.from('events').select('slug').eq('id', eventId.value).single(),
       supabase.rpc('get_evaluation_progress', {
         target_event: eventId.value,
       }),
@@ -90,13 +95,14 @@ const {
       }),
       supabase
         .from('tie_decisions')
-        .select('event_id,category,displayed_score')
+        .select('*')
         .eq('event_id', eventId.value),
       supabase.rpc('get_administrative_publications', {
         target_event: eventId.value,
       }),
     ])
     const failure = [
+      eventRow.error,
       progress.error,
       ranking.error,
       decisions.error,
@@ -104,6 +110,7 @@ const {
     ].find(Boolean)
     if (failure) throw failure
     return {
+      eventSlug: eventRow.data?.slug ?? null,
       progress: (progress.data ?? []) as ProgressRow[],
       ranking: (ranking.data ?? []) as RankingRow[],
       decisions: (decisions.data ?? []) as Decision[],
@@ -114,6 +121,7 @@ const {
     server: false,
     watch: [eventId, eventRoles],
     default: () => ({
+      eventSlug: null as string | null,
       progress: [] as ProgressRow[],
       ranking: [] as RankingRow[],
       decisions: [] as Decision[],
@@ -147,14 +155,17 @@ function tieGroups(category: Category) {
   }
   return [...grouped.entries()]
     .filter(([, rows]) => rows.length > 1)
-    .map(([score, rows]) => ({
-      score,
-      rows,
-      resolved: source.value.decisions.some(decision => (
-        decision.category === category
-        && Number(decision.displayed_score) === score
-      )),
-    }))
+    .map(([score, rows]) => {
+      const decision = source.value.decisions.find(d => (
+        d.category === category && Number(d.displayed_score) === score
+      ))
+      return {
+        score,
+        rows,
+        decision: decision ?? null,
+        resolved: Boolean(decision),
+      }
+    })
 }
 
 function blockers(category: Category) {
@@ -360,9 +371,19 @@ async function unpublishCategory(category: Category) {
           :key="`${category}:${group.score}`"
           class="tie-card"
         >
-          <p v-if="group.resolved" class="form-success">
-            Desempate de nota {{ group.score.toFixed(2) }} já registrado.
-          </p>
+          <div v-if="group.resolved" class="tie-audit">
+            <h4>Desempate de nota {{ group.score.toFixed(2) }}</h4>
+            <p><strong>Decisão registrada:</strong> {{ group.decision!.justification }}</p>
+            <ol>
+              <li v-for="(teamId, index) in group.decision!.ordered_team_ids" :key="teamId">
+                {{ index + 1 }}º lugar do empate:
+                <strong>{{ group.rows.find(r => r.team_id === teamId)?.team_name ?? 'Equipe' }}</strong>
+              </li>
+            </ol>
+            <p class="tie-audit-meta">
+              Registrado em {{ new Date(group.decision!.created_at).toLocaleString('pt-BR') }}
+            </p>
+          </div>
           <TieResolution
             v-else
             data-resolve-tie
@@ -385,18 +406,23 @@ async function unpublishCategory(category: Category) {
               Snapshot imutável criado em
               {{ new Date(publication(category)!.published_at).toLocaleString('pt-BR') }}.
             </p>
-            <button
-              type="button"
-              class="danger-button"
-              :disabled="Boolean(processingAction)"
-              @click="unpublishCategory(category)"
-            >
-              {{
-                processingAction === `unpublish:${category}`
-                  ? 'Despublicando…'
-                  : `Despublicar ${categoryLabel(category)}`
-              }}
-            </button>
+            <div class="publication-actions">
+              <NuxtLink v-if="source.eventSlug" :to="`/resultados/${source.eventSlug}`" class="secondary-button" target="_blank">
+                Ver Ranking Público ↗
+              </NuxtLink>
+              <button
+                type="button"
+                class="danger-button"
+                :disabled="Boolean(processingAction)"
+                @click="unpublishCategory(category)"
+              >
+                {{
+                  processingAction === `unpublish:${category}`
+                    ? 'Despublicando…'
+                    : `Despublicar ${categoryLabel(category)}`
+                }}
+              </button>
+            </div>
           </template>
           <template v-else>
             <h3 v-if="blockers(category).length">
