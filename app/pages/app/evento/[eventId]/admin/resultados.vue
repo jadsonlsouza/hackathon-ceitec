@@ -234,6 +234,33 @@ async function publishCategory(category: Category) {
     processingAction.value = null
   }
 }
+
+async function unpublishCategory(category: Category) {
+  const action = `unpublish:${category}`
+  if (!isProfessor.value || processingAction.value) return
+  if (!confirm(`Deseja despublicar a categoria ${categoryLabel(category)}? Os resultados deixarão de ser visíveis publicamente.`)) return
+  processingAction.value = action
+  actionError.value = null
+  successMessage.value = null
+  try {
+    const { error: rpcError } = await supabase.rpc(
+      'unpublish_category_results',
+      { event_id: eventId.value, category },
+    )
+    if (rpcError) throw rpcError
+    successMessage.value = `Categoria ${categoryLabel(category)} despublicada.`
+    await refreshResults()
+  }
+  catch (caught) {
+    actionError.value = resultsRpcErrorMessage(
+      caught,
+      'Não foi possível despublicar esta categoria. Tente novamente.',
+    )
+  }
+  finally {
+    processingAction.value = null
+  }
+}
 </script>
 
 <template>
@@ -358,6 +385,18 @@ async function publishCategory(category: Category) {
               Snapshot imutável criado em
               {{ new Date(publication(category)!.published_at).toLocaleString('pt-BR') }}.
             </p>
+            <button
+              type="button"
+              class="danger-button"
+              :disabled="Boolean(processingAction)"
+              @click="unpublishCategory(category)"
+            >
+              {{
+                processingAction === `unpublish:${category}`
+                  ? 'Despublicando…'
+                  : `Despublicar ${categoryLabel(category)}`
+              }}
+            </button>
           </template>
           <template v-else>
             <h3 v-if="blockers(category).length">
