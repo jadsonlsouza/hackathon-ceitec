@@ -37,6 +37,7 @@ const navigationByCapability: Record<Capability, NavigationDefinition[]> = {
     { label: 'Equipes', to: 'equipes', eventRelative: true },
     { label: 'Solicitações', to: 'solicitacoes', eventRelative: true },
     { label: 'Canvas', to: 'admin/canvas', eventRelative: true },
+    { label: 'Oficinas', to: 'admin/oficinas', eventRelative: true },
     { label: 'Conteúdo público', to: 'admin/conteudo-publico', eventRelative: true },
     { label: 'Revisões', to: 'revisoes', eventRelative: true },
     { label: 'Avaliadores', to: 'admin/avaliacao', eventRelative: true },
@@ -51,6 +52,7 @@ const navigationByCapability: Record<Capability, NavigationDefinition[]> = {
   collaborate: [
     { label: 'Minha equipe', to: 'equipe', eventRelative: true },
     { label: 'Atividades', to: 'atividades', eventRelative: true },
+    { label: 'Oficinas', to: 'oficinas', eventRelative: true },
   ],
 }
 
