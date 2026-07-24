@@ -256,7 +256,7 @@ async function unpublishCategory(category: Category) {
   try {
     const { error: rpcError } = await supabase.rpc(
       'unpublish_category_results',
-      { target_event: eventId.value, target_category: category },
+      { event_id: eventId.value, category },
     )
     if (rpcError) throw rpcError
     successMessage.value = `Categoria ${categoryLabel(category)} despublicada.`
