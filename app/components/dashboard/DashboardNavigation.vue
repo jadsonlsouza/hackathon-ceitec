@@ -4,6 +4,7 @@ import {
   capabilitiesForAccess,
   dashboardNavigation,
 } from '../../utils/dashboard-navigation'
+import { useAuth } from '../../composables/useAuth'
 
 const props = defineProps<{
   profile: { global_role: 'student' | 'global_admin' } | null
@@ -52,6 +53,12 @@ function handleKeydown(event: KeyboardEvent) {
   event.preventDefault()
   void closeMenu(true)
 }
+
+const { signOut } = useAuth()
+async function handleLogout() {
+  await signOut()
+  await navigateTo('/login')
+}
 </script>
 
 <template>
@@ -96,5 +103,20 @@ function handleKeydown(event: KeyboardEvent) {
     <p v-if="links.length === 0" class="dashboard-nav-empty">
       Nenhum acesso ativo neste evento.
     </p>
+
+    <div class="dashboard-nav-footer">
+      <button
+        type="button"
+        class="dashboard-logout-btn"
+        @click="handleLogout"
+      >
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+          <polyline points="16 17 21 12 16 7"/>
+          <line x1="21" y1="12" x2="9" y2="12"/>
+        </svg>
+        Sair
+      </button>
+    </div>
   </div>
 </template>

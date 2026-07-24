@@ -286,6 +286,9 @@ button, input, select, textarea { font: inherit; }
 .dashboard-nav-list a[aria-current="page"] { background: #0c4a6e; color: #e0f2fe; }
 .dashboard-nav-empty, .dashboard-access-state { color: #94a3b8; line-height: 1.5; }
 .dashboard-access-error { color: #fca5a5; }
+.dashboard-nav-footer { margin-top: 2rem; padding-top: 1rem; border-top: 1px solid #1e293b; }
+.dashboard-logout-btn { align-items: center; background: transparent; border: 1px solid #334155; border-radius: .55rem; color: #94a3b8; cursor: pointer; display: flex; font-size: .9rem; font-weight: 700; gap: .5rem; min-height: 44px; padding: .7rem .8rem; text-align: left; transition: background .15s, color .15s, border-color .15s; width: 100%; }
+.dashboard-logout-btn:hover { background: #2d1111; border-color: #7f1d1d; color: #fca5a5; }
 .dashboard-content { min-width: 0; }
 .dashboard-page { margin: 0 auto; max-width: 76rem; min-height: 100vh; padding: 3rem 1.5rem 6rem; }
 .dashboard-header { max-width: 48rem; }
