@@ -98,6 +98,15 @@ const saving = ref(false)
 const actionError = ref<string | null>(null)
 const successMessage = ref<string | null>(null)
 
+// New member form state
+const addingMember = ref(false)
+const newMemberName = ref('')
+const newMemberEmail = ref('')
+const newMemberEnrollment = ref('')
+const addMemberError = ref<string | null>(null)
+const removingMemberId = ref<string | null>(null)
+const showAddForm = ref(false)
+
 function openEdit(team: TeamWithMembers) {
   editingTeam.value = team
   editName.value = team.name
@@ -110,6 +119,11 @@ function openEdit(team: TeamWithMembers) {
   }))
   actionError.value = null
   successMessage.value = null
+  addMemberError.value = null
+  showAddForm.value = false
+  newMemberName.value = ''
+  newMemberEmail.value = ''
+  newMemberEnrollment.value = ''
 }
 
 function closeEdit() {
@@ -141,6 +155,76 @@ async function saveTeam() {
   }
   finally {
     saving.value = false
+  }
+}
+
+async function addMember() {
+  if (!editingTeam.value || addingMember.value) return
+  if (!newMemberName.value.trim() || !newMemberEmail.value.trim() || !newMemberEnrollment.value.trim()) {
+    addMemberError.value = 'Preencha todos os campos do novo integrante.'
+    return
+  }
+  if (editMembers.value.length >= 6) {
+    addMemberError.value = 'A equipe já atingiu o limite de 6 integrantes.'
+    return
+  }
+  addingMember.value = true
+  addMemberError.value = null
+  try {
+    const { data, error: rpcError } = await supabase.rpc('admin_add_team_member', {
+      p_team_id: editingTeam.value.id,
+      p_name: newMemberName.value.trim(),
+      p_email: newMemberEmail.value.trim(),
+      p_enrollment: newMemberEnrollment.value.trim(),
+    })
+    if (rpcError) {
+      const msg = rpcError.message ?? ''
+      if (msg.includes('member_already_reserved')) addMemberError.value = 'Este e-mail ou matrícula já está registrado neste evento.'
+      else if (msg.includes('team_size_out_of_range')) addMemberError.value = 'A equipe já atingiu o limite de 6 integrantes.'
+      else addMemberError.value = 'Não foi possível adicionar o integrante.'
+      return
+    }
+    // Reload team list and reopen edit with fresh data
+    await refreshList()
+    const updatedTeam = teams.value.find(t => t.id === editingTeam.value!.id)
+    if (updatedTeam) openEdit(updatedTeam)
+    newMemberName.value = ''
+    newMemberEmail.value = ''
+    newMemberEnrollment.value = ''
+    showAddForm.value = false
+  }
+  catch {
+    addMemberError.value = 'Não foi possível adicionar o integrante.'
+  }
+  finally {
+    addingMember.value = false
+  }
+}
+
+async function removeMember(memberId: string) {
+  if (!editingTeam.value || removingMemberId.value) return
+  if (!confirm('Tem certeza que deseja remover este integrante da equipe?')) return
+  removingMemberId.value = memberId
+  actionError.value = null
+  try {
+    const { error: rpcError } = await supabase.rpc('admin_remove_team_member', {
+      p_member_id: memberId,
+    })
+    if (rpcError) {
+      const msg = rpcError.message ?? ''
+      if (msg.includes('last_member')) actionError.value = 'Não é possível remover o único integrante ativo da equipe.'
+      else actionError.value = 'Não foi possível remover o integrante.'
+      return
+    }
+    await refreshList()
+    const updatedTeam = teams.value.find(t => t.id === editingTeam.value!.id)
+    if (updatedTeam) openEdit(updatedTeam)
+  }
+  catch {
+    actionError.value = 'Não foi possível remover o integrante.'
+  }
+  finally {
+    removingMemberId.value = null
   }
 }
 
@@ -259,15 +343,60 @@ function teamCanvasStatus(teamId: string) {
           </select>
 
           <fieldset class="member-fields">
-            <legend>Integrantes</legend>
+            <legend>Integrantes ({{ editMembers.length }}/6)</legend>
             <div v-for="(member, index) in editMembers" :key="member.id" class="member-row">
-              <h3>Integrante {{ index + 1 }}</h3>
+              <div class="member-row-header">
+                <h3>Integrante {{ index + 1 }}</h3>
+                <button
+                  type="button"
+                  class="remove-member-btn"
+                  :disabled="removingMemberId === member.id || editMembers.length <= 1"
+                  :title="editMembers.length <= 1 ? 'Não é possível remover o único integrante' : 'Remover integrante'"
+                  @click="removeMember(member.id)"
+                >
+                  {{ removingMemberId === member.id ? '…' : '✕ Remover' }}
+                </button>
+              </div>
               <label :for="`edit-member-${index}-name`">Nome</label>
               <input :id="`edit-member-${index}-name`" v-model="editMembers[index].name">
               <label :for="`edit-member-${index}-email`">E-mail</label>
               <input :id="`edit-member-${index}-email`" v-model="editMembers[index].email" type="email">
               <label :for="`edit-member-${index}-enrollment`">Matrícula</label>
               <input :id="`edit-member-${index}-enrollment`" v-model="editMembers[index].enrollment">
+            </div>
+
+            <!-- Add member section -->
+            <div v-if="editMembers.length < 6" class="add-member-section">
+              <button
+                v-if="!showAddForm"
+                type="button"
+                class="add-member-toggle"
+                @click="showAddForm = true"
+              >
+                + Adicionar integrante
+              </button>
+
+              <div v-else class="new-member-form">
+                <div class="new-member-header">
+                  <h3>Novo integrante</h3>
+                  <button type="button" class="remove-member-btn" @click="showAddForm = false; addMemberError = null">✕</button>
+                </div>
+                <p v-if="addMemberError" class="form-error">{{ addMemberError }}</p>
+                <label for="new-member-name">Nome</label>
+                <input id="new-member-name" v-model="newMemberName" :disabled="addingMember">
+                <label for="new-member-email">E-mail</label>
+                <input id="new-member-email" v-model="newMemberEmail" type="email" :disabled="addingMember">
+                <label for="new-member-enrollment">Matrícula</label>
+                <input id="new-member-enrollment" v-model="newMemberEnrollment" :disabled="addingMember">
+                <button
+                  type="button"
+                  class="add-member-confirm"
+                  :disabled="addingMember || !newMemberName.trim() || !newMemberEmail.trim() || !newMemberEnrollment.trim()"
+                  @click="addMember"
+                >
+                  {{ addingMember ? 'Adicionando…' : 'Confirmar adição' }}
+                </button>
+              </div>
             </div>
           </fieldset>
 
@@ -282,3 +411,103 @@ function teamCanvasStatus(teamId: string) {
     </div>
   </main>
 </template>
+
+<style scoped>
+.member-row-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.25rem;
+}
+
+.member-row-header h3 {
+  margin: 0;
+}
+
+.remove-member-btn {
+  background: transparent;
+  border: 1px solid rgba(248, 113, 113, 0.35);
+  color: #f87171;
+  border-radius: 6px;
+  padding: 0.25rem 0.6rem;
+  font-size: 0.75rem;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.remove-member-btn:hover:not(:disabled) {
+  background: rgba(248, 113, 113, 0.12);
+}
+
+.remove-member-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.add-member-section {
+  margin-top: 1rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  padding-top: 1rem;
+}
+
+.add-member-toggle {
+  background: transparent;
+  border: 1px dashed rgba(99, 102, 241, 0.5);
+  color: #818cf8;
+  border-radius: 8px;
+  padding: 0.5rem 1rem;
+  font-size: 0.875rem;
+  cursor: pointer;
+  width: 100%;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.add-member-toggle:hover {
+  background: rgba(99, 102, 241, 0.08);
+  border-color: rgba(99, 102, 241, 0.8);
+}
+
+.new-member-form {
+  background: rgba(99, 102, 241, 0.05);
+  border: 1px solid rgba(99, 102, 241, 0.2);
+  border-radius: 8px;
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.new-member-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.5rem;
+}
+
+.new-member-header h3 {
+  margin: 0;
+  color: #a5b4fc;
+  font-size: 0.9rem;
+}
+
+.add-member-confirm {
+  margin-top: 0.5rem;
+  background: #6366f1;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 0.5rem 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+
+.add-member-confirm:hover:not(:disabled) {
+  opacity: 0.88;
+}
+
+.add-member-confirm:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+</style>
