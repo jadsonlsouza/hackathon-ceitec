@@ -12,17 +12,21 @@ export default defineEventHandler(async (): Promise<FeaturedEvent | null> => {
 
   try {
     const rows = await $fetch<FeaturedEvent[]>(
-      `${url}/rest/v1/events?is_featured=eq.true&select=id,name,slug,status&limit=1`,
+      `${url}/rest/v1/rpc/get_featured_event`,
       {
+        method: 'POST',
         headers: {
           apikey: key,
           Authorization: `Bearer ${key}`,
         },
+        body: {},
       },
     )
-    return rows.at(0) ?? null
+    return rows?.at(0) ?? null
   }
   catch {
     return null
   }
 })
+
+
