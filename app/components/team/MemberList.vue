@@ -8,11 +8,13 @@ defineProps<{
   isLeader: boolean
   inviteeMemberId: string | null
   processingId: string | null
+  removingId?: string | null
 }>()
 
 const emit = defineEmits<{
   decide: [memberId: string, approve: boolean]
   request: [memberId: string]
+  remove: [memberId: string]
 }>()
 
 function statusLabel(status: TeamMember['status']) {
@@ -64,6 +66,16 @@ function statusLabel(status: TeamMember['status']) {
           @click="emit('request', member.id)"
         >
           Solicitar entrada
+        </button>
+      </div>
+      <div v-else-if="isLeader && member.status === 'active'" class="member-actions">
+        <button
+          type="button"
+          class="danger-button remove-btn"
+          :disabled="removingId !== null"
+          @click="emit('remove', member.id)"
+        >
+          {{ removingId === member.id ? 'Removendo…' : 'Remover' }}
         </button>
       </div>
     </li>

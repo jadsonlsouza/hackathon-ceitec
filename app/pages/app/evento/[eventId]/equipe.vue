@@ -214,6 +214,90 @@ async function requestJoin(memberId: string) {
     processingMemberId.value = null
   }
 }
+
+// ── Add member (leader only) ─────────────────────────────────────────────
+
+const showAddMember = ref(false)
+const newName = ref('')
+const newEmail = ref('')
+const newEnrollment = ref('')
+const addingMember = ref(false)
+const addMemberError = ref<string | null>(null)
+const removingMemberId = ref<string | null>(null)
+
+function openAddMember() {
+  showAddMember.value = true
+  newName.value = ''
+  newEmail.value = ''
+  newEnrollment.value = ''
+  addMemberError.value = null
+}
+
+function cancelAddMember() {
+  showAddMember.value = false
+  addMemberError.value = null
+}
+
+async function addMember() {
+  if (addingMember.value) return
+  if (!newName.value.trim() || !newEmail.value.trim() || !newEnrollment.value.trim()) {
+    addMemberError.value = 'Preencha todos os campos.'
+    return
+  }
+  addingMember.value = true
+  addMemberError.value = null
+  pageError.value = null
+  try {
+    const { error: rpcError } = await $supabase.rpc('leader_add_team_member', {
+      p_team_id: team.value!.id,
+      p_name: newName.value.trim(),
+      p_email: newEmail.value.trim(),
+      p_enrollment: newEnrollment.value.trim(),
+    })
+    if (rpcError) {
+      const msg = rpcError.message ?? ''
+      if (msg.includes('member_already_reserved')) addMemberError.value = 'Este e-mail ou matrícula já está registrado neste evento.'
+      else if (msg.includes('team_size_out_of_range')) addMemberError.value = 'A equipe já tem 6 integrantes (limite máximo).'
+      else if (msg.includes('forbidden')) addMemberError.value = 'Somente o líder pode adicionar integrantes.'
+      else addMemberError.value = 'Não foi possível adicionar o integrante.'
+      return
+    }
+    showAddMember.value = false
+    await refreshNuxtData(teamPageKey(eventId.value))
+  }
+  catch {
+    addMemberError.value = 'Não foi possível adicionar o integrante.'
+  }
+  finally {
+    addingMember.value = false
+  }
+}
+
+async function removeMember(memberId: string) {
+  if (removingMemberId.value) return
+  if (!confirm('Tem certeza que deseja remover este integrante?')) return
+  removingMemberId.value = memberId
+  pageError.value = null
+  try {
+    const { error: rpcError } = await $supabase.rpc('leader_remove_team_member', {
+      p_member_id: memberId,
+    })
+    if (rpcError) {
+      const msg = rpcError.message ?? ''
+      if (msg.includes('last_member')) pageError.value = 'Não é possível remover o único integrante ativo.'
+      else if (msg.includes('forbidden')) pageError.value = 'Somente o líder pode remover integrantes.'
+      else pageError.value = 'Não foi possível remover o integrante.'
+      return
+    }
+    await refreshNuxtData(teamPageKey(eventId.value))
+  }
+  catch {
+    pageError.value = 'Não foi possível remover o integrante.'
+  }
+  finally {
+    removingMemberId.value = null
+  }
+}
 </script>
 
 <template>
@@ -238,9 +322,43 @@ async function requestJoin(memberId: string) {
         :is-leader="isLeader"
         :invitee-member-id="inviteeMemberId"
         :processing-id="processingMemberId"
+        :removing-id="removingMemberId"
         @decide="decideJoin"
         @request="requestJoin"
+        @remove="removeMember"
       />
+
+      <!-- Leader: add member panel -->
+      <div v-if="isLeader && team.members.filter(m => m.status === 'active').length < 6" class="add-member-panel">
+        <template v-if="!showAddMember">
+          <button type="button" class="add-member-toggle" @click="openAddMember">
+            + Adicionar integrante
+          </button>
+        </template>
+        <div v-else class="new-member-form">
+          <div class="new-member-header">
+            <strong>Novo integrante</strong>
+            <button type="button" class="cancel-add-btn" @click="cancelAddMember">✕</button>
+          </div>
+          <p v-if="addMemberError" class="form-error">{{ addMemberError }}</p>
+          <label for="new-member-name">Nome</label>
+          <input id="new-member-name" v-model="newName" :disabled="addingMember" placeholder="Nome completo">
+          <label for="new-member-email">E-mail</label>
+          <input id="new-member-email" v-model="newEmail" type="email" :disabled="addingMember" placeholder="email@exemplo.com">
+          <label for="new-member-enrollment">Matrícula</label>
+          <input id="new-member-enrollment" v-model="newEnrollment" :disabled="addingMember" placeholder="Ex: 20221234">
+          <div class="new-member-actions">
+            <button type="button" class="cancel-btn" :disabled="addingMember" @click="cancelAddMember">Cancelar</button>
+            <button
+              type="button"
+              :disabled="addingMember || !newName.trim() || !newEmail.trim() || !newEnrollment.trim()"
+              @click="addMember"
+            >
+              {{ addingMember ? 'Adicionando…' : 'Confirmar' }}
+            </button>
+          </div>
+        </div>
+      </div>
     </section>
 
     <section v-else class="team-panel" aria-labelledby="team-form-title">
@@ -277,3 +395,83 @@ async function requestJoin(memberId: string) {
     </section>
   </main>
 </template>
+
+<style scoped>
+.add-member-panel {
+  margin-top: 1.25rem;
+  border-top: 1px solid rgba(255,255,255,0.08);
+  padding-top: 1.25rem;
+}
+
+.add-member-toggle {
+  width: 100%;
+  background: transparent;
+  border: 1px dashed rgba(99,102,241,0.5);
+  color: #818cf8;
+  border-radius: 8px;
+  padding: 0.6rem 1rem;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.add-member-toggle:hover {
+  background: rgba(99,102,241,0.08);
+  border-color: rgba(99,102,241,0.8);
+}
+
+.new-member-form {
+  background: rgba(99,102,241,0.05);
+  border: 1px solid rgba(99,102,241,0.2);
+  border-radius: 10px;
+  padding: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.new-member-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.5rem;
+}
+
+.new-member-header strong {
+  color: #a5b4fc;
+  font-size: 0.95rem;
+}
+
+.cancel-add-btn {
+  background: transparent;
+  border: none;
+  color: #64748b;
+  cursor: pointer;
+  font-size: 1rem;
+  padding: 0.2rem 0.4rem;
+}
+
+.cancel-add-btn:hover { color: #f1f5f9; }
+
+.new-member-actions {
+  display: flex;
+  gap: 0.75rem;
+  margin-top: 0.5rem;
+}
+
+.cancel-btn {
+  background: transparent;
+  border: 1px solid rgba(255,255,255,0.1);
+  color: #94a3b8;
+  border-radius: 8px;
+  padding: 0.5rem 1rem;
+  cursor: pointer;
+}
+
+.cancel-btn:hover:not(:disabled) { background: rgba(255,255,255,0.05); }
+
+.remove-btn {
+  font-size: 0.8rem;
+  padding: 0.3rem 0.75rem;
+}
+</style>
