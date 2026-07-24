@@ -426,3 +426,23 @@ button, input, select, textarea { font: inherit; }
 @media (max-width: 52rem) {
   .sd-columns { grid-template-columns: 1fr; }
 }
+
+/* ── Admin canvas submission viewer ────────────────────────────────────────── */
+.activity-card-header { align-items: flex-start; display: flex; gap: 1rem; justify-content: space-between; }
+.submission-viewer { border-top: 1px solid #1e293b; margin-top: 1rem; overflow-x: auto; padding-top: 1rem; }
+.submission-table { border-collapse: collapse; font-size: .875rem; min-width: 36rem; width: 100%; }
+.submission-table th { border-bottom: 1px solid #334155; color: #64748b; font-size: .75rem; font-weight: 700; letter-spacing: .04em; padding: .5rem .75rem; text-align: left; text-transform: uppercase; }
+.submission-table td { border-bottom: 1px solid #1e293b; padding: .6rem .75rem; vertical-align: middle; }
+.submission-table tr:last-child td { border-bottom: 0; }
+.table-link { color: #38bdf8; font-weight: 600; text-decoration: none; }
+.table-link:hover { text-decoration: underline; }
+
+/* ── Team canvas progress in admin equipes ──────────────────────────────────── */
+.team-canvas-card { flex-direction: column !important; gap: 1rem; }
+.team-canvas-main { align-items: flex-start; display: flex; gap: 1.5rem; justify-content: space-between; width: 100%; }
+.team-canvas-progress { border-top: 1px solid #1e293b; padding-top: 1rem; width: 100%; }
+.team-canvas-progress-title { color: #64748b; font-size: .75rem; font-weight: 700; letter-spacing: .04em; margin: 0 0 .75rem; text-transform: uppercase; }
+.canvas-activity-chips { display: flex; flex-wrap: wrap; gap: .5rem; }
+.canvas-activity-chip { align-items: center; background: #0f172a; border: 1px solid #1e293b; border-radius: .5rem; display: flex; gap: .5rem; padding: .35rem .75rem; }
+.canvas-activity-name { color: #cbd5e1; font-size: .8rem; font-weight: 500; max-width: 10rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+

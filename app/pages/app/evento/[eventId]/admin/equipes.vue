@@ -8,6 +8,12 @@ type Team = Database['public']['Tables']['teams']['Row']
 type TeamMember = Database['public']['Tables']['team_members']['Row']
 type TeamWithMembers = Team & { members: TeamMember[] }
 
+interface ActivityStatus {
+  id: string
+  title: string
+  submissionByTeam: Record<string, { status: string, submitted_at: string | null }>
+}
+
 const route = useRoute()
 const eventId = computed(() => String(route.params.eventId))
 const { $supabase } = useNuxtApp()
@@ -43,6 +49,41 @@ const { data: teams, pending, error, refresh: refreshList } = await useAsyncData
   {
     server: false,
     default: () => [] as TeamWithMembers[],
+    watch: [eventId, eventRoles, profile],
+  },
+)
+
+// ── Canvas activities + submission status per team ────────────────────────────
+
+function canvasStatusKey(targetEventId: string) {
+  return `admin-canvas-status:${targetEventId}`
+}
+
+const canvasKey = computed(() => canvasStatusKey(eventId.value))
+const { data: activities } = await useAsyncData(
+  canvasKey,
+  async (): Promise<ActivityStatus[]> => {
+    if (!isProfessor.value) return []
+    const { data, error: actError } = await supabase
+      .from('canvas_activities')
+      .select('id,title,submissions(team_id,status,submitted_at)')
+      .eq('event_id', eventId.value)
+      .order('created_at')
+    if (actError) throw actError
+    return (data ?? []).map((act: any) => ({
+      id: act.id,
+      title: act.title,
+      submissionByTeam: Object.fromEntries(
+        (act.submissions ?? []).map((s: any) => [
+          s.team_id,
+          { status: s.status, submitted_at: s.submitted_at },
+        ]),
+      ),
+    }))
+  },
+  {
+    server: false,
+    default: () => [] as ActivityStatus[],
     watch: [eventId, eventRoles, profile],
   },
 )
@@ -110,6 +151,34 @@ function categoryLabel(cat: Team['category']) {
 function statusLabel(status: Team['status']) {
   return { pending: 'Pendente', approved: 'Aprovada', rejected: 'Recusada' }[status] ?? status
 }
+
+const canvasStatusLabel: Record<string, string> = {
+  draft: 'Rascunho',
+  submitted: 'Enviado',
+  in_review: 'Em revisão',
+  returned: 'Devolvido',
+  resubmitted: 'Reenviado',
+  approved: 'Aprovado',
+}
+
+function canvasStatusClass(status: string | undefined) {
+  if (!status) return 'chip--gray'
+  return {
+    draft: 'chip--gray',
+    submitted: 'chip--blue',
+    in_review: 'chip--yellow',
+    returned: 'chip--red',
+    resubmitted: 'chip--blue',
+    approved: 'chip--green',
+  }[status] ?? 'chip--gray'
+}
+
+function teamCanvasStatus(teamId: string) {
+  return activities.value.map(act => ({
+    title: act.title,
+    sub: act.submissionByTeam[teamId] ?? null,
+  }))
+}
 </script>
 
 <template>
@@ -126,28 +195,48 @@ function statusLabel(status: Team['status']) {
     <p v-else-if="teams.length === 0" class="request-status">Nenhuma equipe cadastrada neste evento.</p>
 
     <ul v-else class="request-list">
-      <li v-for="team in teams" :key="team.id" class="request-card">
-        <div>
-          <h2>{{ team.name }}</h2>
-          <dl>
-            <div><dt>Categoria</dt><dd>{{ categoryLabel(team.category) }}</dd></div>
-            <div><dt>Status</dt><dd>{{ statusLabel(team.status) }}</dd></div>
-            <div><dt>Integrantes</dt><dd>{{ team.members.length }}</dd></div>
-          </dl>
-          <details>
-            <summary>Ver integrantes</summary>
-            <ul class="team-details">
-              <li v-for="member in team.members" :key="member.id">
-                {{ member.name }} · {{ member.email }} · {{ member.enrollment }}
-              </li>
-            </ul>
-          </details>
+      <li v-for="team in teams" :key="team.id" class="request-card team-canvas-card">
+        <div class="team-canvas-main">
+          <div>
+            <h2>{{ team.name }}</h2>
+            <dl>
+              <div><dt>Categoria</dt><dd>{{ categoryLabel(team.category) }}</dd></div>
+              <div><dt>Status</dt><dd>{{ statusLabel(team.status) }}</dd></div>
+              <div><dt>Integrantes</dt><dd>{{ team.members.length }}</dd></div>
+            </dl>
+            <details>
+              <summary>Ver integrantes</summary>
+              <ul class="team-details">
+                <li v-for="member in team.members" :key="member.id">
+                  {{ member.name }} · {{ member.email }} · {{ member.enrollment }}
+                </li>
+              </ul>
+            </details>
+          </div>
+          <div class="request-actions">
+            <button type="button" data-action="edit-team" @click="openEdit(team)">Editar equipe</button>
+          </div>
         </div>
-        <div class="request-actions">
-          <button type="button" data-action="edit-team" @click="openEdit(team)">Editar equipe</button>
+
+        <!-- Canvas progress per activity -->
+        <div v-if="activities.length > 0" class="team-canvas-progress">
+          <p class="team-canvas-progress-title">Atividades Canvas</p>
+          <div class="canvas-activity-chips">
+            <div
+              v-for="item in teamCanvasStatus(team.id)"
+              :key="item.title"
+              class="canvas-activity-chip"
+            >
+              <span class="canvas-activity-name">{{ item.title }}</span>
+              <span :class="['chip', canvasStatusClass(item.sub?.status)]">
+                {{ item.sub ? (canvasStatusLabel[item.sub.status] ?? item.sub.status) : 'Não iniciado' }}
+              </span>
+            </div>
+          </div>
         </div>
       </li>
     </ul>
+
 
     <!-- Edit modal -->
     <div v-if="editingTeam" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="edit-team-title">

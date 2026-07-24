@@ -22,12 +22,20 @@ interface BuilderBlock {
   maxItems: number | null
 }
 
+interface SubmissionRow {
+  id: string
+  status: string
+  revision: number
+  submitted_at: string | null
+  team: { id: string, name: string, category: 'junior' | 'senior' } | null
+}
+
 interface ExistingActivity {
   id: string
   title: string
   categories: ('junior' | 'senior')[]
   blocks?: Array<{ id: string }>
-  submissions?: Array<{ count: number }>
+  submissions?: SubmissionRow[]
 }
 
 const route = useRoute()
@@ -64,7 +72,7 @@ const { data: activities, pending, error } = await useAsyncData(
     if (!isProfessor.value) return []
     const { data, error: activitiesError } = await $supabase
       .from('canvas_activities')
-      .select('id,title,categories,blocks:canvas_blocks(id),submissions(count)')
+      .select('id,title,categories,blocks:canvas_blocks(id),submissions(id,status,revision,submitted_at,team:teams(id,name,category))')
       .eq('event_id', eventId.value)
       .order('created_at')
     if (activitiesError) throw activitiesError
@@ -217,7 +225,32 @@ async function saveCanvas() {
 }
 
 function submissionCount(activity: ExistingActivity) {
-  return activity.submissions?.[0]?.count ?? 0
+  return activity.submissions?.length ?? 0
+}
+
+const expandedActivity = ref<string | null>(null)
+function toggleSubmissions(activityId: string) {
+  expandedActivity.value = expandedActivity.value === activityId ? null : activityId
+}
+
+const submissionStatusLabel: Record<string, string> = {
+  draft: 'Rascunho',
+  submitted: 'Enviado',
+  in_review: 'Em revisão',
+  returned: 'Devolvido',
+  resubmitted: 'Reenviado',
+  approved: 'Aprovado',
+}
+
+function submissionStatusClass(status: string) {
+  return {
+    draft: 'chip--gray',
+    submitted: 'chip--blue',
+    in_review: 'chip--yellow',
+    returned: 'chip--red',
+    resubmitted: 'chip--blue',
+    approved: 'chip--green',
+  }[status] ?? 'chip--gray'
 }
 </script>
 
@@ -287,13 +320,61 @@ function submissionCount(activity: ExistingActivity) {
         <p v-if="activities.length === 0" class="request-status">Nenhuma atividade criada.</p>
         <ul v-else class="activity-list">
           <li v-for="activity in activities" :key="activity.id" class="activity-card">
-            <div>
-              <h3>{{ activity.title }}</h3>
-              <p>{{ activity.categories.map(category => category === 'junior' ? 'Júnior' : 'Sênior').join(' e ') }}</p>
-              <p v-if="submissionCount(activity) > 0" class="locked-structure">
-                Estrutura bloqueada após o primeiro envio.
-              </p>
-              <p v-else class="field-help">A estrutura ficará bloqueada quando a primeira equipe enviar.</p>
+            <div class="activity-card-header">
+              <div>
+                <h3>{{ activity.title }}</h3>
+                <p>{{ activity.categories.map(c => c === 'junior' ? 'Júnior' : 'Sênior').join(' e ') }}</p>
+                <p v-if="submissionCount(activity) > 0" class="locked-structure">
+                  {{ submissionCount(activity) }} envio(s) — estrutura bloqueada.
+                </p>
+                <p v-else class="field-help">A estrutura ficará bloqueada quando a primeira equipe enviar.</p>
+              </div>
+              <button
+                v-if="submissionCount(activity) > 0"
+                type="button"
+                class="secondary-button"
+                :aria-expanded="expandedActivity === activity.id"
+                @click="toggleSubmissions(activity.id)"
+              >
+                {{ expandedActivity === activity.id ? 'Ocultar envios' : 'Ver envios' }}
+              </button>
+            </div>
+
+            <!-- Submissions table -->
+            <div v-if="expandedActivity === activity.id" class="submission-viewer">
+              <table class="submission-table">
+                <thead>
+                  <tr>
+                    <th>Equipe</th>
+                    <th>Categoria</th>
+                    <th>Status</th>
+                    <th>Revisão</th>
+                    <th>Enviado em</th>
+                    <th>Ação</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-for="sub in activity.submissions" :key="sub.id">
+                    <td>{{ sub.team?.name ?? '—' }}</td>
+                    <td>{{ sub.team?.category === 'junior' ? 'Júnior' : sub.team?.category === 'senior' ? 'Sênior' : '—' }}</td>
+                    <td>
+                      <span :class="['chip', submissionStatusClass(sub.status)]">
+                        {{ submissionStatusLabel[sub.status] ?? sub.status }}
+                      </span>
+                    </td>
+                    <td>{{ sub.revision }}</td>
+                    <td>{{ sub.submitted_at ? new Date(sub.submitted_at).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' }) : '—' }}</td>
+                    <td>
+                      <NuxtLink
+                        :to="`/app/evento/${eventId}/atividades/${activity.id}?team=${sub.team?.id}`"
+                        class="table-link"
+                      >
+                        Ver envio →
+                      </NuxtLink>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
             </div>
           </li>
         </ul>
