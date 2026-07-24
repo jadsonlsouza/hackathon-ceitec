@@ -255,7 +255,7 @@ async function unpublishCategory(category: Category) {
   successMessage.value = null
   try {
     const { error: rpcError } = await supabase.rpc(
-      'unpublish_category_results',
+      'api_unpublish_category',
       { p_event_id: eventId.value, p_category: category },
     )
     if (rpcError) throw rpcError
