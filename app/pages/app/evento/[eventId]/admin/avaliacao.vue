@@ -62,6 +62,7 @@ const eventId = computed(() => String(route.params.eventId))
 const { $supabase } = useNuxtApp()
 const supabase = $supabase as any
 const {
+  profile,
   eventRoles,
   pending: accessPending,
   error: accessError,
@@ -132,7 +133,7 @@ const {
         .eq('event_id', eventId.value),
       supabase
         .from('event_roles')
-        .select('event_id,user_id,role,profile:profiles!event_roles_user_id_fkey(display_name)')
+        .select('event_id,user_id,role,profile:profiles!event_roles_profile_id_fkey(display_name)')
         .eq('event_id', eventId.value)
         .eq('role', 'evaluator'),
       supabase
