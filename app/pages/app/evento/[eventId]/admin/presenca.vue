@@ -107,10 +107,9 @@ async function deleteSession(id: string) {
   if (!confirm('Tem certeza que deseja excluir esta sessão? Todos os registros de presença vinculados serão perdidos.')) return
   
   try {
-    const { error } = await $supabase
-      .from('attendance_sessions')
-      .delete()
-      .eq('id', id)
+    const { error } = await $supabase.rpc('admin_delete_attendance_session', {
+      p_session_id: id
+    })
     
     if (error) throw error
     await fetchSessions()
