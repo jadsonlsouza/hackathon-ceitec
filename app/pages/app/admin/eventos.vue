@@ -181,6 +181,32 @@ async function archiveEvent() {
     archiving.value = false
   }
 }
+
+const updatingStatus = ref<string | null>(null)
+
+async function updateEventStatus(event: EventRow, newStatus: string) {
+  if (!isAuthorized.value || !profile.value || updatingStatus.value) return
+
+  updatingStatus.value = event.id
+  pageError.value = null
+
+  try {
+    const { error: updateError } = await $supabase
+      .from('events')
+      .update({ status: newStatus as EventRow['status'] })
+      .eq('id', event.id)
+
+    if (updateError) throw updateError
+
+    await refreshNuxtData(EVENTS_KEY)
+  }
+  catch {
+    pageError.value = 'Não foi possível atualizar o status do evento.'
+  }
+  finally {
+    updatingStatus.value = null
+  }
+}
 </script>
 
 <template>
@@ -278,8 +304,19 @@ async function archiveEvent() {
           <li v-for="event in activeEvents" :key="event.id" class="event-card">
             <div>
               <h3>{{ event.name }}</h3>
-              <p>
-                <span>{{ event.status }}</span>
+              <p class="event-status-controls">
+                <select 
+                  class="status-select"
+                  :value="event.status" 
+                  @change="updateEventStatus(event, ($event.target as HTMLSelectElement).value)" 
+                  :disabled="updatingStatus === event.id"
+                >
+                  <option value="draft">Rascunho</option>
+                  <option value="registration_open">Inscrições abertas</option>
+                  <option value="in_progress">Em andamento</option>
+                  <option value="evaluation">Avaliação</option>
+                  <option value="results_published">Resultados publicados</option>
+                </select>
                 <span v-if="event.is_featured">Evento principal</span>
               </p>
             </div>
@@ -501,6 +538,18 @@ async function archiveEvent() {
 button:disabled {
   cursor: wait;
   opacity: .65;
+}
+.status-select {
+  background: #0f172a;
+  border: 1px solid #64748b;
+  border-radius: .25rem;
+  color: #f8fafc;
+  padding: .25rem .5rem;
+  font-size: .875rem;
+}
+.status-select:disabled {
+  opacity: 0.5;
+  cursor: wait;
 }
 @media (max-width: 36rem) {
   .event-card,
