@@ -257,7 +257,9 @@ function evaluationPath(teamId: string) {
           <NuxtLink v-if="item.submitted" :to="evaluationPath(item.teamId)">
             Editar avaliação
           </NuxtLink>
-          <span v-else>Pendente</span>
+          <NuxtLink v-else :to="evaluationPath(item.teamId)">
+            Avaliar equipe
+          </NuxtLink>
         </li>
       </ol>
     </section>
