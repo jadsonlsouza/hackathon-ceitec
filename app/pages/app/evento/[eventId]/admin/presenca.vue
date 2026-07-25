@@ -19,7 +19,7 @@ interface SessionRow {
   session_date: string
   secret_word: string
   created_at: string
-  records?: { count: number }[]
+  records_count: number
 }
 
 const sessions = ref<SessionRow[]>([])
@@ -37,11 +37,9 @@ async function fetchSessions() {
   loading.value = true
   fetchError.value = null
   try {
-    const { data, error } = await $supabase
-      .from('attendance_sessions')
-      .select('id, session_date, secret_word, created_at, records:attendance_records(count)')
-      .eq('event_id', eventId.value)
-      .order('session_date', { ascending: false })
+    const { data, error } = await $supabase.rpc('admin_get_sessions', {
+      p_event_id: eventId.value
+    })
     
     if (error) throw error
     sessions.value = data as any[]
@@ -182,7 +180,7 @@ function formatDate(dateString: string) {
                 <span class="session-word">Palavra secreta: <strong>{{ session.secret_word }}</strong></span>
               </div>
               <div class="session-stats">
-                <span class="badge">{{ session.records?.[0]?.count ?? 0 }} aluno(s) presentes</span>
+                <span class="badge">{{ session.records_count ?? 0 }} aluno(s) presentes</span>
               </div>
             </div>
             <div class="session-actions">
@@ -252,7 +250,7 @@ function formatDate(dateString: string) {
 
 .field input:focus {
   outline: none;
-  border-color: #6366f1;
+  border-color: #0369a1;
 }
 
 .field-hint {
@@ -267,11 +265,11 @@ function formatDate(dateString: string) {
 
 .form-actions button {
   padding: 0.6rem 1.25rem;
-  background: #6366f1;
+  background: #0369a1;
   color: white;
   border: none;
   border-radius: 6px;
-  font-weight: 500;
+  font-weight: 700;
   cursor: pointer;
   transition: opacity 0.2s;
 }
@@ -340,19 +338,19 @@ function formatDate(dateString: string) {
 }
 
 .danger-btn {
-  background: transparent;
-  color: #f87171;
-  border: 1px solid rgba(248, 113, 113, 0.3);
-  padding: 0.4rem 0.8rem;
+  background: #991b1b;
+  color: white;
+  border: none;
+  padding: 0.5rem 1rem;
   border-radius: 6px;
   cursor: pointer;
   font-size: 0.85rem;
+  font-weight: 700;
   transition: all 0.2s;
 }
 
 .danger-btn:hover {
-  background: rgba(248, 113, 113, 0.1);
-  border-color: #f87171;
+  background: #7f1d1d;
 }
 
 .empty-state {

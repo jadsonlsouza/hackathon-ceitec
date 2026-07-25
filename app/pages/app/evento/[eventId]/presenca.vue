@@ -17,40 +17,53 @@ const secretWord = ref('')
 const processing = ref(false)
 const errorMessage = ref<string | null>(null)
 const successMessage = ref<string | null>(null)
-const checkedInSessions = ref<any[]>([])
-const loadingHistory = ref(true)
+const selectedSessionId = ref<string | null>(null)
 
-async function fetchAttendanceHistory() {
-  loadingHistory.value = true
+interface StudentSession {
+  id: string
+  session_date: string
+  checked_in_at: string | null
+}
+
+const sessions = ref<StudentSession[]>([])
+const loading = ref(true)
+
+const pendingSessions = computed(() => sessions.value.filter(s => !s.checked_in_at))
+const completedSessions = computed(() => sessions.value.filter(s => s.checked_in_at))
+
+async function fetchSessions() {
+  loading.value = true
   try {
-    const { data, error } = await $supabase
-      .from('attendance_records')
-      .select('checked_in_at, session:attendance_sessions(session_date, secret_word)')
-      .eq('session.event_id', eventId.value)
-      .order('checked_in_at', { ascending: false })
+    const { data, error } = await $supabase.rpc('student_get_sessions', {
+      p_event_id: eventId.value
+    })
     
     if (error) throw error
-    // Filter out null sessions (due to inner join behavior on foreign tables if RLS blocks, though the query should be fine)
-    checkedInSessions.value = data?.filter(r => r.session) || []
+    sessions.value = data as any[]
+    
+    // Auto-select the most recent pending session if none is selected
+    if (!selectedSessionId.value && pendingSessions.value.length > 0) {
+      selectedSessionId.value = pendingSessions.value[0].id
+    }
   } catch (err) {
-    console.error('Failed to fetch attendance history:', err)
+    console.error('Failed to fetch attendance sessions:', err)
   } finally {
-    loadingHistory.value = false
+    loading.value = false
   }
 }
 
 onMounted(() => {
   if (isParticipant.value) {
-    fetchAttendanceHistory()
+    fetchSessions()
   }
 })
 
 watch(isParticipant, (participant) => {
-  if (participant) fetchAttendanceHistory()
+  if (participant) fetchSessions()
 })
 
 async function checkIn() {
-  if (processing.value || !secretWord.value.trim()) return
+  if (processing.value || !secretWord.value.trim() || !selectedSessionId.value) return
 
   processing.value = true
   errorMessage.value = null
@@ -59,6 +72,7 @@ async function checkIn() {
   try {
     const { error } = await $supabase.rpc('student_check_in', {
       p_event_id: eventId.value,
+      p_session_id: selectedSessionId.value,
       p_secret_word: secretWord.value.trim().toUpperCase()
     })
 
@@ -77,7 +91,8 @@ async function checkIn() {
 
     successMessage.value = 'Presença registrada com sucesso!'
     secretWord.value = ''
-    await fetchAttendanceHistory()
+    selectedSessionId.value = null
+    await fetchSessions()
   } catch (err) {
     console.error(err)
     errorMessage.value = 'Ocorreu um erro inesperado.'
@@ -102,7 +117,7 @@ function formatTime(isoString: string) {
     <header class="page-header">
       <div class="header-content">
         <h1>Registrar Presença</h1>
-        <p class="intro">Insira a palavra secreta informada pelo professor para validar sua presença.</p>
+        <p class="intro">Selecione a sessão do dia e insira a palavra secreta para validar sua presença.</p>
       </div>
     </header>
 
@@ -113,9 +128,23 @@ function formatTime(isoString: string) {
     <div v-else class="page-content">
       
       <section class="checkin-section">
-        <form class="checkin-form" @submit.prevent="checkIn">
+        <h2>Validar Presença</h2>
+        <div v-if="loading" class="loading-state">Buscando sessões de presença…</div>
+        <div v-else-if="pendingSessions.length === 0" class="empty-state">
+          Não há nenhuma chamada de presença pendente para você no momento.
+        </div>
+        <form v-else class="checkin-form" @submit.prevent="checkIn">
           <p v-if="errorMessage" class="form-error" role="alert">{{ errorMessage }}</p>
           <p v-if="successMessage" class="form-success" role="status">{{ successMessage }}</p>
+
+          <div class="field">
+            <label for="session-select">Escolha a Sessão (Data)</label>
+            <select id="session-select" v-model="selectedSessionId" required :disabled="processing">
+              <option v-for="session in pendingSessions" :key="session.id" :value="session.id">
+                Aula / Evento do dia {{ formatDate(session.session_date) }}
+              </option>
+            </select>
+          </div>
 
           <div class="field">
             <label for="secret-word">Palavra Secreta</label>
@@ -130,27 +159,27 @@ function formatTime(isoString: string) {
             >
           </div>
 
-          <button type="submit" class="submit-btn" :disabled="processing || !secretWord.trim()">
+          <button type="submit" class="submit-btn" :disabled="processing || !secretWord.trim() || !selectedSessionId">
             {{ processing ? 'Registrando…' : 'Confirmar Presença' }}
           </button>
         </form>
       </section>
 
       <section class="history-section">
-        <h2>Histórico de Presenças</h2>
+        <h2>Seu Histórico</h2>
         
-        <div v-if="loadingHistory" class="loading-state">Buscando histórico…</div>
-        <div v-else-if="checkedInSessions.length === 0" class="empty-state">
+        <div v-if="loading" class="loading-state">Buscando histórico…</div>
+        <div v-else-if="completedSessions.length === 0" class="empty-state">
           Você ainda não registrou nenhuma presença neste evento.
         </div>
         <ul v-else class="history-list">
-          <li v-for="record in checkedInSessions" :key="record.checked_in_at" class="history-card">
+          <li v-for="session in completedSessions" :key="session.id" class="history-card">
             <div class="history-date">
-              <strong>{{ formatDate(record.session.session_date) }}</strong>
+              <strong>{{ formatDate(session.session_date) }}</strong>
             </div>
             <div class="history-details">
-              <span>Palavra: <strong>{{ record.session.secret_word }}</strong></span>
-              <span class="time-badge">Registrado às {{ formatTime(record.checked_in_at) }}</span>
+              <span class="status-badge success">Presença Confirmada</span>
+              <span class="time-badge">Registrado às {{ formatTime(session.checked_in_at!) }}</span>
             </div>
           </li>
         </ul>
@@ -177,6 +206,13 @@ function formatTime(isoString: string) {
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
 }
 
+.checkin-section h2 {
+  font-size: 1.1rem;
+  color: #f1f5f9;
+  margin-top: 0;
+  margin-bottom: 1.5rem;
+}
+
 .checkin-form {
   display: flex;
   flex-direction: column;
@@ -190,17 +226,14 @@ function formatTime(isoString: string) {
 }
 
 .field label {
-  font-size: 1rem;
+  font-size: 0.95rem;
   font-weight: 500;
   color: #cbd5e1;
 }
 
-.field input {
+.field input, .field select {
   padding: 0.8rem 1rem;
-  font-size: 1.25rem;
-  font-weight: 600;
-  letter-spacing: 2px;
-  text-align: center;
+  font-size: 1.1rem;
   border: 2px solid #334155;
   border-radius: 8px;
   background: #0f172a;
@@ -208,21 +241,28 @@ function formatTime(isoString: string) {
   transition: border-color 0.2s;
 }
 
-.field input:focus {
+.field input {
+  font-weight: 600;
+  letter-spacing: 1px;
+  text-align: center;
+}
+
+.field input:focus, .field select:focus {
   outline: none;
-  border-color: #6366f1;
+  border-color: #0369a1;
 }
 
 .submit-btn {
   padding: 1rem;
   font-size: 1.1rem;
-  font-weight: 600;
-  background: #6366f1;
+  font-weight: 700;
+  background: #0369a1;
   color: white;
   border: none;
   border-radius: 8px;
   cursor: pointer;
   transition: opacity 0.2s, transform 0.1s;
+  margin-top: 0.5rem;
 }
 
 .submit-btn:hover:not(:disabled) {
@@ -278,20 +318,22 @@ function formatTime(isoString: string) {
   display: flex;
   flex-direction: column;
   align-items: flex-end;
-  gap: 0.25rem;
+  gap: 0.4rem;
   font-size: 0.85rem;
   color: #64748b;
 }
 
-.history-details strong {
-  color: #94a3b8;
+.status-badge.success {
+  background: rgba(16, 185, 129, 0.15);
+  color: #10b981;
+  padding: 0.2rem 0.6rem;
+  border-radius: 12px;
+  font-weight: 600;
+  font-size: 0.8rem;
 }
 
 .time-badge {
-  background: rgba(99, 102, 241, 0.1);
-  color: #818cf8;
-  padding: 0.15rem 0.5rem;
-  border-radius: 4px;
+  color: #64748b;
   font-size: 0.75rem;
 }
 
