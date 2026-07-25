@@ -258,6 +258,7 @@ function clearMessages() {
 async function refreshData() {
   await refreshAdmin()
   await refreshNuxtData(evaluationAdminKey(eventId.value))
+  clearNuxtData(`result-admin:${eventId.value}`)
 }
 
 async function createCriterion() {
