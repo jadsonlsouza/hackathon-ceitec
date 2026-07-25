@@ -6,7 +6,7 @@ definePageMeta({ middleware: 'auth' })
 const route = useRoute()
 const eventId = computed(() => String(route.params.eventId))
 const { $supabase } = useNuxtApp()
-const { eventRoles, pending: accessPending, error: accessError, teamEventIds, profile } = useCurrentAccess()
+const { eventRoles, contextPending: accessPending, contextError: accessError, teamEventIds, profile } = useDashboardEventContext()
 
 const isParticipant = computed(() => {
   // A participant is someone who has an active team in this event
