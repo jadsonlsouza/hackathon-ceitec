@@ -8,6 +8,7 @@ const messages: Array<[string, string]> = [
   ['forbidden', 'Somente o Professor responsável pode realizar esta ação.'],
   ['event_not_available', 'Este evento não está mais disponível.'],
   ['event_not_in_evaluation', 'Esta ação só está disponível na fase de avaliação.'],
+  ['event_not_ready_for_shuffle', 'O sorteio só pode ser realizado com o evento em andamento ou em avaliação.'],
   ['approved_team_required', 'É necessária pelo menos uma equipe aprovada nesta categoria.'],
   ['evaluation_already_started', 'A ordem não pode mudar porque as avaliações já começaram.'],
   ['category_results_published', 'Os resultados desta categoria já foram publicados.'],
