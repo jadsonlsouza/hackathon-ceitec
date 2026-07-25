@@ -143,6 +143,7 @@ async function saveTeam() {
       members: editMembers.value,
     })
     if (rpcError) {
+      console.error('RPC Error:', rpcError)
       actionError.value = teamRpcErrorMessage(rpcError, 'Não foi possível salvar as alterações.')
       return
     }
