@@ -188,7 +188,7 @@ const isOpen = computed(() => {
     && now <= new Date(activity.value.due_at).getTime()
 })
 const isEditable = computed(() => (
-  isOpen.value && ['draft', 'returned'].includes(submission.value?.status ?? '')
+  isOpen.value && ['draft', 'returned', 'submitted', 'resubmitted'].includes(submission.value?.status ?? '')
 ))
 const hasPendingSave = computed(() => (
   Object.values(blockStates.value).some(state => state !== 'saved')
@@ -382,7 +382,7 @@ async function submitCanvas() {
           :disabled="!canSubmit"
           @click="submitCanvas"
         >
-          {{ submitting ? 'Enviando…' : 'Enviar Canvas para validação' }}
+          {{ submitting ? 'Enviando…' : (['submitted', 'resubmitted'].includes(submission.status) ? 'Atualizar Envio' : 'Enviar Canvas para validação') }}
         </button>
       </footer>
     </template>
