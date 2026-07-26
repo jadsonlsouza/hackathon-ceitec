@@ -21,7 +21,6 @@ const categoryName = (category: string) => category === 'junior' ? 'Júnior' : '
           <li v-for="team in result.ranking" :key="team.position">
             <span>{{ team.position }}º</span>
             <strong>{{ team.team_name }}</strong>
-            <span>{{ team.score }}</span>
           </li>
         </ol>
       </article>
