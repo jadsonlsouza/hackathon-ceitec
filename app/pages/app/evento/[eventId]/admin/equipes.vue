@@ -95,6 +95,7 @@ const editName = ref('')
 const editCategory = ref<'junior' | 'senior'>('junior')
 const editMembers = ref<Array<{ id: string, name: string, email: string, enrollment: string }>>([])
 const saving = ref(false)
+const deleting = ref(false)
 const actionError = ref<string | null>(null)
 const successMessage = ref<string | null>(null)
 
@@ -228,6 +229,31 @@ async function removeMember(memberId: string) {
     removingMemberId.value = null
   }
 }
+
+  async function deleteTeam(teamId: string) {
+    if (deleting.value) return
+    if (!confirm('Tem certeza que deseja EXCLUIR DEFINITIVAMENTE esta equipe? Todos os dados vinculados (integrantes, apresentações, avaliações) serão apagados irreversivelmente.')) return
+    
+    deleting.value = true
+    actionError.value = null
+    try {
+      const { error: rpcError } = await supabase.rpc('admin_delete_team', {
+        p_team_id: teamId,
+      })
+      if (rpcError) {
+        console.error('RPC Error:', rpcError)
+        actionError.value = 'Não foi possível excluir a equipe.'
+        return
+      }
+      await refreshList()
+      closeEdit()
+    } catch (err) {
+      console.error(err)
+      actionError.value = 'Não foi possível excluir a equipe.'
+    } finally {
+      deleting.value = false
+    }
+  }
 
 function categoryLabel(cat: Team['category']) {
   return cat === 'junior' ? 'Júnior' : 'Sênior'
@@ -401,11 +427,21 @@ function teamCanvasStatus(teamId: string) {
             </div>
           </fieldset>
 
-          <div class="modal-footer">
-            <button type="button" @click="closeEdit">Cancelar</button>
-            <button type="submit" :disabled="saving">
-              {{ saving ? 'Salvando…' : 'Salvar alterações' }}
+          <div class="modal-footer" style="justify-content: space-between;">
+            <button
+              type="button"
+              style="color: var(--color-danger); border-color: var(--color-danger); background: transparent;"
+              :disabled="deleting"
+              @click="editingTeam && deleteTeam(editingTeam.id)"
+            >
+              {{ deleting ? 'Excluindo…' : 'Excluir equipe' }}
             </button>
+            <div style="display: flex; gap: 0.75rem;">
+              <button type="button" @click="closeEdit">Cancelar</button>
+              <button type="submit" :disabled="saving">
+                {{ saving ? 'Salvando…' : 'Salvar alterações' }}
+              </button>
+            </div>
           </div>
         </form>
       </div>

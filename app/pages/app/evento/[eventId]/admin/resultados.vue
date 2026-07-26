@@ -101,6 +101,7 @@ const {
         target_event: eventId.value,
       }),
     ])
+    console.log("Error loading results:", [eventRow, progress, ranking, decisions, publications].map(r => r.error))
     const failure = [
       eventRow.error,
       progress.error,
@@ -154,7 +155,7 @@ function tieGroups(category: Category) {
     grouped.set(Number(row.final_score), group)
   }
   return [...grouped.entries()]
-    .filter(([, rows]) => rows.length > 1)
+    .filter(([score, rows]) => rows.length > 1 && score > 0)
     .map(([score, rows]) => {
       const decision = source.value.decisions.find(d => (
         d.category === category && Number(d.displayed_score) === score
@@ -171,10 +172,6 @@ function tieGroups(category: Category) {
 function blockers(category: Category) {
   const messages: string[] = []
   const progress = categoryProgress(category)
-  if (!progress.length) messages.push('A avaliação ainda não foi congelada.')
-  if (progress.some(row => !row.complete)) {
-    messages.push('Há equipes com avaliações pendentes.')
-  }
   if (tieGroups(category).some(group => !group.resolved)) {
     messages.push('Há empates sem decisão registrada.')
   }
@@ -429,7 +426,7 @@ async function exportToCsv() {
         <div class="result-progress">
           <h3>Progresso das avaliações</h3>
           <p v-if="!categoryProgress(category).length">
-            Nenhuma configuração congelada nesta categoria.
+            Nenhuma equipe com avaliadores designados nesta categoria.
           </p>
           <ul v-else>
             <li
@@ -452,8 +449,10 @@ async function exportToCsv() {
               </span>
             </li>
           </ul>
+          <p v-if="categoryProgress(category).some(r => !r.complete)" class="form-help" style="margin-top: 1rem; color: var(--color-danger);">
+            * Equipes com avaliações pendentes receberão nota 0.00 no ranking administrativo e ficarão nas últimas posições.
+          </p>
         </div>
-
         <div class="private-ranking">
           <h3>Classificação administrativa</h3>
           <p v-if="!categoryRanking(category).length">
