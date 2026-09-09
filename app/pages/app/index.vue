@@ -140,8 +140,8 @@ const cardDefinitions: Record<Capability, {
   manage_event: {
     title: 'Equipes do evento',
     count: 'teams',
-    actionLabel: 'Ver equipes',
-    actionPath: 'equipes',
+    actionLabel: 'Ver e editar equipes',
+    actionPath: 'admin/equipes',
     eventRelative: true,
   },
   review_submissions: {

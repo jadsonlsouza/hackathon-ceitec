@@ -219,6 +219,16 @@ describe('dashboard UI', () => {
     expect(wrapper.text()).not.toContain('Avaliações atribuídas')
   })
 
+  it('sends professors directly to the full team management screen', async () => {
+    eventRoles.value = [{ event_id: EVENT_ID, role: 'professor' }]
+    summaryData.value = { ...summaryData.value, teams: 2 }
+    const wrapper = await mountSuspended(DashboardPage)
+
+    const action = wrapper.get('[data-card-action]')
+    expect(action.text()).toBe('Ver e editar equipes')
+    expect(action.attributes('href')).toBe(`/app/evento/${EVENT_ID}/admin/equipes`)
+  })
+
   it('shows a sanitized recoverable global error', async () => {
     const wrapper = await mountSuspended(ErrorPage, {
       error: {
