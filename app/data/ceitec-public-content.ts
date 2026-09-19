@@ -1,30 +1,10 @@
-export type PublicScheduleItem = {
-  dayNumber: 1 | 2
-  startsAt: string
-  activity: string
-  position: number
-}
+import type { PublicEventContent } from './public-events'
 
-export type PublishedCategoryResult = {
-  event_name: string
-  event_slug: string
-  category: 'junior' | 'senior'
-  ranking: Array<{ position: number, team_name: string, score: number }>
-  published_at: string
-}
-
-export type PublicEventContent = {
-  event_name: string
-  event_slug: string
-  tagline: string
-  presentation: string
-  objectives: string[]
-  venue: string
-  date_label: string
-  registration_open: boolean
-  schedule: PublicScheduleItem[]
-  results: PublishedCategoryResult[]
-}
+export type {
+  PublicEventContent,
+  PublicScheduleItem,
+  PublishedCategoryResult,
+} from './public-events'
 
 export const ceitecPublicContent: PublicEventContent = {
   event_name: 'Hackathon CEITEC',
