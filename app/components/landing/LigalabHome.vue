@@ -2,11 +2,11 @@
 import BrandLogo from '../brand/BrandLogo.vue'
 import PlatformHeader from './PlatformHeader.vue'
 import LigalabMetrics from './LigalabMetrics.vue'
-import LigalabPartners from './LigalabPartners.vue'
-import LigalabForma from './LigalabForma.vue'
+import LigalabWorkflow from './LigalabWorkflow.vue'
 import LigalabFeatures from './LigalabFeatures.vue'
 import LigalabRoles from './LigalabRoles.vue'
-import LigalabTheory from './LigalabTheory.vue'
+import LigalabForma from './LigalabForma.vue'
+import LigalabOrigin from './LigalabOrigin.vue'
 import LigalabFaq from './LigalabFaq.vue'
 import LigalabCta from './LigalabCta.vue'
 </script>
@@ -27,7 +27,7 @@ import LigalabCta from './LigalabCta.vue'
           </p>
           <div class="hero-actions">
             <NuxtLink class="primary-cta" to="/eventos">Explorar eventos</NuxtLink>
-            <a class="secondary-cta" href="#metodologia-forma">Conhecer Metodologia FORMA</a>
+            <a class="secondary-cta" href="#como-funciona">Como funciona a plataforma</a>
           </div>
         </div>
 
@@ -64,23 +64,23 @@ import LigalabCta from './LigalabCta.vue'
         </div>
       </section>
 
-      <!-- Faixa de Métricas e Pilares -->
+      <!-- Faixa de Métricas e Indicadores -->
       <LigalabMetrics />
 
-      <!-- Realização & Apoio Institucional (Liga, IMD, UFRN) -->
-      <LigalabPartners />
+      <!-- Explicação Aprofundada da Plataforma (Ciclo da Maratona) -->
+      <LigalabWorkflow />
 
-      <!-- Metodologia Framework FORMA -->
-      <LigalabForma />
-
-      <!-- Bento Grid de Recursos Tecnológicos -->
+      <!-- Recursos Tecnológicos (Bento Grid) -->
       <LigalabFeatures />
 
       <!-- Experiência Multi-Papel -->
       <LigalabRoles />
 
-      <!-- Fundamentação Teórica e DNA da Liga -->
-      <LigalabTheory />
+      <!-- Metodologia Framework FORMA na Plataforma -->
+      <LigalabForma />
+
+      <!-- Única Seção Dedicada: Origem na Liga de Inovação, IMD e UFRN -->
+      <LigalabOrigin />
 
       <!-- Perguntas Frequentes (FAQ) -->
       <LigalabFaq />

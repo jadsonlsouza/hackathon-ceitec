@@ -302,22 +302,40 @@ button, input, select, textarea { font: inherit; }
 .ligalab-home .ligalab-metric-label { color: #0f172a; font-size: 1rem; font-weight: 750; }
 .ligalab-home .ligalab-metric-detail { color: #64748b; font-size: .88rem; line-height: 1.45; margin: 0; }
 
-/* Realização e Apoio Institucional */
-.ligalab-home .ligalab-partners { background: #ffffff; border-bottom: 1px solid #e2e8f0; padding: 3rem 1.25rem; }
-.ligalab-home .ligalab-partners__inner { margin: 0 auto; max-width: 78rem; }
-.ligalab-home .partners-eyebrow { color: #0284c7; font-size: .8rem; font-weight: 800; letter-spacing: .1em; margin: 0 0 1.5rem; text-align: center; text-transform: uppercase; }
-.ligalab-home .partners-grid { display: grid; gap: 1.5rem; grid-template-columns: repeat(3, 1fr); }
-.ligalab-home .partner-card { align-items: center; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 1.25rem; box-shadow: 0 4px 16px rgba(2, 132, 199, 0.05); display: flex; gap: 1.25rem; padding: 1.25rem 1.5rem; transition: border-color .2s ease, transform .2s ease, box-shadow .2s ease; }
-.ligalab-home .partner-card:hover { border-color: #0284c7; box-shadow: 0 10px 25px rgba(2, 132, 199, 0.12); transform: translateY(-2px); }
-.ligalab-home .partner-card--liga { border-color: rgba(14, 165, 233, 0.35); }
-.ligalab-home .partner-logo-box { align-items: center; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: .85rem; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04); display: flex; flex-shrink: 0; height: 4.5rem; justify-content: center; padding: .5rem .75rem; width: 6.5rem; }
-.ligalab-home .partner-logo { height: auto; max-height: 100%; max-width: 100%; object-fit: contain; width: auto; }
-.ligalab-home .partner-meta { display: flex; flex-direction: column; gap: .2rem; min-width: 0; }
-.ligalab-home .partner-badge { background: #f1f5f9; border-radius: 999px; color: #475569; display: inline-block; font-size: .7rem; font-weight: 800; letter-spacing: .06em; padding: .15rem .6rem; text-transform: uppercase; width: fit-content; }
-.ligalab-home .partner-badge--lead { background: #e0f2fe; color: #0284c7; }
-.ligalab-home .partner-name { color: #0f172a; font-size: 1.1rem; margin: .15rem 0 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-weight: 750; }
-.ligalab-home .partner-desc { color: #334155; font-size: .85rem; line-height: 1.4; margin: 0; }
-.ligalab-home .partner-sub { color: #64748b; font-size: .78rem; margin: 0; }
+/* Workflow & Platform Lifecycle */
+.ligalab-home .ligalab-workflow { background: #ffffff; }
+.ligalab-home .workflow-stepper { display: grid; gap: .75rem; grid-template-columns: repeat(4, 1fr); margin-bottom: 2rem; }
+.ligalab-home .workflow-step-btn { align-items: center; background: #ffffff; border: 1px solid #e2e8f0; border-radius: .85rem; cursor: pointer; display: flex; gap: .85rem; padding: .85rem 1rem; text-align: left; transition: all .2s ease; box-shadow: 0 2px 6px rgba(0, 0, 0, 0.03); width: 100%; }
+.ligalab-home .workflow-step-btn:hover { background: #f0f9ff; border-color: #0284c7; }
+.ligalab-home .workflow-step-btn--active { background: #f0f9ff; border-color: #0284c7; box-shadow: 0 4px 14px rgba(2, 132, 199, 0.15); }
+.ligalab-home .workflow-step-num { align-items: center; background: #e0f2fe; border-radius: 999px; color: #0284c7; display: inline-flex; font-size: .85rem; font-weight: 850; height: 32px; justify-content: center; width: 32px; flex-shrink: 0; }
+.ligalab-home .workflow-step-btn--active .workflow-step-num { background: #0284c7; color: #ffffff; }
+.ligalab-home .workflow-step-label { display: flex; flex-direction: column; gap: .15rem; min-width: 0; }
+.ligalab-home .workflow-step-phase { color: #64748b; font-size: .72rem; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; }
+.ligalab-home .workflow-step-btn--active .workflow-step-phase { color: #0284c7; }
+.ligalab-home .workflow-step-name { color: #0f172a; font-size: .92rem; font-weight: 750; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ligalab-home .workflow-panel { background: #ffffff; border: 1px solid #e2e8f0; border-radius: 1.25rem; box-shadow: 0 10px 30px rgba(2, 132, 199, 0.06); display: grid; gap: 2rem; grid-template-columns: 1.5fr 1fr; padding: clamp(1.5rem, 4vw, 2.5rem); }
+.ligalab-home .workflow-panel__badge-row { align-items: center; display: flex; gap: .75rem; margin-bottom: .85rem; }
+.ligalab-home .workflow-panel__phase-tag { background: #e0f2fe; border: 1px solid #bae6fd; border-radius: 999px; color: #0284c7; font-size: .75rem; font-weight: 800; letter-spacing: .06em; padding: .25rem .75rem; text-transform: uppercase; }
+.ligalab-home .workflow-panel__icon { font-size: 1.75rem; line-height: 1; }
+.ligalab-home .workflow-panel__title { color: #0f172a; font-size: clamp(1.4rem, 2.8vw, 2rem); letter-spacing: -.03em; margin: 0 0 .35rem; }
+.ligalab-home .workflow-panel__subtitle { color: #0284c7; font-size: 1.05rem; font-weight: 650; margin: 0 0 1rem; }
+.ligalab-home .workflow-panel__desc { color: #334155; font-size: 1.02rem; line-height: 1.65; margin: 0 0 1.5rem; }
+.ligalab-home .workflow-deliverables__title { color: #64748b; font-size: .82rem; font-weight: 700; letter-spacing: .06em; margin: 0 0 .85rem; text-transform: uppercase; }
+.ligalab-home .workflow-deliverables__list { display: grid; gap: .6rem; list-style: none; margin: 0; padding: 0; }
+.ligalab-home .workflow-deliverables__item { align-items: center; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: .55rem; color: #1e293b; display: flex; font-size: .92rem; font-weight: 550; gap: .6rem; padding: .65rem .85rem; }
+.ligalab-home .workflow-deliverables__check { color: #0284c7; font-weight: 900; }
+.ligalab-home .workflow-panel__telemetry { align-self: center; }
+.ligalab-home .telemetry-card { background: linear-gradient(145deg, #f0f9ff 0%, #ffffff 100%); border: 1px solid rgba(14, 165, 233, 0.35); border-radius: 1rem; box-shadow: 0 10px 25px rgba(2, 132, 199, 0.08); padding: 1.5rem; }
+.ligalab-home .telemetry-card__header { align-items: center; display: flex; gap: .6rem; margin-bottom: 1.25rem; border-bottom: 1px solid #e2e8f0; padding-bottom: .6rem; }
+.ligalab-home .telemetry-pulse { background: #0284c7; border-radius: 999px; box-shadow: 0 0 8px rgba(2, 132, 199, 0.6); height: 8px; width: 8px; }
+.ligalab-home .telemetry-card__title { color: #0284c7; font-family: monospace; font-size: .75rem; font-weight: 750; letter-spacing: .08em; text-transform: uppercase; }
+.ligalab-home .telemetry-card__metrics { display: grid; gap: .85rem; grid-template-columns: repeat(2, 1fr); margin-bottom: 1rem; }
+.ligalab-home .telemetry-metric-tile { background: #ffffff; border: 1px solid #e2e8f0; border-radius: .65rem; display: flex; flex-direction: column; gap: .25rem; padding: .85rem; }
+.ligalab-home .telemetry-metric-value { color: #0284c7; font-size: 1.2rem; font-weight: 850; }
+.ligalab-home .telemetry-metric-label { color: #64748b; font-size: .75rem; font-weight: 600; text-transform: uppercase; }
+.ligalab-home .telemetry-card__notice p { color: #64748b; font-size: .8rem; line-height: 1.45; margin: 0; text-align: center; }
+
 
 /* Framework FORMA */
 .ligalab-home .ligalab-forma { background: #f8fafc; position: relative; }
@@ -368,22 +386,32 @@ button, input, select, textarea { font: inherit; }
 .ligalab-home .role-benefit-item { align-items: center; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: .6rem; color: #1e293b; display: flex; font-size: .95rem; gap: .65rem; padding: .75rem 1rem; }
 .ligalab-home .role-benefit-check { color: #0284c7; font-weight: 900; }
 
-/* Theory & Academic DNA */
-.ligalab-home .ligalab-theory { background: #ffffff; }
-.ligalab-home .theory-grid { display: grid; gap: 1rem; grid-template-columns: repeat(3, 1fr); margin-bottom: 2.5rem; }
-.ligalab-home .theory-card { background: #ffffff; border: 1px solid #e2e8f0; border-radius: 1rem; box-shadow: 0 4px 14px rgba(2, 132, 199, 0.04); display: flex; flex-direction: column; padding: 1.4rem; transition: border-color .2s ease; }
-.ligalab-home .theory-card:hover { border-color: #0284c7; box-shadow: 0 8px 24px rgba(2, 132, 199, 0.1); }
-.ligalab-home .theory-card__tag { color: #0284c7; font-size: .75rem; font-weight: 750; letter-spacing: .06em; margin-bottom: .4rem; text-transform: uppercase; }
-.ligalab-home .theory-card__work { color: #0f172a; font-size: 1.15rem; margin: 0 0 .3rem; font-weight: 750; }
-.ligalab-home .theory-card__author { color: #334155; font-size: .85rem; font-weight: 600; margin: 0 0 .6rem; }
-.ligalab-home .theory-card__focus { color: #64748b; font-size: .85rem; line-height: 1.5; margin: 0; flex: 1; }
-.ligalab-home .theory-impact-box { background: linear-gradient(145deg, #0284c7 0%, #0369a1 50%, #1e3a8a 100%); border: 1px solid #0284c7; border-radius: 1.25rem; box-shadow: 0 16px 40px rgba(2, 132, 199, 0.2); padding: clamp(1.5rem, 4vw, 2.5rem); }
-.ligalab-home .theory-impact-header h3 { color: #ffffff; font-size: 1.6rem; margin: .5rem 0 .75rem; }
-.ligalab-home .theory-impact-header p { color: #e0f2fe; font-size: 1.05rem; line-height: 1.65; margin: 0 0 1.5rem; max-width: 68ch; }
-.ligalab-home .theory-impact-badge { background: rgba(255, 255, 255, 0.2); border: 1px solid rgba(255, 255, 255, 0.35); border-radius: 999px; color: #ffffff; display: inline-block; font-size: .75rem; font-weight: 800; letter-spacing: .06em; padding: .3rem .8rem; text-transform: uppercase; }
-.ligalab-home .theory-outcomes-list { display: grid; gap: .75rem; grid-template-columns: repeat(auto-fit, minmax(18rem, 1fr)); list-style: none; margin: 0; padding: 0; }
-.ligalab-home .theory-outcome-item { align-items: start; background: rgba(255, 255, 255, 0.14); border: 1px solid rgba(255, 255, 255, 0.25); border-radius: .6rem; color: #ffffff; display: flex; font-size: .92rem; gap: .65rem; line-height: 1.5; padding: .8rem 1rem; }
-.ligalab-home .theory-outcome-bullet { color: #bae6fd; font-weight: 900; margin-top: .1rem; }
+/* Origem na Liga de Inovação */
+.ligalab-home .ligalab-origin { background: #ffffff; border-top: 1px solid #e2e8f0; }
+.ligalab-home .origin-story-box { background: linear-gradient(135deg, #f0f9ff 0%, #ffffff 100%); border: 1px solid rgba(14, 165, 233, 0.3); border-radius: 1.5rem; box-shadow: 0 10px 30px rgba(2, 132, 199, 0.06); margin-bottom: 2.5rem; padding: clamp(1.75rem, 4vw, 3rem); }
+.ligalab-home .origin-badge { background: #e0f2fe; border: 1px solid #bae6fd; border-radius: 999px; color: #0284c7; display: inline-block; font-size: .75rem; font-weight: 800; letter-spacing: .06em; margin-bottom: .85rem; padding: .3rem .85rem; text-transform: uppercase; }
+.ligalab-home .origin-story-heading { color: #0f172a; font-size: clamp(1.4rem, 3vw, 2.2rem); letter-spacing: -.03em; margin: 0 0 1rem; }
+.ligalab-home .origin-story-text { color: #334155; font-size: 1.05rem; line-height: 1.7; margin: 0 0 1rem; max-width: 70ch; }
+.ligalab-home .origin-story-text strong { color: #0f172a; }
+.ligalab-home .origin-pillars-grid { display: grid; gap: 1rem; grid-template-columns: repeat(3, 1fr); margin-top: 1.75rem; padding-top: 1.75rem; border-top: 1px solid #e2e8f0; }
+.ligalab-home .origin-pillar-item { background: #ffffff; border: 1px solid #e2e8f0; border-radius: .85rem; display: flex; gap: .85rem; padding: 1rem 1.15rem; }
+.ligalab-home .origin-pillar-icon { font-size: 1.75rem; line-height: 1; flex-shrink: 0; }
+.ligalab-home .origin-pillar-text { display: flex; flex-direction: column; gap: .25rem; }
+.ligalab-home .origin-pillar-title { color: #0f172a; font-size: .95rem; font-weight: 750; }
+.ligalab-home .origin-pillar-desc { color: #64748b; font-size: .85rem; line-height: 1.45; }
+
+.ligalab-home .origin-partners-grid { display: grid; gap: 1.5rem; grid-template-columns: repeat(3, 1fr); }
+.ligalab-home .origin-partner-card { background: #ffffff; border: 1px solid #e2e8f0; border-radius: 1.25rem; box-shadow: 0 4px 16px rgba(2, 132, 199, 0.04); display: flex; flex-direction: column; padding: 1.75rem; transition: transform .2s ease, border-color .2s ease, box-shadow .2s ease; }
+.ligalab-home .origin-partner-card:hover { border-color: #0284c7; box-shadow: 0 10px 25px rgba(2, 132, 199, 0.1); transform: translateY(-2px); }
+.ligalab-home .origin-partner-card--liga { border-color: rgba(14, 165, 233, 0.35); }
+.ligalab-home .origin-logo-box { align-items: center; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: .85rem; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03); display: flex; height: 5rem; justify-content: center; margin-bottom: 1.25rem; padding: .65rem .85rem; width: 100%; }
+.ligalab-home .origin-partner-logo { height: auto; max-height: 100%; max-width: 100%; object-fit: contain; width: auto; }
+.ligalab-home .origin-partner-badge { background: #f1f5f9; border-radius: 999px; color: #475569; display: inline-block; font-size: .7rem; font-weight: 800; letter-spacing: .06em; margin-bottom: .5rem; padding: .15rem .6rem; text-transform: uppercase; width: fit-content; }
+.ligalab-home .origin-partner-badge--lead { background: #e0f2fe; color: #0284c7; }
+.ligalab-home .origin-partner-name { color: #0f172a; font-size: 1.15rem; font-weight: 750; margin: 0 0 .2rem; }
+.ligalab-home .origin-partner-sub { color: #0284c7; font-size: .82rem; font-weight: 650; margin: 0 0 .6rem; }
+.ligalab-home .origin-partner-desc { color: #64748b; font-size: .88rem; line-height: 1.5; margin: 0; }
+
 
 /* FAQ Accordion */
 .ligalab-home .ligalab-faq { background: #f8fafc; }
@@ -489,15 +517,16 @@ button, input, select, textarea { font: inherit; }
 .cancel-btn:hover:not(:disabled) { background: #1e293b; color: #f8fafc; }
 
 @media (max-width: 64rem) {
-  .ligalab-bento-grid, .theory-grid { grid-template-columns: repeat(2, 1fr); }
-  .ligalab-metrics-grid, .partners-grid { grid-template-columns: repeat(2, 1fr); }
+  .ligalab-bento-grid, .origin-partners-grid, .workflow-stepper { grid-template-columns: repeat(2, 1fr); }
+  .ligalab-metrics-grid, .origin-pillars-grid { grid-template-columns: repeat(2, 1fr); }
   .ligalab-footer-content { grid-template-columns: 1fr 1fr; }
+  .workflow-panel { grid-template-columns: 1fr; }
 }
 
 @media (max-width: 48rem) {
   .role-grid { grid-template-columns: 1fr; }
   .about-grid, .category-grid, .event-facts, .editor-columns, .ligalab-home__hero, .ligalab-home__principle-grid, .event-card-grid { grid-template-columns: 1fr; }
-  .ligalab-bento-grid, .theory-grid, .ligalab-metrics-grid, .cockpit-grid, .partners-grid { grid-template-columns: 1fr; }
+  .ligalab-bento-grid, .origin-partners-grid, .workflow-stepper, .ligalab-metrics-grid, .cockpit-grid, .origin-pillars-grid { grid-template-columns: 1fr; }
   .schedule-editor-row { grid-template-columns: 1fr; }
   .hero-actions a { text-align: center; width: 100%; }
   .landing-footer, .ligalab-footer-content { align-items: flex-start; flex-direction: column; }
