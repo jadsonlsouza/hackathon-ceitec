@@ -1,6 +1,6 @@
 :root { color-scheme: dark; font-family: Inter, ui-sans-serif, system-ui, sans-serif; }
 * { box-sizing: border-box; }
-body { margin: 0; min-height: 100vh; background: #070b14; color: #f8fafc; }
+html, body { margin: 0; min-height: 100vh; overflow-x: hidden; width: 100%; max-width: 100vw; background: #070b14; color: #f8fafc; }
 a { color: inherit; }
 button, input, select, textarea { font: inherit; }
 :focus-visible { outline: 3px solid #38bdf8; outline-offset: 2px; }
@@ -526,13 +526,121 @@ button, input, select, textarea { font: inherit; }
 
 @media (max-width: 48rem) {
   .role-grid { grid-template-columns: 1fr; }
-  .about-grid, .category-grid, .event-facts, .editor-columns, .ligalab-home__hero, .ligalab-home__principle-grid, .event-card-grid { grid-template-columns: 1fr; }
-  .ligalab-bento-grid, .origin-partners-grid, .workflow-stepper, .ligalab-metrics-grid, .cockpit-grid, .origin-pillars-grid { grid-template-columns: 1fr; }
+  .about-grid, .category-grid, .event-facts, .editor-columns, .ligalab-home__principle-grid, .event-card-grid { grid-template-columns: 1fr; }
   .schedule-editor-row { grid-template-columns: 1fr; }
-  .hero-actions a { text-align: center; width: 100%; }
-  .landing-footer, .ligalab-footer-content { align-items: flex-start; flex-direction: column; }
-  .ligalab-footer-links { justify-self: start; }
-  .forma-tab, .role-tab { width: 100%; justify-content: center; }
+  .landing-footer { align-items: flex-start; flex-direction: column; }
+
+  /* ── Ligalab Mobile Optimization ────────────────────────────────── */
+  .platform-header { padding: .65rem 1rem; }
+  .platform-header__nav { gap: .5rem; }
+  .platform-header__nav .brand-logo--dark { width: 6.5rem; }
+  .platform-header__actions { gap: .35rem; }
+  .platform-header__actions a,
+  .platform-header__actions button { min-height: 38px; padding: .35rem .65rem; font-size: .82rem; }
+
+  /* Sections & Typography */
+  .ligalab-home .landing-section { padding: 2.25rem 1rem; }
+  .ligalab-home .ligalab-section-header { margin-bottom: 1.25rem; }
+  .ligalab-home .section-index { font-size: .75rem; }
+  .ligalab-home .landing-section h2 { font-size: clamp(1.55rem, 6.5vw, 2.15rem); line-height: 1.15; margin: .35rem 0 .5rem; }
+  .ligalab-home .section-copy { font-size: .95rem; line-height: 1.55; }
+
+  /* Hero Section */
+  .ligalab-home .ligalab-home__hero { grid-template-columns: 1fr; padding: 2.25rem 1rem 1.75rem; gap: 1.75rem; min-height: auto; }
+  .ligalab-home .ligalab-home__copy h1 { font-size: clamp(1.8rem, 7.5vw, 2.45rem); line-height: 1.1; max-width: 100%; margin: .35rem 0 .75rem; }
+  .ligalab-home .ligalab-home__lead { font-size: .95rem; line-height: 1.55; max-width: 100%; margin: 0 0 1.25rem; }
+  .ligalab-home .hero-actions { display: flex; flex-direction: column; gap: .65rem; width: 100%; }
+  .ligalab-home .hero-actions a { font-size: .95rem; padding: .75rem 1rem; text-align: center; width: 100%; }
+  .ligalab-home .ligalab-brand-wrapper { margin: 0 auto; max-width: 12.5rem; padding: 1rem; border-radius: 1.25rem; }
+  .ligalab-home .hero-cockpit { padding: .85rem; border-radius: .85rem; }
+  .ligalab-home .cockpit-header { margin-bottom: .6rem; padding-bottom: .45rem; }
+  .ligalab-home .cockpit-title { font-size: .68rem; }
+  .ligalab-home .cockpit-grid { grid-template-columns: repeat(2, 1fr) !important; gap: .5rem; }
+  .ligalab-home .cockpit-tile { padding: .5rem .55rem; }
+  .ligalab-home .cockpit-label { font-size: .65rem; }
+  .ligalab-home .cockpit-value { font-size: .85rem; }
+
+  /* Metrics Bar: Compact 2-column grid */
+  .ligalab-home .ligalab-metrics-bar { padding: 1.25rem 1rem; }
+  .ligalab-home .ligalab-metrics-grid { grid-template-columns: repeat(2, 1fr) !important; gap: 1rem .75rem; }
+  .ligalab-home .ligalab-metric-item { padding-left: .65rem; border-left-width: 2px; }
+  .ligalab-home .ligalab-metric-value { font-size: 1.65rem; }
+  .ligalab-home .ligalab-metric-label { font-size: .85rem; }
+  .ligalab-home .ligalab-metric-detail { font-size: .78rem; line-height: 1.35; }
+
+  /* Workflow: Horizontal swipeable tabs + responsive panel */
+  .ligalab-home .workflow-stepper { display: flex; overflow-x: auto; flex-wrap: nowrap; gap: .5rem; padding-bottom: .5rem; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
+  .ligalab-home .workflow-step-btn { flex-shrink: 0; min-width: 13.5rem; padding: .65rem .85rem; gap: .65rem; }
+  .ligalab-home .workflow-step-num { height: 28px; width: 28px; font-size: .8rem; }
+  .ligalab-home .workflow-panel { grid-template-columns: 1fr !important; padding: 1.25rem 1rem; border-radius: 1rem; gap: 1.25rem; }
+  .ligalab-home .workflow-panel__title { font-size: 1.3rem; line-height: 1.2; }
+  .ligalab-home .workflow-panel__subtitle { font-size: .92rem; margin-bottom: .65rem; }
+  .ligalab-home .workflow-panel__desc { font-size: .9rem; line-height: 1.55; margin-bottom: 1rem; }
+  .ligalab-home .workflow-deliverables__title { font-size: .78rem; margin-bottom: .5rem; }
+  .ligalab-home .workflow-deliverables__item { font-size: .85rem; padding: .5rem .75rem; }
+  .ligalab-home .telemetry-card { padding: 1rem; border-radius: .85rem; }
+  .ligalab-home .telemetry-card__metrics { gap: .5rem; }
+  .ligalab-home .telemetry-metric-tile { padding: .65rem; }
+  .ligalab-home .telemetry-metric-value { font-size: 1.05rem; }
+  .ligalab-home .telemetry-metric-label { font-size: .7rem; }
+
+  /* Bento Grid */
+  .ligalab-home .ligalab-bento-grid { grid-template-columns: 1fr !important; gap: .85rem; }
+  .ligalab-home .bento-card { padding: 1.15rem 1rem; border-radius: 1rem; }
+  .ligalab-home .bento-card__title { font-size: 1.15rem; margin-bottom: .4rem; }
+  .ligalab-home .bento-card__desc { font-size: .9rem; line-height: 1.5; margin-bottom: 1rem; }
+
+  /* Roles Multi-Papel: Horizontal scrolling tabs */
+  .ligalab-home .roles-tablist { display: flex; overflow-x: auto; flex-wrap: nowrap; gap: .5rem; padding-bottom: .5rem; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
+  .ligalab-home .role-tab { flex-shrink: 0; width: auto !important; min-height: 40px; padding: .45rem .85rem; font-size: .85rem; border-radius: .65rem; }
+  .ligalab-home .role-panel { padding: 1.25rem 1rem; border-radius: 1rem; }
+  .ligalab-home .role-panel__header { gap: .85rem; margin-bottom: 1rem; }
+  .ligalab-home .role-panel__icon { font-size: 2rem; }
+  .ligalab-home .role-panel__title { font-size: 1.3rem; }
+  .ligalab-home .role-panel__tagline { font-size: .88rem; }
+  .ligalab-home .role-panel__description { font-size: .92rem; line-height: 1.55; margin-bottom: 1.25rem; }
+  .ligalab-home .role-benefit-item { font-size: .85rem; padding: .55rem .75rem; }
+
+  /* Framework FORMA: Horizontal scrolling pill tabs */
+  .ligalab-home .forma-nav { display: flex; overflow-x: auto; flex-wrap: nowrap; gap: .5rem; padding-bottom: .5rem; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
+  .ligalab-home .forma-tab { flex-shrink: 0; width: auto !important; min-height: 40px; padding: .45rem .85rem; font-size: .85rem; gap: .5rem; }
+  .ligalab-home .forma-card { padding: 1.25rem 1rem; border-radius: 1rem; }
+  .ligalab-home .forma-card__title { font-size: 1.3rem; line-height: 1.2; }
+  .ligalab-home .forma-card__desc { font-size: .92rem; line-height: 1.55; margin: .65rem 0 1.25rem; }
+  .ligalab-home .forma-tool-item { font-size: .85rem; padding: .55rem .75rem; }
+
+  /* Origin Section */
+  .ligalab-home .origin-story-box { padding: 1.15rem 1rem; border-radius: 1rem; margin-bottom: 1.25rem; }
+  .ligalab-home .origin-story-heading { font-size: 1.25rem; line-height: 1.25; margin-bottom: .6rem; }
+  .ligalab-home .origin-story-text { font-size: .92rem; line-height: 1.55; margin-bottom: .65rem; }
+  .ligalab-home .origin-pillars-grid { grid-template-columns: 1fr !important; gap: .65rem; margin-top: 1rem; padding-top: 1rem; }
+  .ligalab-home .origin-pillar-item { padding: .75rem .85rem; gap: .65rem; border-radius: .65rem; }
+  .ligalab-home .origin-pillar-icon { font-size: 1.4rem; }
+  .ligalab-home .origin-pillar-title { font-size: .9rem; }
+  .ligalab-home .origin-pillar-desc { font-size: .82rem; line-height: 1.4; }
+  .ligalab-home .origin-partners-grid { grid-template-columns: 1fr !important; gap: .85rem; }
+  .ligalab-home .origin-partner-card { padding: 1.15rem 1rem; border-radius: 1rem; }
+  .ligalab-home .origin-logo-box { height: 4.25rem; padding: .4rem .65rem; margin-bottom: 1rem; }
+  .ligalab-home .origin-partner-name { font-size: 1.05rem; }
+  .ligalab-home .origin-partner-desc { font-size: .85rem; }
+
+  /* FAQ */
+  .ligalab-home .faq-question-btn { padding: .85rem 1rem; font-size: .98rem; }
+  .ligalab-home .faq-answer-panel { padding: .85rem 1rem; }
+  .ligalab-home .faq-answer-panel p { font-size: .92rem; line-height: 1.6; }
+
+  /* CTA Section */
+  .ligalab-home .ligalab-cta-section { padding-bottom: 2rem; }
+  .ligalab-home .ligalab-cta-card { padding: 1.75rem 1rem; border-radius: 1.15rem; }
+  .ligalab-home .ligalab-cta-content h2 { font-size: clamp(1.5rem, 6.5vw, 2.1rem); line-height: 1.15; margin: .5rem 0 .75rem; }
+  .ligalab-home .ligalab-cta-content .section-copy { font-size: .95rem; margin-bottom: 1.5rem; }
+
+  /* Footer */
+  .ligalab-home .ligalab-footer { padding: 2rem 1rem; }
+  .ligalab-home .ligalab-footer-content { grid-template-columns: 1fr !important; gap: 1.5rem; }
+  .ligalab-home .ligalab-footer-links { flex-direction: row; flex-wrap: wrap; gap: .6rem 1rem; justify-self: start; }
+  .ligalab-home .footer-partners-row { gap: .5rem; }
+  .ligalab-home .footer-partner-chip { width: 4.5rem; height: 2.3rem; padding: .2rem .4rem; }
 }
 
 
