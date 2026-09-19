@@ -16,7 +16,7 @@ function retry() {
   <main class="error-page">
     <section class="error-card" aria-labelledby="error-title">
       <p class="eyebrow">
-        Hackathon CEITEC
+        ligalab
       </p>
       <h1 id="error-title">
         Algo não saiu como esperado

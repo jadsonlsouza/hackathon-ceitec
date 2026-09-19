@@ -100,7 +100,7 @@ async function confirm() {
   <main class="onboarding-page">
     <div class="onboarding-card">
       <div class="onboarding-header">
-        <p class="eyebrow">Hackathon CEITEC</p>
+        <p class="eyebrow">ligalab</p>
         <h1>Como você vai participar?</h1>
         <p class="intro">
           <span v-if="eventLoading">Carregando evento…</span>

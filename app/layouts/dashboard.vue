@@ -18,13 +18,8 @@ const {
 <template>
   <div class="dashboard-shell">
     <aside class="dashboard-sidebar">
-      <NuxtLink to="/app" class="dashboard-brand" aria-label="Painel CEITEC">
-        <img
-          src="/brand/ceitec-horizontal-white.png"
-          alt="CEITEC"
-          width="1029"
-          height="252"
-        >
+      <NuxtLink to="/app" class="dashboard-brand" aria-label="Painel ligalab">
+        <BrandLogo variant="dark" />
       </NuxtLink>
       <p v-if="pending || contextPending" class="dashboard-access-state">
         Carregando seus acessos…

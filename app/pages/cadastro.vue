@@ -45,7 +45,7 @@ async function submit() {
 <template>
   <main class="auth-page">
     <section class="auth-card" aria-labelledby="signup-title">
-      <p class="eyebrow">Hackathon CEITEC</p>
+      <p class="eyebrow">ligalab</p>
       <h1 id="signup-title">Criar conta</h1>
       <p class="intro">Informe seus dados para começar.</p>
 

@@ -2,7 +2,7 @@ export default defineNuxtConfig({
   compatibilityDate: '2026-07-23',
   app: {
     head: {
-      title: 'Hackathon CEITEC',
+      title: 'ligalab',
       htmlAttrs: { lang: 'pt-BR' },
     },
   },

@@ -59,7 +59,7 @@ async function submitGoogle() {
 <template>
   <main class="auth-page">
     <section class="auth-card" aria-labelledby="login-title">
-      <p class="eyebrow">Hackathon CEITEC</p>
+      <p class="eyebrow">ligalab</p>
       <h1 id="login-title">Entrar</h1>
       <p class="intro">Acesse sua conta para participar do evento.</p>
 

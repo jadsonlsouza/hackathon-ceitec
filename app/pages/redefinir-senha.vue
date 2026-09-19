@@ -36,7 +36,7 @@ async function submit() {
 <template>
   <main class="auth-page">
     <section class="auth-card" aria-labelledby="reset-title">
-      <p class="eyebrow">Hackathon CEITEC</p>
+      <p class="eyebrow">ligalab</p>
       <h1 id="reset-title">Redefinir senha</h1>
       <p class="intro">Escolha uma nova senha para sua conta.</p>
 

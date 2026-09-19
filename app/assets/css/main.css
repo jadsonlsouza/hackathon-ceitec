@@ -5,6 +5,17 @@ a { color: inherit; }
 button, input, select, textarea { font: inherit; }
 :focus-visible { outline: 3px solid #38bdf8; outline-offset: 2px; }
 
+.brand-logo { display: block; height: auto; max-width: 100%; }
+.brand-logo--dark { width: 10rem; }
+.brand-logo--light { width: 8rem; }
+.platform-header { background: #0b1220; border-bottom: 1px solid #334155; color: #f8fafc; padding: .8rem 1.25rem; }
+.platform-header[data-theme="light"] { background: #f8fafc; border-color: #cbd5e1; color: #0f172a; }
+.platform-header__nav, .platform-header__actions { align-items: center; display: flex; gap: .75rem; }
+.platform-header__nav { justify-content: space-between; margin: 0 auto; max-width: 76rem; }
+.platform-header__actions { flex-wrap: wrap; justify-content: end; }
+.platform-header__actions a, .platform-header__actions button { border: 1px solid currentColor; border-radius: .5rem; color: inherit; font-weight: 700; min-height: 44px; padding: .65rem .8rem; text-decoration: none; }
+.platform-header__actions button { background: transparent; cursor: pointer; }
+
 .auth-page { align-items: center; display: flex; justify-content: center; min-height: 100vh; padding: 1.5rem; }
 .auth-card { background: #111827; border: 1px solid #334155; border-radius: 1rem; box-shadow: 0 20px 45px #0008; max-width: 29rem; padding: 2rem; width: 100%; }
 .eyebrow { color: #38bdf8; font-size: .85rem; font-weight: 700; letter-spacing: .08em; margin: 0 0 .5rem; text-transform: uppercase; }
