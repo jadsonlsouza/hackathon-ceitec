@@ -14,7 +14,7 @@ function currentOrigin(customOrigin?: string) {
   if (import.meta.client && typeof window !== 'undefined' && window.location?.origin) {
     return window.location.origin
   }
-  return 'https://hackathon-ceitec.vercel.app'
+  return process.env.NUXT_PUBLIC_APP_URL || 'http://localhost:3000'
 }
 
 export function createAuthActions(supabase: SupabaseClient<Database>, origin?: string) {

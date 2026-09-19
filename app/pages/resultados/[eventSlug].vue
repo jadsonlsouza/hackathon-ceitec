@@ -50,7 +50,7 @@ function categoryLabel(category: 'junior' | 'senior') {
       <p class="eyebrow">
         Classificação oficial
       </p>
-      <h1>Resultados do Hackathon</h1>
+      <h1>Resultados do evento</h1>
       <p v-if="results[0]" class="intro">
         {{ results[0].event_name }}
       </p>

@@ -1,6 +1,6 @@
-# Hackathon CEITEC — Plataforma de Gestão
+# Ligalab — Plataforma de desafios e eventos
 
-Plataforma web para organização, avaliação e publicação de resultados do Hackathon CEITEC, construída com **Nuxt 4**, **Vue 3**, **TypeScript** e **Supabase**.
+O Ligalab é uma plataforma web para organizar eventos, equipes, avaliações e resultados. O **Hackathon CEITEC** é o primeiro evento disponível no catálogo. A aplicação é construída com **Nuxt 4**, **Vue 3**, **TypeScript** e **Supabase**.
 
 ---
 
@@ -66,7 +66,7 @@ No painel do Supabase → **Authentication → Providers → Google**:
    - Produção: `https://<seu-projeto>.supabase.co/auth/v1/callback`
 
 No painel do Supabase → **Authentication → URL Configuration**:
-- **Site URL**: URL pública do app (ex.: `https://hackathon-ceitec.vercel.app`)
+- **Site URL**: URL pública do app (ex.: `https://seu-dominio.vercel.app`)
 - **Redirect URLs**: adicione `http://127.0.0.1:3000/**` (local) e a URL de produção.
 
 ### 6. Rodar em modo desenvolvimento
@@ -162,14 +162,14 @@ No painel do Vercel → **Settings → Environment Variables**, adicione:
 
 ### 3. Configurar o Supabase para produção
 
-- **Site URL**: URL de produção do Vercel (ex.: `https://hackathon-ceitec.vercel.app`)
-- **Redirect URLs**: adicione `https://hackathon-ceitec.vercel.app/**`
+- **Site URL**: URL de produção do Vercel (ex.: `https://seu-dominio.vercel.app`)
+- **Redirect URLs**: adicione `https://seu-dominio.vercel.app/**`
 - **Callback Google OAuth**: `https://<seu-projeto>.supabase.co/auth/v1/callback`
 
 ### 4. Smoke test de produção
 
 ```bash
-PLAYWRIGHT_BASE_URL="https://hackathon-ceitec.vercel.app" npx playwright test tests/e2e/release.spec.ts
+PLAYWRIGHT_BASE_URL="https://seu-dominio.vercel.app" npx playwright test tests/e2e/release.spec.ts
 ```
 
 ---

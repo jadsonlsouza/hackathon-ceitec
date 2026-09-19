@@ -5,7 +5,9 @@ import { $fetch, setup } from '@nuxt/test-utils/e2e'
 describe('application shell', async () => {
   await setup({ rootDir: fileURLToPath(new URL('../..', import.meta.url)) })
 
-  it('renders the CEITEC heading', async () => {
-    expect(await $fetch('/')).toContain('Hackathon CEITEC')
+  it('uses Ligalab for the application title and Hackathon CEITEC for its event detail', async () => {
+    expect(await $fetch('/login')).toContain('ligalab')
+    expect(await $fetch('/eventos/hackathon-ceitec')).toContain('Hackathon CEITEC')
+    expect((await $fetch<{ service: string }>('/api/health')).service).toBe('ligalab')
   })
 })

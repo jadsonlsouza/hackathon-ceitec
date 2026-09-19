@@ -8,7 +8,7 @@ describe('dashboard and recovery endpoints', async () => {
   it('server-renders the authenticated dashboard shell safely', async () => {
     const html = await $fetch<string>('/app')
 
-    expect(html).toContain('Painel do Hackathon')
+    expect(html).toContain('Painel Ligalab')
     expect(html).toContain('Nenhum acesso ativo')
     expect(html).not.toContain('service_role')
   })
@@ -30,7 +30,7 @@ describe('dashboard and recovery endpoints', async () => {
 
     expect(body).toEqual({
       ok: true,
-      service: 'hackathon-ceitec',
+      service: 'ligalab',
       timestamp: expect.any(String),
     })
     expect(new Date(body.timestamp).toISOString()).toBe(body.timestamp)

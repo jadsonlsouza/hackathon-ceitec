@@ -200,7 +200,7 @@ const cards = computed(() => capabilities.value.flatMap((capability) => {
       <p class="eyebrow">
         Visão geral
       </p>
-      <h1>Painel do Hackathon</h1>
+      <h1>Painel Ligalab</h1>
       <p class="intro">
         Acompanhe somente os fluxos liberados para o seu perfil.
       </p>

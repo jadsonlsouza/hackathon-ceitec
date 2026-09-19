@@ -29,10 +29,11 @@ async function expectAccessible(page: Page) {
 
 test.describe('páginas públicas', () => {
   for (const [path, heading] of [
-    ['/', 'Hackathon CEITEC E2E A'],
+    ['/', 'Uma plataforma para transformar desafios em aprendizagem.'],
+    ['/eventos', 'Encontre o próximo desafio'],
     ['/login', 'Entrar'],
     ['/cadastro', 'Criar conta'],
-    ['/resultados/hackathon-e2e-a', 'Resultados do Hackathon'],
+    ['/resultados/hackathon-e2e-a', 'Resultados do evento'],
   ] as const) {
     test(`${path} não possui violações graves`, async ({ page }) => {
       await page.goto(path)
@@ -65,7 +66,7 @@ test.describe('aluno autenticado', () => {
   test.use({ storageState: authState('studentA') })
 
   for (const [path, heading] of [
-    ['/app', 'Painel do Hackathon'],
+    ['/app', 'Painel Ligalab'],
     [`/app/evento/${E2E_EVENT_A}/equipe`, 'Sua equipe'],
     [`/app/evento/${E2E_EVENT_A}/atividades`, 'Atividades'],
     [`/app/evento/${E2E_EVENT_A}/atividades/${E2E_ACTIVITY_A}`, 'Canvas de impacto'],
