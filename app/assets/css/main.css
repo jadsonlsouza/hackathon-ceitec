@@ -268,7 +268,7 @@ button, input, select, textarea { font: inherit; }
 .ligalab-home__hero { align-items: center; background: radial-gradient(circle at 80% 20%, rgba(14, 165, 233, 0.18), transparent 45%), radial-gradient(circle at 15% 85%, rgba(99, 102, 241, 0.15), transparent 40%), linear-gradient(155deg, #071b37 0%, #070b14 100%); border-bottom: 1px solid #1e293b; display: grid; gap: clamp(2rem, 6vw, 5rem); grid-template-columns: minmax(0, 1.25fr) minmax(18rem, 28rem); margin: 0 auto; min-height: 78vh; padding: clamp(4rem, 8vw, 7rem) max(1.25rem, calc((100vw - 78rem) / 2)); position: relative; }
 .ligalab-home__copy h1 { font-size: clamp(2.6rem, 6.5vw, 5rem); letter-spacing: -.05em; line-height: .98; margin: .75rem 0 1.25rem; max-width: 14ch; }
 .ligalab-home { background: #ffffff; color: #0f172a; min-height: 100vh; }
-.ligalab-home .ligalab-home__hero { align-items: center; background: radial-gradient(circle at 85% 15%, rgba(14, 165, 233, 0.16), transparent 50%), radial-gradient(circle at 10% 85%, rgba(37, 99, 235, 0.10), transparent 45%), linear-gradient(180deg, #f0f9ff 0%, #ffffff 100%); border-bottom: 1px solid #e2e8f0; display: grid; gap: clamp(2rem, 6vw, 5rem); grid-template-columns: minmax(0, 1.25fr) minmax(18rem, 28rem); margin: 0 auto; min-height: 78vh; padding: clamp(4rem, 8vw, 7rem) max(1.25rem, calc((100vw - 78rem) / 2)); position: relative; }
+.ligalab-home .ligalab-home__hero { align-items: center; background: radial-gradient(circle at 85% 15%, rgba(14, 165, 233, 0.16), transparent 50%), radial-gradient(circle at 10% 85%, rgba(37, 99, 235, 0.10), transparent 45%), linear-gradient(180deg, #f0f9ff 0%, #ffffff 100%); border-bottom: 1px solid #e2e8f0; display: grid; gap: clamp(1.5rem, 4vw, 3.5rem); grid-template-columns: minmax(0, 1.25fr) minmax(18rem, 28rem); margin: 0 auto; min-height: auto; padding: clamp(2.5rem, 5vw, 4.25rem) max(1.25rem, calc((100vw - 78rem) / 2)); position: relative; }
 .ligalab-home .ligalab-home__copy h1 { color: #0f172a; font-size: clamp(2.6rem, 6.5vw, 5rem); letter-spacing: -.05em; line-height: .98; margin: .75rem 0 1.25rem; max-width: 14ch; }
 .ligalab-home .ligalab-home__copy .eyebrow { background: linear-gradient(90deg, #0284c7, #2563eb); -webkit-background-clip: text; -webkit-text-fill-color: transparent; display: inline-block; font-size: .85rem; font-weight: 800; letter-spacing: .1em; margin: 0; text-transform: uppercase; }
 .ligalab-home .ligalab-home__lead { color: #475569; font-size: clamp(1.05rem, 1.8vw, 1.25rem); line-height: 1.7; max-width: 52ch; }
@@ -288,14 +288,15 @@ button, input, select, textarea { font: inherit; }
 .ligalab-home .cockpit-label { color: #64748b; font-size: .72rem; text-transform: uppercase; font-weight: 600; }
 .ligalab-home .cockpit-value { color: #0f172a; font-size: .95rem; font-weight: 750; }
 
-/* Section Header */
-.ligalab-home .ligalab-section-header { margin-bottom: 3rem; max-width: 50rem; }
+/* Section Header & Spacing */
+.ligalab-home .landing-section { padding: clamp(2.25rem, 4vw, 3.75rem) 1.25rem; }
+.ligalab-home .ligalab-section-header { margin-bottom: 1.5rem; max-width: 50rem; }
 .ligalab-home .section-index { color: #0284c7; font-size: .8rem; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; }
-.ligalab-home .landing-section h2 { color: #0f172a; font-size: clamp(2rem, 4.5vw, 3.5rem); letter-spacing: -.035em; line-height: 1.1; margin: .75rem 0; }
-.ligalab-home .section-copy { color: #475569; font-size: clamp(1.05rem, 1.8vw, 1.2rem); line-height: 1.7; max-width: 62ch; margin: 0; }
+.ligalab-home .landing-section h2 { color: #0f172a; font-size: clamp(1.85rem, 3.8vw, 2.75rem); letter-spacing: -.03em; line-height: 1.15; margin: .5rem 0 .75rem; }
+.ligalab-home .section-copy { color: #475569; font-size: clamp(1rem, 1.6vw, 1.15rem); line-height: 1.65; max-width: 62ch; margin: 0; }
 
 /* Metrics Bar */
-.ligalab-home .ligalab-metrics-bar { background: #f8fafc; border-bottom: 1px solid #e2e8f0; border-top: 1px solid #e2e8f0; padding: 2.75rem 1.25rem; }
+.ligalab-home .ligalab-metrics-bar { background: #f8fafc; border-bottom: 1px solid #e2e8f0; border-top: 1px solid #e2e8f0; padding: 1.75rem 1.25rem; }
 .ligalab-home .ligalab-metrics-grid { display: grid; gap: 1.5rem; grid-template-columns: repeat(4, 1fr); margin: 0 auto; max-width: 78rem; }
 .ligalab-home .ligalab-metric-item { border-left: 2px solid #0284c7; display: flex; flex-direction: column; gap: .35rem; padding-left: 1.25rem; }
 .ligalab-home .ligalab-metric-value { background: linear-gradient(90deg, #0284c7, #2563eb); -webkit-background-clip: text; -webkit-text-fill-color: transparent; font-size: clamp(1.8rem, 3.5vw, 2.5rem); font-weight: 900; line-height: 1; }
@@ -304,7 +305,7 @@ button, input, select, textarea { font: inherit; }
 
 /* Workflow & Platform Lifecycle */
 .ligalab-home .ligalab-workflow { background: #ffffff; }
-.ligalab-home .workflow-stepper { display: grid; gap: .75rem; grid-template-columns: repeat(4, 1fr); margin-bottom: 2rem; }
+.ligalab-home .workflow-stepper { display: grid; gap: .75rem; grid-template-columns: repeat(4, 1fr); margin-bottom: 1.25rem; }
 .ligalab-home .workflow-step-btn { align-items: center; background: #ffffff; border: 1px solid #e2e8f0; border-radius: .85rem; cursor: pointer; display: flex; gap: .85rem; padding: .85rem 1rem; text-align: left; transition: all .2s ease; box-shadow: 0 2px 6px rgba(0, 0, 0, 0.03); width: 100%; }
 .ligalab-home .workflow-step-btn:hover { background: #f0f9ff; border-color: #0284c7; }
 .ligalab-home .workflow-step-btn--active { background: #f0f9ff; border-color: #0284c7; box-shadow: 0 4px 14px rgba(2, 132, 199, 0.15); }
@@ -339,7 +340,7 @@ button, input, select, textarea { font: inherit; }
 
 /* Framework FORMA */
 .ligalab-home .ligalab-forma { background: #f8fafc; position: relative; }
-.ligalab-home .forma-nav { display: flex; flex-wrap: wrap; gap: .75rem; margin-bottom: 2rem; }
+.ligalab-home .forma-nav { display: flex; flex-wrap: wrap; gap: .75rem; margin-bottom: 1.25rem; }
 .ligalab-home .forma-tab { align-items: center; background: #ffffff; border: 1px solid #cbd5e1; border-radius: 999px; color: #334155; cursor: pointer; display: inline-flex; font-size: .95rem; font-weight: 700; gap: .75rem; min-height: 48px; padding: .65rem 1.4rem; transition: all .2s ease; box-shadow: 0 2px 6px rgba(0, 0, 0, 0.03); }
 .ligalab-home .forma-tab:hover { background: #f0f9ff; border-color: #0284c7; color: #0284c7; }
 .ligalab-home .forma-tab--active { background: linear-gradient(135deg, #0284c7, #0369a1); border-color: #0284c7; box-shadow: 0 6px 20px rgba(2, 132, 199, 0.3); color: #ffffff; }
@@ -358,7 +359,7 @@ button, input, select, textarea { font: inherit; }
 
 /* Bento Grid Features */
 .ligalab-home .ligalab-features { background: #ffffff; }
-.ligalab-home .ligalab-bento-grid { display: grid; gap: 1.25rem; grid-template-columns: repeat(3, 1fr); margin-top: 2rem; }
+.ligalab-home .ligalab-bento-grid { display: grid; gap: 1.25rem; grid-template-columns: repeat(3, 1fr); margin-top: 1.25rem; }
 .ligalab-home .bento-card { background: #ffffff; border: 1px solid #e2e8f0; border-radius: 1.25rem; box-shadow: 0 4px 16px rgba(2, 132, 199, 0.04); display: flex; flex-direction: column; padding: 1.75rem; transition: transform .2s ease, border-color .2s ease, box-shadow .2s ease; }
 .ligalab-home .bento-card:hover { border-color: #0284c7; box-shadow: 0 12px 30px rgba(2, 132, 199, 0.12); transform: translateY(-3px); }
 .ligalab-home .bento-card__top { align-items: center; display: flex; justify-content: space-between; margin-bottom: 1.25rem; }
@@ -371,7 +372,7 @@ button, input, select, textarea { font: inherit; }
 
 /* Roles Multi-Papel */
 .ligalab-home .ligalab-roles { background: #f8fafc; }
-.ligalab-home .roles-tablist { display: flex; flex-wrap: wrap; gap: .75rem; margin-bottom: 2rem; }
+.ligalab-home .roles-tablist { display: flex; flex-wrap: wrap; gap: .75rem; margin-bottom: 1.25rem; }
 .ligalab-home .role-tab { align-items: center; background: #ffffff; border: 1px solid #cbd5e1; border-radius: .75rem; color: #334155; cursor: pointer; display: flex; font-size: .95rem; font-weight: 700; gap: .6rem; min-height: 48px; padding: .65rem 1.25rem; transition: all .2s ease; box-shadow: 0 2px 6px rgba(0, 0, 0, 0.03); }
 .ligalab-home .role-tab:hover { background: #f0f9ff; border-color: #0284c7; color: #0284c7; }
 .ligalab-home .role-tab--active { background: #e0f2fe; border-color: #0284c7; color: #0284c7; box-shadow: 0 4px 14px rgba(2, 132, 199, 0.15); }
@@ -388,12 +389,12 @@ button, input, select, textarea { font: inherit; }
 
 /* Origem na Liga de Inovação */
 .ligalab-home .ligalab-origin { background: #ffffff; border-top: 1px solid #e2e8f0; }
-.ligalab-home .origin-story-box { background: linear-gradient(135deg, #f0f9ff 0%, #ffffff 100%); border: 1px solid rgba(14, 165, 233, 0.3); border-radius: 1.5rem; box-shadow: 0 10px 30px rgba(2, 132, 199, 0.06); margin-bottom: 2.5rem; padding: clamp(1.75rem, 4vw, 3rem); }
-.ligalab-home .origin-badge { background: #e0f2fe; border: 1px solid #bae6fd; border-radius: 999px; color: #0284c7; display: inline-block; font-size: .75rem; font-weight: 800; letter-spacing: .06em; margin-bottom: .85rem; padding: .3rem .85rem; text-transform: uppercase; }
-.ligalab-home .origin-story-heading { color: #0f172a; font-size: clamp(1.4rem, 3vw, 2.2rem); letter-spacing: -.03em; margin: 0 0 1rem; }
-.ligalab-home .origin-story-text { color: #334155; font-size: 1.05rem; line-height: 1.7; margin: 0 0 1rem; max-width: 70ch; }
+.ligalab-home .origin-story-box { background: linear-gradient(135deg, #f0f9ff 0%, #ffffff 100%); border: 1px solid rgba(14, 165, 233, 0.3); border-radius: 1.5rem; box-shadow: 0 10px 30px rgba(2, 132, 199, 0.06); margin-bottom: 1.5rem; padding: clamp(1.5rem, 3.5vw, 2.5rem); }
+.ligalab-home .origin-badge { background: #e0f2fe; border: 1px solid #bae6fd; border-radius: 999px; color: #0284c7; display: inline-block; font-size: .75rem; font-weight: 800; letter-spacing: .06em; margin-bottom: .6rem; padding: .25rem .75rem; text-transform: uppercase; }
+.ligalab-home .origin-story-heading { color: #0f172a; font-size: clamp(1.35rem, 2.8vw, 2rem); letter-spacing: -.03em; margin: 0 0 .75rem; }
+.ligalab-home .origin-story-text { color: #334155; font-size: 1rem; line-height: 1.65; margin: 0 0 .75rem; max-width: 70ch; }
 .ligalab-home .origin-story-text strong { color: #0f172a; }
-.ligalab-home .origin-pillars-grid { display: grid; gap: 1rem; grid-template-columns: repeat(3, 1fr); margin-top: 1.75rem; padding-top: 1.75rem; border-top: 1px solid #e2e8f0; }
+.ligalab-home .origin-pillars-grid { display: grid; gap: 1rem; grid-template-columns: repeat(3, 1fr); margin-top: 1.25rem; padding-top: 1.25rem; border-top: 1px solid #e2e8f0; }
 .ligalab-home .origin-pillar-item { background: #ffffff; border: 1px solid #e2e8f0; border-radius: .85rem; display: flex; gap: .85rem; padding: 1rem 1.15rem; }
 .ligalab-home .origin-pillar-icon { font-size: 1.75rem; line-height: 1; flex-shrink: 0; }
 .ligalab-home .origin-pillar-text { display: flex; flex-direction: column; gap: .25rem; }
@@ -425,8 +426,8 @@ button, input, select, textarea { font: inherit; }
 .ligalab-home .faq-answer-panel p { color: #334155; font-size: 1rem; line-height: 1.7; margin: 0; }
 
 /* Final Glow CTA */
-.ligalab-home .ligalab-cta-section { background: #ffffff; padding-bottom: clamp(4rem, 8vw, 7rem); }
-.ligalab-home .ligalab-cta-card { background: radial-gradient(circle at 50% 0%, #0284c7 0%, #0369a1 45%, #1e3a8a 100%); border: 1px solid #0ea5e9; border-radius: 1.75rem; box-shadow: 0 25px 60px rgba(2, 132, 199, 0.25), 0 10px 30px rgba(0, 0, 0, 0.08); overflow: hidden; padding: clamp(2.5rem, 6vw, 4.5rem) 1.5rem; position: relative; text-align: center; }
+.ligalab-home .ligalab-cta-section { background: #ffffff; padding-bottom: clamp(2rem, 4vw, 3.5rem); }
+.ligalab-home .ligalab-cta-card { background: radial-gradient(circle at 50% 0%, #0284c7 0%, #0369a1 45%, #1e3a8a 100%); border: 1px solid #0ea5e9; border-radius: 1.75rem; box-shadow: 0 25px 60px rgba(2, 132, 199, 0.25), 0 10px 30px rgba(0, 0, 0, 0.08); overflow: hidden; padding: clamp(2rem, 4.5vw, 3.25rem) 1.5rem; position: relative; text-align: center; }
 .ligalab-home .ligalab-cta-content { margin: 0 auto; max-width: 46rem; position: relative; z-index: 2; }
 .ligalab-home .ligalab-cta-content .eyebrow { color: #bae6fd; }
 .ligalab-home .ligalab-cta-content h2 { color: #ffffff; font-size: clamp(2rem, 5vw, 3.5rem); letter-spacing: -.035em; line-height: 1.1; margin: .85rem 0 1.25rem; }
@@ -438,7 +439,7 @@ button, input, select, textarea { font: inherit; }
 .ligalab-home .ligalab-cta-content .secondary-cta:hover { background: rgba(255, 255, 255, 0.15); border-color: #ffffff; }
 
 /* Footer Ligalab */
-.ligalab-home .ligalab-footer { background: #f8fafc; border-top: 1px solid #e2e8f0; color: #475569; padding: 3.5rem 1.25rem; }
+.ligalab-home .ligalab-footer { background: #f8fafc; border-top: 1px solid #e2e8f0; color: #475569; padding: 2.25rem 1.25rem; }
 .ligalab-home .ligalab-footer-content { align-items: start; display: grid; gap: 2.5rem; grid-template-columns: 1.3fr 1.7fr auto; margin: 0 auto; max-width: 78rem; width: 100%; }
 .ligalab-home .ligalab-footer-brand-col { display: flex; flex-direction: column; gap: .75rem; }
 .ligalab-home .ligalab-footer-brand-col p { color: #64748b; font-size: .88rem; line-height: 1.55; margin: 0; max-width: 36ch; }
