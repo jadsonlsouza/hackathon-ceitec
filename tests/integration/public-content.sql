@@ -7,6 +7,8 @@ select no_plan();
 select has_table('public', 'event_public_content', 'public content table exists');
 select has_table('public', 'event_schedule_items', 'schedule table exists');
 select has_function('public', 'get_featured_event_content', array[]::text[], 'fixed public fetch RPC exists');
+select has_function('public', 'get_public_event_catalog', array[]::text[], 'public catalog RPC exists');
+select has_function('public', 'get_public_event_content', array['text'], 'public slug content RPC exists');
 select has_function('public', 'get_event_public_content_for_edit', array['uuid'], 'Professor editor fetch RPC exists');
 select has_function('public', 'save_event_public_content', array['uuid', 'jsonb'], 'atomic Professor save RPC exists');
 
@@ -19,6 +21,14 @@ select ok(
 select function_privs_are(
   'public', 'get_featured_event_content', array[]::text[], 'anon',
   array['EXECUTE'], 'anonymous may only execute sanitized public fetch'
+);
+select function_privs_are(
+  'public', 'get_public_event_catalog', array[]::text[], 'anon',
+  array['EXECUTE'], 'anonymous may execute only the sanitized public catalog'
+);
+select function_privs_are(
+  'public', 'get_public_event_content', array['text'], 'anon',
+  array['EXECUTE'], 'anonymous may execute only sanitized public event detail'
 );
 
 insert into auth.users (id, email, raw_user_meta_data)
@@ -37,6 +47,22 @@ insert into public.event_roles (event_id, user_id, role, approved_by)
 values
   ('10000000-0000-4000-8000-000000000801', '00000000-0000-4000-8000-000000000801', 'professor', '00000000-0000-4000-8000-000000000801'),
   ('10000000-0000-4000-8000-000000000802', '00000000-0000-4000-8000-000000000802', 'professor', '00000000-0000-4000-8000-000000000802');
+
+-- A second operational event must be catalogued even though `is_featured` is
+-- intentionally unique. Draft and content-less events remain private.
+insert into public.events (id, name, slug, status, is_featured, professor_id, created_by)
+values
+  ('10000000-0000-4000-8000-000000000803', 'Mostra de Projetos', 'mostra-projetos', 'in_progress', false,
+   '00000000-0000-4000-8000-000000000801', '00000000-0000-4000-8000-000000000801'),
+  ('10000000-0000-4000-8000-000000000804', 'Sem conteúdo', 'sem-conteudo', 'registration_open', false,
+   '00000000-0000-4000-8000-000000000801', '00000000-0000-4000-8000-000000000801');
+
+insert into public.event_public_content (
+  event_id, tagline, presentation, objectives, venue, date_label, registration_open
+)
+values
+  ('10000000-0000-4000-8000-000000000803', 'Projetos em destaque', 'Uma mostra pública de projetos.', '["Criatividade"]', 'Ligalab', '12 de agosto', false),
+  ('10000000-0000-4000-8000-000000000802', 'Rascunho', 'Conteúdo que não pode ser publicado.', '["Privado"]', 'Interno', 'Nunca', false);
 
 set local role authenticated;
 select set_config('request.jwt.claim.sub', '00000000-0000-4000-8000-000000000801', true);
@@ -108,6 +134,24 @@ select is(
   0,
   'unfeatured event remains absent'
 );
+select results_eq(
+  $$ select event_slug from public.get_public_event_catalog() order by event_slug $$,
+  $$ values ('landing-ceitec'), ('mostra-projetos') $$,
+  'catalog includes every operational event with public content and excludes draft or content-less events'
+);
+select is(
+  (select event_name from public.get_public_event_content('mostra-projetos')),
+  'Mostra de Projetos',
+  'slug content returns only the requested public event'
+);
+select is_empty(
+  $$ select * from public.get_public_event_content('evento-privado') $$,
+  'draft event is absent from public detail'
+);
+select is_empty(
+  $$ select * from public.get_public_event_content('missing-event') $$,
+  'unknown public event slug has no content'
+);
 
 reset role;
 update public.events
@@ -118,6 +162,11 @@ select is(
   (select count(*)::integer from public.get_featured_event_content()),
   0,
   'archived event remains absent'
+);
+select results_eq(
+  $$ select event_slug from public.get_public_event_catalog() order by event_slug $$,
+  $$ values ('mostra-projetos') $$,
+  'archived events are absent from the catalog'
 );
 reset role;
 
