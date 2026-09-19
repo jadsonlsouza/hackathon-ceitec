@@ -1,6 +1,9 @@
 <script setup lang="ts">
+import BrandLogo from '../brand/BrandLogo.vue'
+
 defineProps<{
   eventName: string
+  eventSlug: string
   tagline: string
   registrationOpen: boolean
 }>()
@@ -9,15 +12,13 @@ defineProps<{
 <template>
   <header class="landing-hero">
     <nav aria-label="Navegação principal" class="landing-nav">
-      <NuxtLink to="/" aria-label="Página inicial do Hackathon CEITEC">
-        <img
-          src="/brand/ceitec-horizontal-white.png"
-          alt="CEITEC"
-          width="1029"
-          height="252"
-        >
+      <NuxtLink to="/" aria-label="Página inicial do Ligalab">
+        <BrandLogo variant="dark" />
       </NuxtLink>
-      <NuxtLink class="nav-login" to="/login">Entrar</NuxtLink>
+      <div class="landing-nav__links">
+        <NuxtLink to="/eventos">Eventos</NuxtLink>
+        <NuxtLink class="nav-login" to="/login">Entrar</NuxtLink>
+      </div>
     </nav>
 
     <div class="hero-content">

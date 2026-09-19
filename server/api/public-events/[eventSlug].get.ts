@@ -2,6 +2,7 @@ import type {
   PublicEventContent,
   PublishedCategoryResult,
 } from '../../../app/data/public-events'
+import { ceitecPublicContent } from '../../../app/data/ceitec-public-content'
 
 const slugPattern = /^[a-z0-9]+(?:-[a-z0-9]+)*$/
 
@@ -14,7 +15,9 @@ export default defineEventHandler(async (event): Promise<PublicEventContent> => 
   const config = useRuntimeConfig()
   const url = config.public.supabaseUrl || process.env.NUXT_PUBLIC_SUPABASE_URL
   const key = config.public.supabasePublishableKey || process.env.NUXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
+  const fallbackAllowed = config.allowStaticPublicContentFallback === true
   if (!url || !key) {
+    if (fallbackAllowed && eventSlug === ceitecPublicContent.event_slug) return ceitecPublicContent
     throw eventUnavailableError()
   }
 
@@ -36,6 +39,7 @@ export default defineEventHandler(async (event): Promise<PublicEventContent> => 
     return { ...content, results }
   }
   catch (error) {
+    if (fallbackAllowed && eventSlug === ceitecPublicContent.event_slug) return ceitecPublicContent
     if ((error as { statusCode?: number }).statusCode) throw error
     throw eventUnavailableError()
   }

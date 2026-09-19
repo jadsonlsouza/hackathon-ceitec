@@ -4,6 +4,7 @@ import HeroSection from '../../app/components/landing/HeroSection.vue'
 import PublicResults from '../../app/components/landing/PublicResults.vue'
 import ScheduleSection from '../../app/components/landing/ScheduleSection.vue'
 import UnavailableState from '../../app/components/landing/UnavailableState.vue'
+import EventCard from '../../app/components/landing/EventCard.vue'
 
 const NuxtLink = {
   props: ['to'],
@@ -17,18 +18,20 @@ describe('public landing components', () => {
         eventName: 'Hackathon CEITEC',
         tagline: 'Criando soluções, conectando o futuro.',
         registrationOpen: true,
+        eventSlug: 'hackathon-ceitec',
       },
       global: { stubs: { NuxtLink } },
     })
 
     expect(wrapper.findAll('h1')).toHaveLength(1)
     expect(wrapper.get('img').attributes()).toMatchObject({
-      alt: 'CEITEC',
-      width: '1029',
-      height: '252',
+      alt: 'ligalab',
+      width: '2172',
+      height: '724',
     })
     expect(wrapper.get('a[href="/cadastro"]').text()).toContain('Inscreva-se')
     expect(wrapper.get('a[href="/login"]').text()).toContain('Entrar')
+    expect(wrapper.get('a[href="/eventos"]').text()).toContain('Eventos')
   })
 
   it('uses real table semantics and preserves multiline track detail', () => {
@@ -74,11 +77,32 @@ describe('public landing components', () => {
 
   it('renders a safe unavailable state without an active registration CTA', () => {
     const wrapper = mount(UnavailableState, {
+      props: { kind: 'event' },
       global: { stubs: { NuxtLink } },
     })
 
-    expect(wrapper.text()).toContain('Nenhum evento público disponível')
+    expect(wrapper.text()).toContain('Evento não encontrado')
     expect(wrapper.find('a[href="/cadastro"]').exists()).toBe(false)
     expect(wrapper.get('a[href="/login"]').text()).toContain('Entrar')
+  })
+
+  it('renders only public event metadata in catalog cards', () => {
+    const wrapper = mount(EventCard, {
+      props: {
+        event: {
+          event_name: 'Hackathon CEITEC',
+          event_slug: 'hackathon-ceitec',
+          tagline: 'Criando soluções, conectando o futuro.',
+          venue: 'CAC - CEI Roberto Freire',
+          date_label: '24 e 25 de julho',
+          registration_open: true,
+        },
+      },
+      global: { stubs: { NuxtLink } },
+    })
+
+    expect(wrapper.get('a').attributes('href')).toBe('/eventos/hackathon-ceitec')
+    expect(wrapper.text()).toContain('Inscrições abertas')
+    expect(wrapper.text()).not.toContain('team_members')
   })
 })
