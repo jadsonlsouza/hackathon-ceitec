@@ -2,7 +2,15 @@
 import { ref } from 'vue'
 import BrandLogo from '../brand/BrandLogo.vue'
 
-const theme = ref<'dark' | 'light'>('dark')
+const props = withDefaults(defineProps<{
+  showThemeToggle?: boolean
+  initialTheme?: 'dark' | 'light'
+}>(), {
+  showThemeToggle: true,
+  initialTheme: 'dark',
+})
+
+const theme = ref<'dark' | 'light'>(props.initialTheme)
 
 function toggleTheme() {
   theme.value = theme.value === 'dark' ? 'light' : 'dark'
@@ -19,7 +27,12 @@ function toggleTheme() {
         <NuxtLink to="/eventos">Eventos</NuxtLink>
         <NuxtLink to="/login">Entrar</NuxtLink>
         <NuxtLink to="/cadastro">Cadastrar-se</NuxtLink>
-        <button type="button" aria-label="Alternar tema" @click="toggleTheme">
+        <button
+          v-if="showThemeToggle"
+          type="button"
+          aria-label="Alternar tema"
+          @click="toggleTheme"
+        >
           {{ theme === 'dark' ? 'Claro' : 'Escuro' }}
         </button>
       </div>

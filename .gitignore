@@ -9,3 +9,9 @@ tests/e2e/.auth/
 tests/e2e/.fixtures/
 .vercel
 .env*
+.DS_Store
+.cache/
+scratch/
+scratchpad_*
+test_*.sql
+test-publish.cjs
