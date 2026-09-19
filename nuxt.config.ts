@@ -4,6 +4,9 @@ export default defineNuxtConfig({
     head: {
       title: 'ligalab',
       htmlAttrs: { lang: 'pt-BR' },
+      link: [
+        { rel: 'icon', type: 'image/png', href: '/brand/liga-inovacao.png' },
+      ],
     },
   },
   css: ['~/assets/css/main.css'],
