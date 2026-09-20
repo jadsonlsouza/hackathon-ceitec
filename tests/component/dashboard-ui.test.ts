@@ -178,6 +178,7 @@ describe('dashboard UI', () => {
 
     await wrapper.get('[data-role-view-trigger]').trigger('click')
     await nextTick()
+    expect(wrapper.get('[role="listbox"]').attributes('aria-label')).toBe('Escolher visualização')
     await wrapper.get('[data-role-view-selector]').trigger('keydown', { key: 'Escape' })
     await nextTick()
 

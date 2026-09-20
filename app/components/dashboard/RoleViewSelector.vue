@@ -98,6 +98,7 @@ function handleKeydown(event: KeyboardEvent) {
       ref="listbox"
       class="role-view-listbox"
       role="listbox"
+      aria-label="Escolher visualização"
       tabindex="-1"
       :aria-activedescendant="`role-view-option-${selectedIndex}`"
     >
