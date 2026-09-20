@@ -11,6 +11,7 @@ import {
 } from 'vue'
 import type { Database } from '~/types/database'
 import { installBrowserReconciliation } from '../utils/browser-reconciliation'
+import { useActiveRoleView } from './useActiveRoleView'
 
 interface TeamContext {
   teamEventIds: string[]
@@ -210,13 +211,22 @@ export function useDashboardEventContext() {
 
   if (!$supabase) {
     const teamEventIds = computed(() => [] as string[])
+    const currentEventId = computed(() => null as string | null)
+    const roleView = useActiveRoleView({
+      userId: access.userId,
+      globalRole: computed(() => access.profile.value?.global_role ?? null),
+      eventRoles: access.eventRoles,
+      teamEventIds,
+      currentEventId,
+    })
     return {
       ...access,
       teamEventIds,
       contextPending: ref(false),
       contextError: ref<unknown>(null),
       refreshTeamContext: async () => {},
-      currentEventId: computed(() => null as string | null),
+      currentEventId,
+      ...roleView,
     }
   }
   let teamAccess = teamControllers.get($supabase)
@@ -265,6 +275,14 @@ export function useDashboardEventContext() {
       ?? null
   })
 
+  const roleView = useActiveRoleView({
+    userId: access.userId,
+    globalRole: computed(() => access.profile.value?.global_role ?? null),
+    eventRoles: access.eventRoles,
+    teamEventIds,
+    currentEventId,
+  })
+
   return {
     ...access,
     teamEventIds,
@@ -272,6 +290,6 @@ export function useDashboardEventContext() {
     contextError: teamAccess.error,
     refreshTeamContext: teamAccess.refresh,
     currentEventId,
+    ...roleView,
   }
 }
-

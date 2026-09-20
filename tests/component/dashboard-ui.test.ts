@@ -49,6 +49,7 @@ describe('dashboard UI', () => {
   let DashboardNavigation: unknown
   let DashboardPage: unknown
   let ErrorPage: unknown
+  let DashboardContextProbe: unknown
 
   beforeAll(async () => {
     vi.stubGlobal('computed', computed)
@@ -90,6 +91,16 @@ describe('dashboard UI', () => {
     DashboardNavigation = (await import('../../app/components/dashboard/DashboardNavigation.vue')).default
     DashboardPage = (await import('../../app/pages/app/index.vue')).default
     ErrorPage = (await import('../../app/error.vue')).default
+    const { useDashboardEventContext } = await import('../../app/composables/useDashboardEventContext')
+    DashboardContextProbe = defineComponent({
+      setup() {
+        const context = useDashboardEventContext()
+        return () => h('output', {
+          'data-active-role-view': context.activeView.value?.role ?? '',
+          'data-current-event-id': context.currentEventId.value ?? '',
+        })
+      },
+    })
   })
 
   afterAll(() => vi.unstubAllGlobals())
@@ -157,6 +168,19 @@ describe('dashboard UI', () => {
     ])
     await wrapper.setProps({ eventRoles: [{ event_id: EVENT_ID, role: 'evaluator' }] })
     expect(wrapper.findAll('[data-dashboard-link]').map(link => link.text())).toEqual(['Avaliações'])
+  })
+
+  it('exposes an active role view without changing the authorized event context', async () => {
+    eventRoles.value = [{ event_id: EVENT_ID, role: 'professor' }]
+    const wrapper = await mountSuspended(DashboardContextProbe)
+
+    expect(wrapper.get('output').attributes('data-current-event-id')).toBe(EVENT_ID)
+    expect(wrapper.get('output').attributes('data-active-role-view')).toBe('professor')
+
+    eventRoles.value = []
+    await nextTick()
+    expect(wrapper.get('output').attributes('data-current-event-id')).toBe('')
+    expect(wrapper.get('output').attributes('data-active-role-view')).toBe('')
   })
 
   it('marks the current page and operates the mobile menu with focus and Escape', async () => {
