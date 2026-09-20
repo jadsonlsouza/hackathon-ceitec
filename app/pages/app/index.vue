@@ -4,7 +4,7 @@ import StatusCard from '../../components/dashboard/StatusCard.vue'
 import StudentDashboard from '../../components/dashboard/StudentDashboard.vue'
 import { useDashboardEventContext } from '../../composables/useDashboardEventContext'
 import {
-  capabilitiesForAccess,
+  capabilitiesForActiveView,
   type Capability,
 } from '../../utils/dashboard-navigation'
 
@@ -30,13 +30,9 @@ const {
   contextPending,
   contextError,
   currentEventId,
+  activeView,
 } = useDashboardEventContext()
-const capabilities = computed(() => capabilitiesForAccess(
-  profile.value,
-  eventRoles.value,
-  currentEventId.value,
-  teamEventIds.value,
-))
+const capabilities = computed(() => capabilitiesForActiveView(activeView.value))
 const summary = useAsyncData(
   'dashboard-summary',
   async (): Promise<DashboardSummary> => {
@@ -109,6 +105,7 @@ const summary = useAsyncData(
       eventRoles,
       currentEventId,
       teamEventIds,
+      activeView,
       reconciliationRevision,
     ],
   },

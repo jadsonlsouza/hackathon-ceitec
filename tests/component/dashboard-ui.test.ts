@@ -47,6 +47,7 @@ async function mountSuspended(component: unknown, options: Record<string, unknow
 
 describe('dashboard UI', () => {
   let DashboardNavigation: unknown
+  let RoleViewSelector: unknown
   let DashboardPage: unknown
   let ErrorPage: unknown
   let DashboardContextProbe: unknown
@@ -82,13 +83,14 @@ describe('dashboard UI', () => {
       },
     }))
     vi.stubGlobal('useAsyncData', (key: string) => (
-      key === 'dashboard-event-context'
-        ? { data: contextData, pending: contextPending, error: contextError }
+      key === 'context-featured-event'
+        ? { data: ref(null), pending: ref(false), error: ref(null) }
         : { data: summaryData, pending: summaryPending, error: summaryError }
     ))
     vi.stubGlobal('clearError', vi.fn())
 
     DashboardNavigation = (await import('../../app/components/dashboard/DashboardNavigation.vue')).default
+    RoleViewSelector = (await import('../../app/components/dashboard/RoleViewSelector.vue')).default
     DashboardPage = (await import('../../app/pages/app/index.vue')).default
     ErrorPage = (await import('../../app/error.vue')).default
     const { useDashboardEventContext } = await import('../../app/composables/useDashboardEventContext')
@@ -123,20 +125,18 @@ describe('dashboard UI', () => {
   })
 
   it.each([
-    ['global_admin', [], null, [], ['Eventos', 'Professores', 'Auditoria']],
-    ['student', [{ event_id: EVENT_ID, role: 'professor' }], EVENT_ID, [], ['Equipes', 'Solicitações', 'Canvas', 'Conteúdo público', 'Revisões', 'Avaliadores', 'Resultados']],
-    ['student', [{ event_id: EVENT_ID, role: 'monitor' }], EVENT_ID, [], ['Revisões']],
-    ['student', [{ event_id: EVENT_ID, role: 'evaluator' }], EVENT_ID, [], ['Avaliações']],
-    ['student', [], EVENT_ID, [EVENT_ID], ['Minha equipe', 'Atividades']],
+    [{ role: 'global_admin', eventId: null }, null, ['Eventos', 'Pessoas e permissões', 'Auditoria']],
+    [{ role: 'professor', eventId: EVENT_ID }, EVENT_ID, ['Equipes', 'Atividades', 'Revisar envios', 'Configurar avaliação', 'Conteúdo do evento', 'Resultados', 'Configurações do evento']],
+    [{ role: 'monitor', eventId: EVENT_ID }, EVENT_ID, ['Revisar envios']],
+    [{ role: 'evaluator', eventId: EVENT_ID }, EVENT_ID, ['Avaliar projetos']],
+    [{ role: 'student', eventId: EVENT_ID }, EVENT_ID, ['Minha equipe', 'Atividades']],
   ] as const)(
-    'mounts the correct navigation for %s access',
-    async (globalRole, roles, currentEventId, teamEventIds, labels) => {
+    'mounts the correct navigation for the active %s view',
+    async (activeView, currentEventId, labels) => {
       const wrapper = mount(DashboardNavigation as never, {
         props: {
-          profile: { global_role: globalRole },
-          eventRoles: roles,
+          activeView,
           currentEventId,
-          teamEventIds,
           currentPath: '/app',
         },
         global: { stubs: { NuxtLink } },
@@ -146,28 +146,43 @@ describe('dashboard UI', () => {
     },
   )
 
-  it('updates immediately when an approved role is revoked and deduplicates links', async () => {
+  it('updates immediately when the selected view changes', async () => {
     const wrapper = mount(DashboardNavigation as never, {
       props: {
-        profile: { global_role: 'student' },
-        eventRoles: [
-          { event_id: EVENT_ID, role: 'monitor' },
-          { event_id: EVENT_ID, role: 'monitor' },
-          { event_id: EVENT_ID, role: 'evaluator' },
-        ],
+        activeView: { role: 'monitor', eventId: EVENT_ID },
         currentEventId: EVENT_ID,
-        teamEventIds: [],
         currentPath: '/app',
       },
       global: { stubs: { NuxtLink } },
     })
 
     expect(wrapper.findAll('[data-dashboard-link]').map(link => link.text())).toEqual([
-      'Revisões',
-      'Avaliações',
+      'Revisar envios',
     ])
-    await wrapper.setProps({ eventRoles: [{ event_id: EVENT_ID, role: 'evaluator' }] })
-    expect(wrapper.findAll('[data-dashboard-link]').map(link => link.text())).toEqual(['Avaliações'])
+    await wrapper.setProps({ activeView: { role: 'evaluator', eventId: EVENT_ID } })
+    expect(wrapper.findAll('[data-dashboard-link]').map(link => link.text())).toEqual(['Avaliar projetos'])
+  })
+
+  it('keeps focus on the selector trigger after Escape', async () => {
+    const wrapper = mount(RoleViewSelector as never, {
+      attachTo: document.body,
+      props: {
+        activeView: { role: 'professor', eventId: EVENT_ID },
+        availableViews: [
+          { role: 'global_admin', eventId: null },
+          { role: 'professor', eventId: EVENT_ID },
+        ],
+        setActiveView: vi.fn(),
+      },
+    })
+
+    await wrapper.get('[data-role-view-trigger]').trigger('click')
+    await nextTick()
+    await wrapper.get('[data-role-view-selector]').trigger('keydown', { key: 'Escape' })
+    await nextTick()
+
+    expect(document.activeElement).toBe(wrapper.get('[data-role-view-trigger]').element)
+    wrapper.unmount()
   })
 
   it('exposes an active role view without changing the authorized event context', async () => {
@@ -188,10 +203,8 @@ describe('dashboard UI', () => {
     const wrapper = mount(DashboardNavigation as never, {
       attachTo: document.body,
       props: {
-        profile: { global_role: 'student' },
-        eventRoles: [{ event_id: EVENT_ID, role: 'monitor' }],
+        activeView: { role: 'monitor', eventId: EVENT_ID },
         currentEventId: EVENT_ID,
-        teamEventIds: [],
         currentPath: current,
       },
       global: { stubs: { NuxtLink } },
@@ -213,6 +226,9 @@ describe('dashboard UI', () => {
 
   it('renders explicit pending, empty, error and success card states', async () => {
     profile.value = { global_role: 'global_admin' }
+    await nextTick()
+    await flushPromises()
+    await nextTick()
     summaryPending.value = true
     const wrapper = await mountSuspended(DashboardPage)
 

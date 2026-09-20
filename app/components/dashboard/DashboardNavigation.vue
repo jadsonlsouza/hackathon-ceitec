@@ -1,32 +1,19 @@
 <script setup lang="ts">
 import { computed, nextTick, ref } from 'vue'
-import {
-  capabilitiesForAccess,
-  dashboardNavigation,
-} from '../../utils/dashboard-navigation'
+import { navigationForActiveView } from '../../utils/dashboard-navigation'
+import type { ActiveRoleView } from '../../utils/active-role-view'
 import { useAuth } from '../../composables/useAuth'
 
 const props = defineProps<{
-  profile: { global_role: 'student' | 'global_admin' } | null
-  eventRoles: Array<{
-    event_id: string
-    role: 'professor' | 'monitor' | 'evaluator'
-  }>
+  activeView: ActiveRoleView | null
   currentEventId: string | null
-  teamEventIds: string[]
   currentPath: string
 }>()
 
 const navigationRoot = ref<HTMLElement | null>(null)
 const menuToggle = ref<HTMLButtonElement | null>(null)
 const menuOpen = ref(false)
-const capabilities = computed(() => capabilitiesForAccess(
-  props.profile,
-  props.eventRoles,
-  props.currentEventId,
-  props.teamEventIds,
-))
-const links = computed(() => dashboardNavigation(capabilities.value, props.currentEventId))
+const links = computed(() => navigationForActiveView(props.activeView, props.currentEventId))
 
 function isCurrent(to: string) {
   return props.currentPath === to || props.currentPath.startsWith(`${to}/`)
@@ -101,7 +88,7 @@ async function handleLogout() {
     </nav>
 
     <p v-if="links.length === 0" class="dashboard-nav-empty">
-      Nenhum acesso ativo neste evento.
+      Nenhuma tarefa disponível nesta visualização.
     </p>
 
     <div class="dashboard-nav-footer">

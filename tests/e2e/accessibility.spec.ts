@@ -172,6 +172,20 @@ test.describe('Professor autenticado', () => {
 test.describe('Admin global autenticado', () => {
   test.use({ storageState: authState('admin') })
 
+  test('Professor view hides administration tasks and guards their routes', async ({ page }) => {
+    await page.goto('/app')
+    const selector = page.locator('[data-role-view-selector]')
+    await expect(selector).toBeVisible()
+    await selector.getByRole('button', { name: /Visualização:/ }).click()
+    await selector.getByRole('option', { name: /Professor/ }).click()
+    await expect(page.getByRole('link', { name: 'Eventos' })).toHaveCount(0)
+    await expect(page.getByRole('link', { name: 'Pessoas e permissões' })).toHaveCount(0)
+
+    await page.goto('/app/admin/usuarios')
+    await expect(page).toHaveURL(/\/app$/)
+    await expect(page.getByRole('status')).toContainText('não está disponível')
+  })
+
   test('confirmação de arquivamento restaura foco com Escape', async ({ page }) => {
     await page.goto('/app/admin/eventos')
     const prepare = page.getByRole('button', { name: /Preparar novo hackathon/ }).first()

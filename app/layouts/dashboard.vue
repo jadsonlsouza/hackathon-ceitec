@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import DashboardNavigation from '../components/dashboard/DashboardNavigation.vue'
+import RoleViewSelector from '../components/dashboard/RoleViewSelector.vue'
 import { useDashboardEventContext } from '../composables/useDashboardEventContext'
 
 const route = useRoute()
@@ -12,7 +13,11 @@ const {
   contextPending,
   contextError,
   currentEventId,
+  activeView,
+  availableViews,
+  setActiveView,
 } = useDashboardEventContext()
+const roleViewMessage = useState<string | null>('active-role-view-message', () => null)
 </script>
 
 <template>
@@ -29,14 +34,23 @@ const {
       </p>
       <DashboardNavigation
         v-else
-        :profile="profile"
-        :event-roles="eventRoles"
+        :active-view="activeView"
         :current-event-id="currentEventId"
-        :team-event-ids="teamEventIds"
         :current-path="route.path"
       />
     </aside>
     <div class="dashboard-content">
+      <header class="dashboard-layout-header">
+        <p v-if="roleViewMessage" class="dashboard-role-view-message" role="status">
+          {{ roleViewMessage }}
+        </p>
+        <RoleViewSelector
+          v-if="activeView && availableViews.length > 1"
+          :active-view="activeView"
+          :available-views="availableViews"
+          :set-active-view="setActiveView"
+        />
+      </header>
       <slot />
     </div>
   </div>
