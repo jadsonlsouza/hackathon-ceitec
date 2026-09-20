@@ -8,16 +8,24 @@ import {
 interface ActiveRoleViewContext {
   userId: Ref<string | null> | ComputedRef<string | null>
   globalRole: Ref<'global_admin' | 'student' | null> | ComputedRef<'global_admin' | 'student' | null>
-  eventRoles: Ref<Array<{
-    event_id: string
-    role: 'professor' | 'monitor' | 'evaluator'
-  }>> | ComputedRef<Array<{
-    event_id: string
-    role: 'professor' | 'monitor' | 'evaluator'
-  }>>
+  eventRoles: Ref<Array<{ event_id: string, role: 'professor' | 'monitor' | 'evaluator' }>> | ComputedRef<Array<{ event_id: string, role: 'professor' | 'monitor' | 'evaluator' }>>
   teamEventIds: Ref<string[]> | ComputedRef<string[]>
   currentEventId: Ref<string | null> | ComputedRef<string | null>
 }
+
+interface StoredView {
+  exists: boolean
+  view: ActiveRoleView | null
+  valid: boolean
+}
+
+interface ActiveRoleViewController {
+  activeView: Ref<ActiveRoleView | null>
+  stored: StoredView | null
+}
+
+const controllers = new Map<string, ActiveRoleViewController>()
+const isBrowser = import.meta.client || typeof window !== 'undefined'
 
 function sameView(left: ActiveRoleView | null, right: ActiveRoleView | null) {
   return left?.role === right?.role && left?.eventId === right?.eventId
@@ -27,23 +35,44 @@ function storageKey(userId: string, eventId: string | null) {
   return `ligalab:active-view:${userId}:${eventId ?? 'global'}`
 }
 
-function readStoredView(key: string): ActiveRoleView | null {
-  if (!import.meta.client) return null
+function isActiveRoleView(value: unknown): value is ActiveRoleView {
+  return (
+    typeof value === 'object'
+    && value !== null
+    && 'role' in value
+    && 'eventId' in value
+    && ['global_admin', 'professor', 'monitor', 'evaluator', 'student'].includes(String(value.role))
+    && (typeof value.eventId === 'string' || value.eventId === null)
+  )
+}
+
+function readStoredView(key: string): StoredView {
+  if (!isBrowser) return { exists: false, valid: true, view: null }
+  const raw = localStorage.getItem(key)
+  if (raw === null) return { exists: false, valid: true, view: null }
   try {
-    const value: unknown = JSON.parse(localStorage.getItem(key) ?? 'null')
-    if (
-      typeof value === 'object'
-      && value !== null
-      && 'role' in value
-      && 'eventId' in value
-      && typeof value.role === 'string'
-      && (typeof value.eventId === 'string' || value.eventId === null)
-    ) return value as ActiveRoleView
+    const value: unknown = JSON.parse(raw)
+    if (isActiveRoleView(value)) return { exists: true, valid: true, view: value }
   }
   catch {
-    // Invalid browser storage is treated as no selection.
+    // Invalid browser storage is cleared during reconciliation.
   }
-  return null
+  return { exists: true, valid: false, view: null }
+}
+
+function getController(key: string) {
+  let controller = controllers.get(key)
+  if (!controller) {
+    controller = { activeView: ref<ActiveRoleView | null>(null), stored: readStoredView(key) }
+    controllers.set(key, controller)
+  }
+  return controller
+}
+
+function persist(key: string, view: ActiveRoleView | null) {
+  if (!isBrowser) return
+  if (view) localStorage.setItem(key, JSON.stringify(view))
+  else localStorage.removeItem(key)
 }
 
 export function useActiveRoleView(context: ActiveRoleViewContext) {
@@ -53,60 +82,50 @@ export function useActiveRoleView(context: ActiveRoleViewContext) {
     teamEventIds: context.teamEventIds.value,
     eventId: context.currentEventId.value,
   }))
-  const activeView = ref<ActiveRoleView | null>(null)
-  let activeScope: string | null = null
+  const scopeKey = computed(() => {
+    const userId = context.userId.value
+    return userId ? storageKey(userId, context.currentEventId.value) : null
+  })
 
   const isViewValid = (view: ActiveRoleView | null) => Boolean(view && availableViews.value.some(available => (
     available.role === view.role && available.eventId === view.eventId
   )))
 
-  function persist(view: ActiveRoleView | null) {
-    const userId = context.userId.value
-    if (!import.meta.client || !userId) return
-    const key = storageKey(userId, context.currentEventId.value)
-    if (view) localStorage.setItem(key, JSON.stringify(view))
-    else localStorage.removeItem(key)
+  function reconcile() {
+    const key = scopeKey.value
+    if (!key) return
+    const controller = getController(key)
+    const stored = controller.stored
+    const candidate = controller.activeView.value ?? stored?.view ?? null
+    const resolved = resolveActiveRoleView({ stored: candidate, available: availableViews.value })
+
+    if (stored?.exists && (!stored.valid || !sameView(stored.view, resolved))) persist(key, resolved)
+    else if (candidate && !sameView(candidate, resolved)) persist(key, resolved)
+    controller.activeView.value = resolved
+    controller.stored = null
   }
 
   function setActiveView(view: ActiveRoleView) {
-    if (!isViewValid(view)) return false
-    activeView.value = view
-    persist(view)
+    const key = scopeKey.value
+    if (!key || !isViewValid(view)) return false
+    const controller = getController(key)
+    controller.activeView.value = view
+    controller.stored = null
+    persist(key, view)
     return true
   }
 
   watch(
-    () => [
-      context.userId.value,
-      context.currentEventId.value,
-      availableViews.value.map(view => `${view.role}:${view.eventId ?? ''}`).join(','),
-    ],
-    () => {
-      const userId = context.userId.value
-      if (!userId) {
-        activeView.value = null
-        activeScope = null
-        return
-      }
-      const key = storageKey(userId, context.currentEventId.value)
-      const scopeChanged = key !== activeScope
-      const stored = scopeChanged ? readStoredView(key) : activeView.value
-      const resolved = resolveActiveRoleView({
-        stored,
-        available: availableViews.value,
-      })
-      if (!sameView(stored, resolved) && import.meta.client) {
-        if (resolved) localStorage.setItem(key, JSON.stringify(resolved))
-        else localStorage.removeItem(key)
-      }
-      activeView.value = resolved
-      activeScope = key
-    },
+    () => [scopeKey.value, availableViews.value.map(view => `${view.role}:${view.eventId ?? ''}`).join(',')],
+    reconcile,
     { immediate: true },
   )
 
   return {
-    activeView: computed(() => activeView.value),
+    activeView: computed(() => {
+      const key = scopeKey.value
+      return key ? getController(key).activeView.value : null
+    }),
     availableViews,
     setActiveView,
     isViewValid,

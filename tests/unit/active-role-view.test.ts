@@ -1,4 +1,7 @@
-import { describe, expect, it } from 'vitest'
+// @vitest-environment happy-dom
+import { nextTick, ref } from 'vue'
+import { afterEach, describe, expect, it } from 'vitest'
+import { useActiveRoleView } from '../../app/composables/useActiveRoleView'
 import {
   availableRoleViewsForAccess,
   resolveActiveRoleView,
@@ -7,6 +10,7 @@ import {
 const EVENT_ID = '10000000-0000-4000-8000-000000000901'
 
 describe('active role views', () => {
+  afterEach(() => localStorage.clear())
   it('lets a global admin narrow to professor but never derives admin from professor', () => {
     const views = availableRoleViewsForAccess({
       globalRole: 'global_admin',
@@ -35,5 +39,72 @@ describe('active role views', () => {
       stored: { role: 'monitor', eventId: EVENT_ID },
       available: [{ role: 'student', eventId: EVENT_ID }],
     })).toEqual({ role: 'student', eventId: EVENT_ID })
+  })
+
+  it('restores an event-scoped stored selection and isolates it by user', async () => {
+    localStorage.setItem(
+      `ligalab:active-view:user-a:${EVENT_ID}`,
+      JSON.stringify({ role: 'monitor', eventId: EVENT_ID }),
+    )
+    localStorage.setItem(
+      `ligalab:active-view:user-b:${EVENT_ID}`,
+      JSON.stringify({ role: 'professor', eventId: EVENT_ID }),
+    )
+    const context = {
+      userId: ref('user-a'),
+      globalRole: ref<'global_admin' | 'student' | null>('global_admin'),
+      eventRoles: ref<Array<{ event_id: string, role: 'professor' | 'monitor' | 'evaluator' }>>([]),
+      teamEventIds: ref<string[]>([]),
+      currentEventId: ref<string | null>(EVENT_ID),
+    }
+    const roleView = useActiveRoleView(context)
+
+    await nextTick()
+    expect(roleView.activeView.value).toEqual({ role: 'monitor', eventId: EVENT_ID })
+
+    context.userId.value = 'user-b'
+    await nextTick()
+    expect(roleView.activeView.value).toEqual({ role: 'professor', eventId: EVENT_ID })
+  })
+
+  it('clears malformed and revoked stored selections without a fallback', async () => {
+    localStorage.setItem(`ligalab:active-view:bad-storage:${EVENT_ID}`, '{bad json')
+    const context = {
+      userId: ref('bad-storage'),
+      globalRole: ref<'global_admin' | 'student' | null>('student'),
+      eventRoles: ref<Array<{ event_id: string, role: 'professor' | 'monitor' | 'evaluator' }>>([]),
+      teamEventIds: ref<string[]>([]),
+      currentEventId: ref<string | null>(EVENT_ID),
+    }
+    const malformed = useActiveRoleView(context)
+
+    await nextTick()
+    expect(malformed.activeView.value).toBeNull()
+    expect(localStorage.getItem(`ligalab:active-view:bad-storage:${EVENT_ID}`)).toBeNull()
+
+    localStorage.setItem(
+      `ligalab:active-view:revoked:${EVENT_ID}`,
+      JSON.stringify({ role: 'monitor', eventId: EVENT_ID }),
+    )
+    const revoked = useActiveRoleView({ ...context, userId: ref('revoked') })
+    await nextTick()
+    expect(revoked.activeView.value).toBeNull()
+    expect(localStorage.getItem(`ligalab:active-view:revoked:${EVENT_ID}`)).toBeNull()
+  })
+
+  it('shares an active selection between consumers in the same scope', async () => {
+    const context = {
+      userId: ref('shared-user'),
+      globalRole: ref<'global_admin' | 'student' | null>('global_admin'),
+      eventRoles: ref<Array<{ event_id: string, role: 'professor' | 'monitor' | 'evaluator' }>>([]),
+      teamEventIds: ref<string[]>([]),
+      currentEventId: ref<string | null>(EVENT_ID),
+    }
+    const first = useActiveRoleView(context)
+    const second = useActiveRoleView(context)
+
+    expect(first.setActiveView({ role: 'monitor', eventId: EVENT_ID })).toBe(true)
+    await nextTick()
+    expect(second.activeView.value).toEqual({ role: 'monitor', eventId: EVENT_ID })
   })
 })
