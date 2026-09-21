@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import DashboardNavigation from '../components/dashboard/DashboardNavigation.vue'
 import RoleViewSelector from '../components/dashboard/RoleViewSelector.vue'
+import NotificationBell from '../components/dashboard/NotificationBell.vue'
+import { useNotifications } from '../composables/useNotifications'
 import { useDashboardEventContext } from '../composables/useDashboardEventContext'
 
 const route = useRoute()
@@ -18,6 +20,7 @@ const {
   setActiveView,
 } = useDashboardEventContext()
 const roleViewMessage = useState<string | null>('active-role-view-message', () => null)
+const notifications = useNotifications(activeView, currentEventId)
 </script>
 
 <template>
@@ -41,6 +44,16 @@ const roleViewMessage = useState<string | null>('active-role-view-message', () =
     </aside>
     <div class="dashboard-content">
       <header class="dashboard-layout-header">
+        <NotificationBell
+          :items="notifications.items.value"
+          :pending="notifications.pending.value"
+          :error="notifications.error.value"
+          :can-compose="notifications.canCompose.value"
+          :event-id="activeView?.role === 'professor' ? activeView.eventId : null"
+          :mark-read="notifications.markRead"
+          :refresh="notifications.refresh"
+          :create-manual="notifications.createManual"
+        />
         <p v-if="roleViewMessage" class="dashboard-role-view-message" role="status">
           {{ roleViewMessage }}
         </p>

@@ -51,6 +51,7 @@ describe('dashboard UI', () => {
   let DashboardPage: unknown
   let ErrorPage: unknown
   let DashboardContextProbe: unknown
+  let NotificationBell: unknown
 
   beforeAll(async () => {
     vi.stubGlobal('computed', computed)
@@ -145,6 +146,76 @@ describe('dashboard UI', () => {
       expect(wrapper.findAll('[data-dashboard-link]').map(link => link.text())).toEqual(labels)
     },
   )
+
+  it('marks only manual notifications read and preserves automatic action links', async () => {
+    NotificationBell = (await import('../../app/components/dashboard/NotificationBell.vue')).default
+    const markRead = vi.fn()
+    const wrapper = mount(NotificationBell as never, {
+      props: {
+        items: [
+          { id: 'manual-1', source: 'manual', title: 'Aviso', body: 'Mensagem', read_at: null, action_path: null },
+          { id: 'automatic:1', source: 'automatic', title: 'Revisar', body: 'Envio pendente', read_at: null, action_path: '/app/evento/event-a/revisoes' },
+        ],
+        pending: false, error: null, canCompose: false, markRead, refresh: vi.fn(), createManual: vi.fn(),
+      },
+      global: { stubs: { NuxtLink } },
+    })
+    expect(wrapper.get('[data-notification-trigger]').text()).toContain('2')
+    await wrapper.get('[data-notification-trigger]').trigger('click')
+    await wrapper.get('[data-notification-item="manual-1"]').trigger('click')
+    expect(markRead).toHaveBeenCalledWith(['manual-1'])
+    expect(wrapper.get('[data-notification-item="automatic:1"]').attributes('href')).toBe('/app/evento/event-a/revisoes')
+    await wrapper.get('[data-notification-item="automatic:1"]').trigger('click')
+    expect(markRead).toHaveBeenCalledTimes(1)
+    wrapper.unmount()
+  })
+
+  it('offers retry, restores bell focus, and marks only unread manual items in bulk', async () => {
+    const Bell = (await import('../../app/components/dashboard/NotificationBell.vue')).default
+    const markRead = vi.fn()
+    const refresh = vi.fn()
+    const wrapper = mount(Bell, { attachTo: document.body, global: { stubs: { NuxtLink } }, props: {
+      items: [
+        { id: 'manual-1', source: 'manual', title: 'Aviso', body: 'Texto', read_at: null },
+        { id: 'automatic:1', source: 'automatic', title: 'Tarefa', body: 'Texto', read_at: null },
+        { id: 'manual-2', source: 'manual', title: 'Lido', body: 'Texto', read_at: '2026-01-01' },
+      ] as never,
+      pending: false, error: null, canCompose: false, markRead, refresh, createManual: vi.fn(),
+    } })
+    await wrapper.get('[data-notification-trigger]').trigger('click')
+    await wrapper.get('[data-mark-all-read]').trigger('click')
+    expect(markRead).toHaveBeenCalledWith(['manual-1'])
+    await wrapper.setProps({ error: new Error('secret backend details') })
+    expect(wrapper.text()).not.toContain('secret backend details')
+    await wrapper.get('[data-notification-retry]').trigger('click')
+    expect(refresh).toHaveBeenCalledOnce()
+    await wrapper.get('[data-notification-bell]').trigger('keydown', { key: 'Escape' })
+    expect(document.activeElement).toBe(wrapper.get('[data-notification-trigger]').element)
+    expect(wrapper.find('[data-notification-composer]').exists()).toBe(false)
+    wrapper.unmount()
+  })
+
+  it('requires a scoped audience before sending and constructs only the selected selector', async () => {
+    const Bell = (await import('../../app/components/dashboard/NotificationBell.vue')).default
+    const createManual = vi.fn().mockResolvedValue(undefined)
+    const wrapper = mount(Bell, { global: { stubs: { NuxtLink } }, props: {
+      items: [], pending: false, error: null, canCompose: true, eventId: EVENT_ID,
+      markRead: vi.fn(), refresh: vi.fn(), createManual,
+    } })
+    await wrapper.get('[data-notification-trigger]').trigger('click')
+    await wrapper.get('[data-notification-compose]').trigger('click')
+    await wrapper.get('[name="title"]').setValue('Aviso importante')
+    await wrapper.get('[name="body"]').setValue('Mensagem da organização')
+    await wrapper.get('[name="audience"]').setValue('users')
+    await wrapper.get('form').trigger('submit')
+    expect(createManual).not.toHaveBeenCalled()
+    expect(wrapper.get('[role="alert"]').text()).toContain('destinatário')
+    await wrapper.get('[name="audience"]').setValue('event_role')
+    await wrapper.get('[name="role"]').setValue('monitor')
+    await wrapper.get('form').trigger('submit')
+    expect(createManual).toHaveBeenCalledWith({ title: 'Aviso importante', body: 'Mensagem da organização', event_id: EVENT_ID, audience: { type: 'event_role', role: 'monitor' } })
+    wrapper.unmount()
+  })
 
   it('updates immediately when the selected view changes', async () => {
     const wrapper = mount(DashboardNavigation as never, {

@@ -73,6 +73,34 @@ test('Aluno não lê rascunho nem respostas de outra equipe/evento', async ({ re
   await expectDenied(answer, 'SEGREDO-EQUIPE-BOREAL')
 })
 
+test('Notificações respeitam destinatário, escopo do professor e ações da campainha', async ({ request, browser }) => {
+  const foreign = await rest(request, 'rpc/create_manual_notifications', 'professorA', {
+    method: 'POST', data: { input: { event_id: E2E_EVENT_B, audience: { type: 'event_role', role: 'monitor' }, title: 'Proibida', body: 'Nunca entregue' } },
+  })
+  expect(foreign.ok()).toBe(false)
+  const created = await rest(request, 'rpc/create_manual_notifications', 'professorA', {
+    method: 'POST', data: { input: { event_id: E2E_EVENT_A, audience: { type: 'event_role', role: 'student' }, title: 'Aviso E2E privado', body: 'Somente participantes A' } },
+  })
+  expect(created.ok()).toBe(true)
+  const inbox = await rest(request, 'rpc/get_notification_inbox', 'studentA', { method: 'POST', data: {} })
+  expect(inbox.ok()).toBe(true)
+  const own = (await inbox.json() as Array<{ id: string, title: string }>).find(item => item.title === 'Aviso E2E privado')!
+  expect(own).toBeTruthy()
+  const otherInbox = await rest(request, 'rpc/get_notification_inbox', 'studentB', { method: 'POST', data: {} })
+  expect(await otherInbox.text()).not.toContain(own.id)
+  const wrongRead = await rest(request, 'rpc/mark_notifications_read', 'studentB', { method: 'POST', data: { notification_ids: [own.id] } })
+  expect(await wrongRead.json()).toBe(0)
+  await expectDenied(await rest(request, 'notifications', 'studentA', { method: 'POST', data: { title: 'Bypass' } }))
+  const context = await browser.newContext({ storageState: 'tests/e2e/.auth/studentA.json' })
+  const page = await context.newPage()
+  await page.goto('/app')
+  await page.locator('[data-notification-trigger]').click()
+  await expect(page.locator(`[data-notification-item="${own.id}"]`)).toBeVisible()
+  await page.locator(`[data-notification-item="${own.id}"]`).click()
+  await expect(page.locator(`[data-notification-item="${own.id}"]`).locator('..')).toContainText('Lida')
+  await context.close()
+})
+
 test('Monitor não aprova equipe nem reabre submissão', async ({ request }) => {
   await expectDenied(await rest(request, 'rpc/decide_team', 'monitor', {
     method: 'POST',
