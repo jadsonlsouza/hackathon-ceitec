@@ -23,6 +23,8 @@ const USER_ID = '00000000-0000-4000-8000-000000000001'
 const EVENT_NAME = 'Hackathon CEITEC'
 
 const testState = {
+  rpc: vi.fn(),
+  navigate: vi.fn(),
   insert: vi.fn(),
   order: vi.fn(),
   getSession: vi.fn(),
@@ -84,18 +86,20 @@ async function openReadyArchiveDialog(
 describe('event administration interactions', () => {
   beforeAll(async () => {
     const supabase = {
+      rpc: testState.rpc,
       auth: {
         getSession: testState.getSession,
       },
-      from: () => ({
+      from: (table: string) => ({
         insert: testState.insert,
         select: () => ({
-          order: testState.order,
+          order: table === 'profiles' ? async () => ({ data: [{ id: USER_ID, display_name: 'Responsável', email: 'admin@example.test' }], error: null }) : testState.order,
         }),
       }),
     }
 
     vi.stubGlobal('computed', computed)
+    vi.stubGlobal('navigateTo', testState.navigate)
     vi.stubGlobal('definePageMeta', vi.fn())
     vi.stubGlobal('nextTick', nextTick)
     vi.stubGlobal('ref', ref)
@@ -154,6 +158,8 @@ describe('event administration interactions', () => {
   })
 
   beforeEach(() => {
+    testState.rpc.mockReset().mockResolvedValue({ data: [{ event_id: EVENT_ID }], error: null })
+    testState.navigate.mockReset().mockResolvedValue(undefined)
     testState.insert.mockReset().mockResolvedValue({ data: null, error: null })
     testState.order.mockReset().mockResolvedValue({
       data: [featuredEvent],
@@ -203,6 +209,55 @@ describe('event administration interactions', () => {
     expect(nameInput.attributes('aria-invalid')).toBe('true')
     expect(nameInput.attributes('aria-describedby')).toContain('event-name-error')
     expect(document.activeElement).toBe(nameInput.element)
+  })
+
+  it('blocks invalid basics and requires a responsible professor before review', async () => {
+    const wrapper = await mountPage()
+    await wrapper.get('[data-wizard-next]').trigger('click')
+    expect(wrapper.get('#event-slug-error').text()).toContain('Informe')
+    await wrapper.get('#event-name').setValue('Novo evento')
+    await wrapper.get('#event-slug').setValue('novo-evento')
+    await wrapper.get('[data-wizard-next]').trigger('click')
+    await wrapper.get('[data-wizard-next]').trigger('click')
+    expect(wrapper.get('#event-professor-error').text()).toContain('Selecione')
+    expect(testState.rpc).not.toHaveBeenCalled()
+  })
+
+  it('creates a fresh draft only after review, then opens its configuration', async () => {
+    const wrapper = await mountPage()
+    await wrapper.get('#event-name').setValue(' Novo evento ')
+    await wrapper.get('#event-slug').setValue('novo-evento')
+    await wrapper.get('[data-wizard-next]').trigger('click')
+    await wrapper.get('#event-professor').setValue(USER_ID)
+    await wrapper.get('[data-wizard-next]').trigger('click')
+    expect(wrapper.text()).toContain('Nunca serão copiados')
+    expect(testState.rpc).not.toHaveBeenCalled()
+    await wrapper.get('.event-form').trigger('submit')
+    await flushPromises()
+    expect(testState.rpc).toHaveBeenCalledWith('create_event_draft', { draft: { name: 'Novo evento', slug: 'novo-evento', professor_id: USER_ID } })
+    expect(wrapper.get('[role="status"]').text()).toContain('rascunho')
+    expect(testState.navigate).toHaveBeenCalledWith(`/app/evento/${EVENT_ID}/admin/conteudo-publico`)
+  })
+
+  it('copies only checked reusable configuration and returns slug conflicts to basics', async () => {
+    testState.rpc.mockResolvedValueOnce({ data: null, error: { code: '23505', message: 'duplicate key' } })
+    const wrapper = await mountPage()
+    await wrapper.get('#event-name').setValue('Cópia')
+    await wrapper.get('#event-slug').setValue('copia')
+    await wrapper.get('[data-wizard-next]').trigger('click')
+    await wrapper.get('#event-professor').setValue(USER_ID)
+    await wrapper.get('#event-source').setValue(EVENT_ID)
+    await wrapper.get('[data-copy-option="workshops"]').setValue(false)
+    await wrapper.get('[data-wizard-next]').trigger('click')
+    await wrapper.get('.event-form').trigger('submit')
+    await flushPromises()
+    expect(testState.rpc).toHaveBeenCalledWith('duplicate_event_configuration', {
+      source_event_id: EVENT_ID,
+      draft: { name: 'Cópia', slug: 'copia', professor_id: USER_ID },
+      copy_options: { public_content: true, evaluation: true, canvas: true, workshops: false, general: true },
+    })
+    expect(wrapper.get('#event-slug-error').text()).toContain('uso')
+    expect(testState.navigate).not.toHaveBeenCalled()
   })
 
   it('blocks Cancel, Escape, and backdrop dismissal while archiving is in flight', async () => {

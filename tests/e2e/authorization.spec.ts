@@ -183,6 +183,63 @@ test('Não global não arquiva/limpa evento e segredo não retorna no corpo', as
   expect(await response.text()).not.toContain('SEGREDO-QUE-NAO-DEVE-RETORNAR')
 })
 
+test('Somente o administrador global cria ou duplica rascunhos de eventos', async ({ request }) => {
+  const denied = await rest(request, 'rpc/create_event_draft', 'professorA', {
+    method: 'POST',
+    data: {
+      draft: {
+        name: 'Rascunho proibido E2E',
+        slug: 'rascunho-proibido-e2e',
+        professor_id: '00000000-0000-0000-0000-000000000000',
+      },
+    },
+  })
+  await expectDenied(denied)
+
+  const service = createClient(local.apiUrl, local.serviceRoleKey, {
+    auth: { persistSession: false, autoRefreshToken: false },
+  })
+  const { data: users, error: usersError } = await service.auth.admin.listUsers()
+  if (usersError) throw usersError
+  const admin = users.users.find(user => user.email === E2E_USERS.admin[0])
+  expect(admin).toBeTruthy()
+
+  const created = await rest(request, 'rpc/create_event_draft', 'admin', {
+    method: 'POST',
+    data: {
+      draft: {
+        name: 'Rascunho global E2E',
+        slug: 'rascunho-global-e2e',
+        professor_id: admin!.id,
+      },
+    },
+  })
+  expect(created.ok()).toBe(true)
+  const [{ event_id: createdId }] = await created.json() as Array<{ event_id: string }>
+
+  const cloned = await rest(request, 'rpc/duplicate_event_configuration', 'admin', {
+    method: 'POST',
+    data: {
+      source_event_id: E2E_EVENT_A,
+      draft: {
+        name: 'Cópia global E2E',
+        slug: 'copia-global-e2e',
+        professor_id: admin!.id,
+      },
+      copy_options: {},
+    },
+  })
+  expect(cloned.ok()).toBe(true)
+  const [{ event_id: clonedId }] = await cloned.json() as Array<{ event_id: string }>
+
+  const [createdEvent, clonedTeams] = await Promise.all([
+    rest(request, `events?select=status&id=eq.${createdId}`, 'admin'),
+    rest(request, `teams?select=id&event_id=eq.${clonedId}`, 'admin'),
+  ])
+  expect(await createdEvent.json()).toEqual([{ status: 'draft' }])
+  expect(await clonedTeams.json()).toEqual([])
+})
+
 test('Evento arquivado rejeita novas escritas', async ({ request }) => {
   await expectDenied(await rest(request, 'rpc/create_team', 'studentA', {
     method: 'POST',

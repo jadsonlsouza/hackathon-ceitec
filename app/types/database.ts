@@ -1782,6 +1782,12 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      create_event_draft: {
+        Args: { draft: Json }
+        Returns: {
+          event_id: string
+        }[]
+      }
       create_manual_notifications: { Args: { input: Json }; Returns: number }
       create_team: {
         Args: {
@@ -1895,6 +1901,12 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      duplicate_event_configuration: {
+        Args: { copy_options: Json; draft: Json; source_event_id: string }
+        Returns: {
+          event_id: string
+        }[]
       }
       enroll_in_workshop: {
         Args: { p_member_id: string; p_workshop_id: string }
@@ -2368,7 +2380,6 @@ export type Database = {
     }
   }
 }
-
 type DatabaseWithoutInternals = Omit<Database, "__InternalSupabase">
 
 type DefaultSchema = DatabaseWithoutInternals[Extract<keyof Database, "public">]

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import EventWizard from '../../../components/events/EventWizard.vue'
 import type { Database } from '~/types/database'
 
 definePageMeta({ middleware: 'auth' })
@@ -13,13 +14,9 @@ const isAuthorized = computed(
   () => profile.value?.global_role === 'global_admin',
 )
 
-const createName = ref('')
-const createNameInput = ref<HTMLInputElement | null>(null)
-const createNameError = ref<string | null>(null)
-const createSlug = ref('')
-const createFeatured = ref(false)
 const creating = ref(false)
 const createMessage = ref<string | null>(null)
+const createSlugError = ref<string | null>(null)
 const pageError = ref<string | null>(null)
 
 const archiveDialog = ref<HTMLDialogElement | null>(null)
@@ -51,11 +48,33 @@ const { data: events, pending, error } = await useAsyncData(
   },
 )
 
+const { data: professors } = await useAsyncData(
+  'admin-event-professors',
+  async () => {
+    if (!isAuthorized.value) return []
+    const { data, error: professorsError } = await $supabase
+      .from('profiles')
+      .select('id, display_name, email')
+      .order('display_name', { ascending: true })
+    if (professorsError) throw professorsError
+    return data ?? []
+  },
+  { server: false, default: () => [] },
+)
+
 const activeEvents = computed(
   () => events.value.filter(event => event.status !== 'archived'),
 )
 const archivedEvents = computed(
   () => events.value.filter(event => event.status === 'archived'),
+)
+const sourceEvents = computed(
+  () => events.value.map(event => ({
+    id: event.id,
+    name: event.name,
+    slug: event.slug,
+    status: event.status,
+  })),
 )
 const canConfirmArchive = computed(
   () => Boolean(
@@ -66,42 +85,47 @@ const canConfirmArchive = computed(
   ),
 )
 
-async function createEvent() {
+async function createEvent(input: {
+  name: string
+  slug: string
+  professor_id: string
+  source_event_id: string | null
+  copy_options: Record<string, boolean>
+}) {
   if (!isAuthorized.value || !profile.value || creating.value) return
 
-  const trimmedName = createName.value.trim()
-  if (!trimmedName) {
-    createNameError.value = 'Informe um nome de evento.'
-    await nextTick()
-    createNameInput.value?.focus()
-    return
-  }
-
   creating.value = true
-  createNameError.value = null
+  createSlugError.value = null
   createMessage.value = null
   pageError.value = null
 
   try {
-    const { error: createError } = await $supabase
-      .from('events')
-      .insert({
-        name: trimmedName,
-        slug: createSlug.value.trim(),
-        status: 'draft',
-        is_featured: createFeatured.value,
-        created_by: profile.value.id,
-      })
+    const draft = {
+      name: input.name,
+      slug: input.slug,
+      professor_id: input.professor_id,
+    }
+    const { data, error: createError } = input.source_event_id
+      ? await $supabase.rpc('duplicate_event_configuration', {
+          source_event_id: input.source_event_id,
+          draft,
+          copy_options: input.copy_options,
+        })
+      : await $supabase.rpc('create_event_draft', { draft })
 
     if (createError) throw createError
 
-    createName.value = ''
-    createSlug.value = ''
-    createFeatured.value = false
+    const eventId = (data as Array<{ event_id: string }> | null)?.[0]?.event_id
+    if (!eventId) throw new Error('missing event id')
     createMessage.value = 'Evento criado como rascunho.'
     await refreshNuxtData(EVENTS_KEY)
+    await navigateTo(`/app/evento/${eventId}/admin/conteudo-publico`)
   }
-  catch {
+  catch (error: unknown) {
+    if ((error as { code?: string }).code === '23505') {
+      createSlugError.value = 'Este identificador já está em uso.'
+      return
+    }
     pageError.value = 'Não foi possível criar o evento.'
   }
   finally {
@@ -246,51 +270,13 @@ async function updateEventStatus(event: EventRow, newStatus: string) {
         <h2 id="create-event-title">
           Criar evento
         </h2>
-        <form class="event-form" @submit.prevent="createEvent">
-          <label for="event-name">Nome do evento</label>
-          <input
-            id="event-name"
-            v-model="createName"
-            ref="createNameInput"
-            name="event-name"
-            required
-            :aria-invalid="createNameError ? 'true' : undefined"
-            :aria-describedby="createNameError ? 'event-name-error' : undefined"
-            autocomplete="off"
-            @input="createNameError = null"
-          >
-          <p
-            v-if="createNameError"
-            id="event-name-error"
-            class="form-error"
-            role="alert"
-          >
-            {{ createNameError }}
-          </p>
-
-          <label for="event-slug">Identificador na URL</label>
-          <input
-            id="event-slug"
-            v-model="createSlug"
-            name="event-slug"
-            required
-            pattern="[a-z0-9]+(?:-[a-z0-9]+)*"
-            aria-describedby="event-slug-help"
-            autocomplete="off"
-          >
-          <p id="event-slug-help" class="field-help">
-            Use letras minúsculas, números e hífens.
-          </p>
-
-          <label class="checkbox-field">
-            <input v-model="createFeatured" type="checkbox">
-            Tornar o evento principal
-          </label>
-
-          <button type="submit" :disabled="creating">
-            {{ creating ? 'Criando…' : 'Criar rascunho' }}
-          </button>
-        </form>
+        <EventWizard
+          :professors="professors"
+          :source-events="sourceEvents"
+          :submitting="creating"
+          :slug-error="createSlugError"
+          @submit="createEvent"
+        />
       </section>
 
       <section class="event-panel" aria-labelledby="active-events-title">
