@@ -42,6 +42,25 @@ insert into public.notifications(event_id,recipient_id,created_by,title,body) va
  ('42000000-0000-4000-8000-000000000001','41000000-0000-4000-8000-000000000003','41000000-0000-4000-8000-000000000001','Privado','Não copiar');
 create temporary table wizard_result(id uuid, kind text);
 grant all on wizard_result to authenticated;
+update public.events
+set status = 'archived', archived_at = now()
+where id = '42000000-0000-4000-8000-000000000001';
+set local role authenticated;
+select throws_ok(
+  $$insert into public.canvas_templates(event_id,name,created_by) values ('42000000-0000-4000-8000-000000000001','Bloqueado','41000000-0000-4000-8000-000000000001')$$,
+  '42501', null, 'global admin cannot create Canvas templates on archived events'
+);
+select results_eq(
+  $$with attempted as (
+      update public.canvas_activities
+      set title = 'Não editar'
+      where id = '44000000-0000-4000-8000-000000000001'
+      returning id
+    ) select count(*)::bigint from attempted$$,
+  array[0::bigint],
+  'global admin cannot update Canvas activities on archived events'
+);
+reset role;
 select set_config('request.jwt.claim.sub','41000000-0000-4000-8000-000000000003',true);
 set local role authenticated;
 select throws_ok($$select public.create_event_draft('{}')$$,'42501','forbidden','non-admin cannot create');
@@ -70,6 +89,10 @@ select is((select count(*) from public.event_roles where event_id=(select id fro
 select is((select user_id from public.event_roles where event_id=(select id from wizard_result where kind='copy')),'41000000-0000-4000-8000-000000000002'::uuid,'role belongs to selected professor');
 select is((select registration_open from public.event_public_content where event_id=(select id from wizard_result where kind='copy')),false,'registration stays closed');
 select is((select count(*) from public.get_public_event_content('wizard-copy')),0::bigint,'public API hides draft');
+select lives_ok(
+  $$select * from public.get_event_public_content_for_edit((select id from wizard_result where kind='copy'))$$,
+  'global admin can enter the new responsible professor configuration workspace'
+);
 select is((select count(*) from public.canvas_templates where event_id=(select id from wizard_result where kind='copy')),1::bigint,'one selected template copied');
 select is((select count(*) from public.canvas_activities where event_id=(select id from wizard_result where kind='copy')),
  (select count(*) from public.canvas_activities where event_id='42000000-0000-4000-8000-000000000001'),'activities copied without extra seeded defaults');
@@ -92,7 +115,7 @@ select is((select count(*) from public.published_results where event_id in(selec
 select is((select count(*) from public.audit_log where event_id in(select id from wizard_result)),0::bigint,'no audit data copied or synthesized by weight updates');
 select is((select count(*) from public.notifications where event_id in(select id from wizard_result)),0::bigint,'no notifications copied');
 select is((select count(*) from public.profiles where email like 'wizard-%@test.local'),3::bigint,'no users copied');
-select is((select status::text from public.events where slug='wizard-source'),'in_progress','source lifecycle unchanged');
+select is((select status::text from public.events where slug='wizard-source'),'archived','archived source remains archived after copying');
 -- Force failure after the new event and configuration writes; the entire RPC must roll back.
 create function pg_temp.fail_wizard_workshop() returns trigger language plpgsql as $$
 begin raise exception 'forced_workshop_failure'; end $$;

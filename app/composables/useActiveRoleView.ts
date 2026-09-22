@@ -75,6 +75,25 @@ function persist(key: string, view: ActiveRoleView | null) {
   else localStorage.removeItem(key)
 }
 
+// This stores only the client-side dashboard narrowing. Authorization remains
+// in the database and route middleware validates the stored view against the
+// user's actual global/event access before using it.
+export function setStoredActiveRoleView(
+  userId: string,
+  eventId: string,
+  view: ActiveRoleView,
+) {
+  if (!userId || !eventId || view.eventId !== eventId) return false
+  const key = storageKey(userId, eventId)
+  persist(key, view)
+  const controller = controllers.get(key)
+  if (controller) {
+    controller.activeView.value = view
+    controller.stored = null
+  }
+  return isBrowser
+}
+
 export function useActiveRoleView(context: ActiveRoleViewContext) {
   const availableViews = computed(() => availableRoleViewsForAccess({
     globalRole: context.globalRole.value,

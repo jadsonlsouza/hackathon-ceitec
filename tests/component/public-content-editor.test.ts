@@ -5,6 +5,10 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vites
 const EVENT_ID = '10000000-0000-4000-8000-000000000801'
 const rpc = vi.fn()
 const refresh = vi.fn()
+const accessProfile = ref<{ global_role: 'global_admin' | 'student' } | null>(null)
+const accessRoles = ref<Array<{ event_id: string, role: 'professor' }>>([
+  { event_id: EVENT_ID, role: 'professor' },
+])
 
 async function mountPage(component: unknown) {
   const Host = defineComponent({
@@ -27,7 +31,8 @@ describe('Professor public-content editor', () => {
     vi.stubGlobal('ref', ref)
     vi.stubGlobal('useRoute', () => ({ params: { eventId: EVENT_ID } }))
     vi.stubGlobal('useCurrentAccess', () => ({
-      eventRoles: ref([{ event_id: EVENT_ID, role: 'professor' }]),
+      profile: accessProfile,
+      eventRoles: accessRoles,
       pending: ref(false),
       error: ref(null),
     }))
@@ -46,6 +51,8 @@ describe('Professor public-content editor', () => {
   afterAll(() => vi.unstubAllGlobals())
 
   beforeEach(() => {
+    accessProfile.value = null
+    accessRoles.value = [{ event_id: EVENT_ID, role: 'professor' }]
     rpc.mockReset().mockImplementation((name: string) => {
       if (name === 'get_event_public_content_for_edit') {
         return Promise.resolve({
@@ -108,6 +115,19 @@ describe('Professor public-content editor', () => {
       },
     })
     expect(wrapper.get('button[type="submit"]').attributes('disabled')).toBeDefined()
+  })
+
+  it('lets a global admin edit a new event assigned to another professor', async () => {
+    accessProfile.value = { global_role: 'global_admin' }
+    accessRoles.value = []
+    const wrapper = await mountPage(EditorPage)
+
+    expect(wrapper.get('form').exists()).toBe(true)
+    await wrapper.get('form').trigger('submit')
+    await flushPromises()
+    expect(rpc).toHaveBeenCalledWith('save_event_public_content', expect.objectContaining({
+      target_event: EVENT_ID,
+    }))
   })
 
   it('sanitizes deterministic backend errors into Portuguese feedback', async () => {

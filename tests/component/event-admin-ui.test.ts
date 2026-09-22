@@ -20,6 +20,7 @@ import {
 
 const EVENT_ID = '10000000-0000-4000-8000-000000000001'
 const USER_ID = '00000000-0000-4000-8000-000000000001'
+const RESPONSIBLE_ID = '00000000-0000-4000-8000-000000000002'
 const EVENT_NAME = 'Hackathon CEITEC'
 
 const testState = {
@@ -93,7 +94,10 @@ describe('event administration interactions', () => {
       from: (table: string) => ({
         insert: testState.insert,
         select: () => ({
-          order: table === 'profiles' ? async () => ({ data: [{ id: USER_ID, display_name: 'Responsável', email: 'admin@example.test' }], error: null }) : testState.order,
+          order: table === 'profiles' ? async () => ({ data: [
+            { id: USER_ID, display_name: 'Admin', email: 'admin@example.test' },
+            { id: RESPONSIBLE_ID, display_name: 'Responsável', email: 'responsavel@example.test' },
+          ], error: null }) : testState.order,
         }),
       }),
     }
@@ -236,6 +240,21 @@ describe('event administration interactions', () => {
     await flushPromises()
     expect(testState.rpc).toHaveBeenCalledWith('create_event_draft', { draft: { name: 'Novo evento', slug: 'novo-evento', professor_id: USER_ID } })
     expect(wrapper.get('[role="status"]').text()).toContain('rascunho')
+    expect(testState.navigate).toHaveBeenCalledWith(`/app/evento/${EVENT_ID}/admin/conteudo-publico`)
+  })
+
+  it('switches a global admin into the new event professor view before opening another professor’s workspace', async () => {
+    const wrapper = await mountPage()
+    await wrapper.get('#event-name').setValue('Evento de outro responsável')
+    await wrapper.get('#event-slug').setValue('evento-outro-responsavel')
+    await wrapper.get('[data-wizard-next]').trigger('click')
+    await wrapper.get('#event-professor').setValue(RESPONSIBLE_ID)
+    await wrapper.get('[data-wizard-next]').trigger('click')
+    await wrapper.get('.event-form').trigger('submit')
+    await flushPromises()
+
+    expect(localStorage.getItem(`ligalab:active-view:${USER_ID}:${EVENT_ID}`))
+      .toBe(JSON.stringify({ role: 'professor', eventId: EVENT_ID }))
     expect(testState.navigate).toHaveBeenCalledWith(`/app/evento/${EVENT_ID}/admin/conteudo-publico`)
   })
 

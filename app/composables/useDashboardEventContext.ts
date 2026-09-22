@@ -265,6 +265,9 @@ export function useDashboardEventContext() {
 
   const currentEventId = computed(() => {
     if (routeEventId.value) {
+      if (access.profile.value?.global_role === 'global_admin') {
+        return routeEventId.value
+      }
       return authorizedEventIds.value.has(routeEventId.value)
         ? routeEventId.value
         : null

@@ -30,7 +30,7 @@ type EditorRow = {
 
 const route = useRoute()
 const eventId = computed(() => String(route.params.eventId ?? ''))
-const { eventRoles, pending: accessPending } = useCurrentAccess()
+const { profile, eventRoles, pending: accessPending } = useCurrentAccess()
 const { $supabase } = useNuxtApp()
 const saving = ref(false)
 const feedback = ref('')
@@ -40,9 +40,12 @@ const withClientKey = (item: PublicScheduleItem): EditorScheduleItem => ({
   ...item,
   clientKey: `schedule-row-${++nextScheduleRowKey}`,
 })
-const canEdit = computed(() => eventRoles.value.some(role => (
-  role.event_id === eventId.value && role.role === 'professor'
-)))
+const canEdit = computed(() => (
+  profile.value?.global_role === 'global_admin'
+  || eventRoles.value.some(role => (
+    role.event_id === eventId.value && role.role === 'professor'
+  ))
+))
 
 const form = reactive<EditorContent>({
   tagline: ceitecPublicContent.tagline,

@@ -5,6 +5,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vites
 
 const EVENT_ID = '10000000-0000-4000-8000-000000000901'
 const routePath = ref('/app')
+const routeEventId = ref<string | null>(null)
 const profile = ref<{ global_role: 'student' | 'global_admin' }>({ global_role: 'student' })
 const eventRoles = ref<Array<{ event_id: string, role: 'professor' | 'monitor' | 'evaluator' }>>([])
 const accessUserId = ref<string | null>('dashboard-test-user')
@@ -60,7 +61,7 @@ describe('dashboard UI', () => {
     vi.stubGlobal('definePageMeta', vi.fn())
     vi.stubGlobal('useRoute', () => ({
       path: routePath.value,
-      params: {},
+      params: routeEventId.value ? { eventId: routeEventId.value } : {},
     }))
     vi.stubGlobal('useCurrentAccess', () => ({
       profile,
@@ -110,6 +111,7 @@ describe('dashboard UI', () => {
 
   beforeEach(() => {
     routePath.value = '/app'
+    routeEventId.value = null
     profile.value = { global_role: 'student' }
     eventRoles.value = []
     accessUserId.value = 'dashboard-test-user'
@@ -268,6 +270,24 @@ describe('dashboard UI', () => {
     await nextTick()
     expect(wrapper.get('output').attributes('data-current-event-id')).toBe('')
     expect(wrapper.get('output').attributes('data-active-role-view')).toBe('')
+  })
+
+  it('opens a global admin’s newly-created event in its stored professor view without creating an event role', async () => {
+    const newEventId = '10000000-0000-4000-8000-000000000999'
+    accessUserId.value = 'global-admin-new-event'
+    profile.value = { global_role: 'global_admin' }
+    routePath.value = `/app/evento/${newEventId}/admin/conteudo-publico`
+    routeEventId.value = newEventId
+    localStorage.setItem(
+      `ligalab:active-view:${accessUserId.value}:${newEventId}`,
+      JSON.stringify({ role: 'professor', eventId: newEventId }),
+    )
+
+    const wrapper = await mountSuspended(DashboardContextProbe)
+
+    expect(wrapper.get('output').attributes('data-current-event-id')).toBe(newEventId)
+    expect(wrapper.get('output').attributes('data-active-role-view')).toBe('professor')
+    expect(eventRoles.value).toEqual([])
   })
 
   it('marks the current page and operates the mobile menu with focus and Escape', async () => {

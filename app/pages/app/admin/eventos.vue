@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import EventWizard from '../../../components/events/EventWizard.vue'
+import { setStoredActiveRoleView } from '../../../composables/useActiveRoleView'
 import type { Database } from '~/types/database'
 
 definePageMeta({ middleware: 'auth' })
@@ -119,6 +120,10 @@ async function createEvent(input: {
     if (!eventId) throw new Error('missing event id')
     createMessage.value = 'Evento criado como rascunho.'
     await refreshNuxtData(EVENTS_KEY)
+    setStoredActiveRoleView(profile.value.id, eventId, {
+      role: 'professor',
+      eventId,
+    })
     await navigateTo(`/app/evento/${eventId}/admin/conteudo-publico`)
   }
   catch (error: unknown) {
