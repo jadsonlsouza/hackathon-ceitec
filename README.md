@@ -199,6 +199,36 @@ Senha de todas as contas E2E: `Ceitec-E2E-2026!`
 
 Consulte [`docs/operations/new-event.md`](docs/operations/new-event.md) para o passo a passo de criação de um novo hackathon.
 
+### Visualizações e tarefas pendentes
+
+O painel mostra tarefas conforme a **visualização ativa**. Pessoas com mais de
+um papel alternam entre Administração, Professor, Monitor, Avaliador e Aluno;
+ao mudar a visualização, os atalhos e as notificações são filtrados para o
+papel e, quando aplicável, para o evento atual. A tentativa de abrir uma rota
+de outra visualização retorna ao painel sem ampliar permissões.
+
+Solicitações de papel não são atalhos primários da barra lateral. Elas chegam
+na campainha de notificações e levam à página **Revisar solicitações**:
+
+- solicitações de Professor chegam à Administração;
+- solicitações de Monitor e Avaliador chegam aos Professores do evento;
+- a página continua protegida pelo papel correspondente, inclusive quando a
+  URL é aberta diretamente.
+
+Notificações automáticas representam tarefas pendentes e são filtradas pelo
+destinatário, pelo evento e pelo papel ativo. Avisos manuais podem ser enviados
+pela Administração ou pelo Professor responsável para participantes aprovados,
+papéis do evento, equipes ou pessoas específicas. Se uma notificação não
+aparecer, confirme a visualização selecionada, atualize o painel e verifique se
+o evento não foi arquivado.
+
+Ao preparar um novo hackathon, a Administração pode iniciar um rascunho vazio
+ou copiar a configuração de outro evento. A cópia leva estrutura e conteúdo
+configurável, mas nunca equipes, membros, envios, revisões, avaliações,
+rankings, resultados, auditoria, presença ou notificações. Se a cópia falhar,
+o rascunho de origem permanece intacto: corrija os dados informados e tente
+novamente; um rascunho incompleto pode ser ajustado pela tela de eventos.
+
 ---
 
 ## Estrutura do projeto

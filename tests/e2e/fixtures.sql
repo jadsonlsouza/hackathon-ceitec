@@ -72,9 +72,20 @@ begin
   values
     (event_a, professor_a_id, 'professor', '{}', admin_id),
     (event_b, professor_b_id, 'professor', '{}', admin_id),
+    (event_a, admin_id, 'professor', '{}', admin_id),
     (event_a, monitor_id, 'monitor', '{junior,senior}', professor_a_id),
     (event_a, evaluator_junior_id, 'evaluator', '{junior}', professor_a_id),
     (event_a, evaluator_senior_id, 'evaluator', '{senior}', professor_a_id)
+  on conflict do nothing;
+
+  -- Gives the global admin a Professor view and a real pending action in it.
+  insert into public.role_requests (
+    id, event_id, user_id, requested_role, status, created_at
+  )
+  values (
+    'fa000000-0000-4000-8000-000000000001', event_a, student_b_id,
+    'monitor', 'pending', now() - interval '5 minutes'
+  )
   on conflict do nothing;
 
   insert into public.teams (

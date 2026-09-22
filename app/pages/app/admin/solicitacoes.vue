@@ -80,9 +80,9 @@ async function decide(id: string, decision: 'approved' | 'rejected') {
       <p class="eyebrow">
         Administração geral
       </p>
-      <h1>Solicitações de Professor</h1>
+      <h1>Revisar solicitações</h1>
       <p class="intro">
-        Aprove ou rejeite quem poderá administrar cada evento.
+        Analise as solicitações de Professor recebidas por notificação.
       </p>
     </header>
 

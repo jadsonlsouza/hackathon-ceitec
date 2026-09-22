@@ -8,6 +8,13 @@ import {
 
 const authState = (profile: string) => `tests/e2e/.auth/${profile}.json`
 
+async function selectRoleView(page: Page, name: string) {
+  const selector = page.locator('[data-role-view-selector]')
+  await expect(selector).toBeVisible()
+  await selector.getByRole('button', { name: /Visualização:/ }).click()
+  await selector.getByRole('option', { name: new RegExp(name) }).click()
+}
+
 async function waitForNuxtHydration(page: Page) {
   await page.waitForFunction(() => Boolean(
     (document.querySelector('main') as HTMLElement & {
@@ -172,14 +179,12 @@ test.describe('Professor autenticado', () => {
 test.describe('Admin global autenticado', () => {
   test.use({ storageState: authState('admin') })
 
-  test('Professor view hides administration tasks and guards their routes', async ({ page }) => {
+  test('admin acting as professor cannot open global people management', async ({ page }) => {
     await page.goto('/app')
-    const selector = page.locator('[data-role-view-selector]')
-    await expect(selector).toBeVisible()
-    await selector.getByRole('button', { name: /Visualização:/ }).click()
-    await selector.getByRole('option', { name: /Professor/ }).click()
+    await selectRoleView(page, 'Professor')
     await expect(page.getByRole('link', { name: 'Eventos' })).toHaveCount(0)
     await expect(page.getByRole('link', { name: 'Pessoas e permissões' })).toHaveCount(0)
+    await expect(page.getByRole('link', { name: /solicita/i })).toHaveCount(0)
 
     await page.goto('/app/admin/usuarios')
     await expect(page).toHaveURL(/\/app$/)

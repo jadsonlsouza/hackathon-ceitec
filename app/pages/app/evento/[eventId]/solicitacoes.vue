@@ -86,9 +86,9 @@ async function decide(id: string, decision: 'approved' | 'rejected') {
       <p class="eyebrow">
         Administração do evento
       </p>
-      <h1>Solicitações do evento</h1>
+      <h1>Revisar solicitações</h1>
       <p class="intro">
-        Analise solicitações de Monitor e Avaliador para este evento.
+        Analise as solicitações de Monitor e Avaliador recebidas por notificação.
       </p>
     </header>
 
