@@ -11,8 +11,9 @@ const EVENTS_KEY = 'admin-events'
 const { $supabase } = useNuxtApp()
 const { profile, pending: accessPending, error: accessError } =
   useCurrentAccess()
+const { activeView } = useDashboardEventContext()
 const isAuthorized = computed(
-  () => profile.value?.global_role === 'global_admin',
+  () => profile.value?.global_role === 'global_admin' && activeView.value?.role === 'global_admin',
 )
 
 const creating = ref(false)
@@ -45,7 +46,7 @@ const { data: events, pending, error } = await useAsyncData(
   {
     server: false,
     default: () => [] as EventRow[],
-    watch: [profile],
+    watch: [isAuthorized],
   },
 )
 
@@ -60,8 +61,17 @@ const { data: professors } = await useAsyncData(
     if (professorsError) throw professorsError
     return data ?? []
   },
-  { server: false, default: () => [] },
+  { server: false, default: () => [], watch: [isAuthorized] },
 )
+
+watch(isAuthorized, (allowed) => {
+  if (allowed) return
+  events.value = []
+  professors.value = []
+  archiveSecret.value = ''
+  selectedEvent.value = null
+  archiveDialog.value?.close()
+})
 
 const activeEvents = computed(
   () => events.value.filter(event => event.status !== 'archived'),
@@ -139,6 +149,7 @@ async function createEvent(input: {
 }
 
 function openArchiveDialog(event: EventRow) {
+  if (!isAuthorized.value) return
   selectedEvent.value = event
   confirmedName.value = ''
   archiveSecret.value = ''
@@ -169,7 +180,7 @@ function handleArchiveBackdrop(event: MouseEvent) {
 }
 
 async function archiveEvent() {
-  if (!selectedEvent.value || !canConfirmArchive.value) return
+  if (!isAuthorized.value || !selectedEvent.value || !canConfirmArchive.value) return
 
   archiving.value = true
   archiveMessage.value = null
@@ -181,6 +192,7 @@ async function archiveEvent() {
       await $supabase.auth.getSession()
     const accessToken = sessionData.session?.access_token
     if (sessionError || !accessToken) throw new Error('session unavailable')
+    if (!isAuthorized.value || !selectedEvent.value) return
 
     await $fetch('/api/admin/archive-event', {
       method: 'POST',

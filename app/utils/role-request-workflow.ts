@@ -38,8 +38,9 @@ export function canManageGlobalRoleRequests(profile: Profile | null) {
 export function canManageEventRoleRequests(
   eventRoles: EventRole[],
   eventId: string,
+  profile: Profile | null = null,
 ) {
-  return eventRoles.some(role => (
+  return profile?.global_role === 'global_admin' || eventRoles.some(role => (
     role.event_id === eventId && role.role === 'professor'
   ))
 }

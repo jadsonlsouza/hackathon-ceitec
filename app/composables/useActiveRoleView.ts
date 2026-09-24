@@ -6,6 +6,7 @@ import {
 } from '../utils/active-role-view'
 
 interface ActiveRoleViewContext {
+  ready?: Ref<boolean> | ComputedRef<boolean>
   userId: Ref<string | null> | ComputedRef<string | null>
   globalRole: Ref<'global_admin' | 'student' | null> | ComputedRef<'global_admin' | 'student' | null>
   eventRoles: Ref<Array<{ event_id: string, role: 'professor' | 'monitor' | 'evaluator' }>> | ComputedRef<Array<{ event_id: string, role: 'professor' | 'monitor' | 'evaluator' }>>
@@ -95,12 +96,13 @@ export function setStoredActiveRoleView(
 }
 
 export function useActiveRoleView(context: ActiveRoleViewContext) {
-  const availableViews = computed(() => availableRoleViewsForAccess({
+  const ready = computed(() => context.ready?.value ?? true)
+  const availableViews = computed(() => ready.value ? availableRoleViewsForAccess({
     globalRole: context.globalRole.value,
     eventRoles: context.eventRoles.value,
     teamEventIds: context.teamEventIds.value,
     eventId: context.currentEventId.value,
-  }))
+  }) : [])
   const scopeKey = computed(() => {
     const userId = context.userId.value
     return userId ? storageKey(userId, context.currentEventId.value) : null
@@ -111,6 +113,7 @@ export function useActiveRoleView(context: ActiveRoleViewContext) {
   )))
 
   function reconcile() {
+    if (!ready.value) return
     const key = scopeKey.value
     if (!key) return
     const controller = getController(key)
@@ -135,13 +138,14 @@ export function useActiveRoleView(context: ActiveRoleViewContext) {
   }
 
   watch(
-    () => [scopeKey.value, availableViews.value.map(view => `${view.role}:${view.eventId ?? ''}`).join(',')],
+    () => [ready.value, scopeKey.value, availableViews.value.map(view => `${view.role}:${view.eventId ?? ''}`).join(',')],
     reconcile,
     { immediate: true },
   )
 
   return {
     activeView: computed(() => {
+      if (!ready.value) return null
       const key = scopeKey.value
       return key ? getController(key).activeView.value : null
     }),

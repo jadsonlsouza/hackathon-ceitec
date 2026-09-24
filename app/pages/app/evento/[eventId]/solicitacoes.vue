@@ -19,15 +19,18 @@ const route = useRoute()
 const eventId = computed(() => String(route.params.eventId))
 const { $supabase } = useNuxtApp()
 const {
+  profile,
   eventRoles,
   pending: accessPending,
   error: accessError,
 } = useCurrentAccess()
+const { activeView } = useDashboardEventContext()
 const processingId = ref<string | null>(null)
 const decisionError = ref<string | null>(null)
 const requestsKey = computed(() => eventRoleRequestsKey(eventId.value))
 const isAuthorized = computed(() => (
-  canManageEventRoleRequests(eventRoles.value, eventId.value)
+  activeView.value?.role === 'professor' && activeView.value.eventId === eventId.value
+  && canManageEventRoleRequests(eventRoles.value, eventId.value, profile.value)
 ))
 
 const { data: requests, pending, error } = await useAsyncData(
@@ -54,7 +57,7 @@ const { data: requests, pending, error } = await useAsyncData(
   {
     server: false,
     default: () => [] as RoleRequestRow[],
-    watch: [eventRoles],
+    watch: [isAuthorized],
   },
 )
 

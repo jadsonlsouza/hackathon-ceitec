@@ -6,6 +6,7 @@ import {
   nextTick,
   ref,
   Suspense,
+  watch,
 } from 'vue'
 import {
   afterAll,
@@ -22,6 +23,7 @@ const EVENT_ID = '10000000-0000-4000-8000-000000000001'
 const USER_ID = '00000000-0000-4000-8000-000000000001'
 const RESPONSIBLE_ID = '00000000-0000-4000-8000-000000000002'
 const EVENT_NAME = 'Hackathon CEITEC'
+const activeView = ref<any>({ role: 'global_admin', eventId: null })
 
 const testState = {
   rpc: vi.fn(),
@@ -107,6 +109,9 @@ describe('event administration interactions', () => {
     vi.stubGlobal('definePageMeta', vi.fn())
     vi.stubGlobal('nextTick', nextTick)
     vi.stubGlobal('ref', ref)
+    vi.stubGlobal('watch', watch)
+    vi.stubGlobal('clearNuxtData', vi.fn())
+    vi.stubGlobal('useDashboardEventContext', () => ({ activeView }))
     vi.stubGlobal('refreshNuxtData', testState.refresh)
     vi.stubGlobal('useCurrentAccess', () => ({
       profile: ref({
@@ -162,6 +167,7 @@ describe('event administration interactions', () => {
   })
 
   beforeEach(() => {
+    activeView.value = { role: 'global_admin', eventId: null }
     testState.rpc.mockReset().mockResolvedValue({ data: [{ event_id: EVENT_ID }], error: null })
     testState.navigate.mockReset().mockResolvedValue(undefined)
     testState.insert.mockReset().mockResolvedValue({ data: null, error: null })
@@ -196,6 +202,16 @@ describe('event administration interactions', () => {
       newEventId: '10000000-0000-4000-8000-000000000002',
     })
     testState.refresh.mockReset().mockResolvedValue(undefined)
+  })
+
+  it('blocks a stale archive submit after narrowing the active view', async () => {
+    const wrapper = await mountPage()
+    await openReadyArchiveDialog(wrapper)
+    activeView.value = { role: 'student', eventId: EVENT_ID }
+    await nextTick()
+    await wrapper.get('.archive-dialog form').trigger('submit')
+    expect(testState.archiveFetch).not.toHaveBeenCalled()
+    expect(wrapper.find('.event-form').exists()).toBe(false)
   })
 
   it('rejects a whitespace-only event name, announces the error, and focuses the field', async () => {

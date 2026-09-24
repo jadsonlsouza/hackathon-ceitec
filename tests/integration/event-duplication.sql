@@ -24,9 +24,16 @@ insert into public.canvas_templates(id,event_id,name,instructions,created_by)
 values ('43000000-0000-4000-8000-000000000001','42000000-0000-4000-8000-000000000001','Modelo origem','Instruções','41000000-0000-4000-8000-000000000001');
 insert into public.canvas_template_blocks(template_id,key,title,prompt,position)
 values ('43000000-0000-4000-8000-000000000001','teste','Bloco modelo','Modelo',1);
+insert into public.canvas_template_blocks(template_id,key,title,prompt,position)
+values ('43000000-0000-4000-8000-000000000001','second','Segundo','Segundo',2);
 insert into public.canvas_activities(id,event_id,template_id,title,categories,opens_at,due_at,published,created_by)
 values ('44000000-0000-4000-8000-000000000001','42000000-0000-4000-8000-000000000001','43000000-0000-4000-8000-000000000001','Atividade origem','{junior}','2027-01-01','2027-01-02',true,'41000000-0000-4000-8000-000000000001');
 update public.canvas_blocks set prompt='Bloco personalizado' where activity_id='44000000-0000-4000-8000-000000000001';
+-- Swap positions without ever violating source constraints, and rename a block.
+update public.canvas_blocks set position=position+10 where activity_id='44000000-0000-4000-8000-000000000001';
+update public.canvas_blocks set position=case key when 'teste' then 2 else 1 end,
+ key=case key when 'second' then 'renamed' else key end
+where activity_id='44000000-0000-4000-8000-000000000001';
 select set_config('request.jwt.claim.sub','41000000-0000-4000-8000-000000000003',true);
 update public.criterion_weights set weight=3.5 where event_id='42000000-0000-4000-8000-000000000001' and category='junior';
 select set_config('request.jwt.claim.sub','41000000-0000-4000-8000-000000000001',true);
@@ -45,7 +52,11 @@ grant all on wizard_result to authenticated;
 update public.events
 set status = 'archived', archived_at = now()
 where id = '42000000-0000-4000-8000-000000000001';
+select throws_ok($$delete from public.team_members where team_id='45000000-0000-4000-8000-000000000001'$$,
+ 'P0001','event_not_available','archived membership cannot be deleted by privileged workflow');
 set local role authenticated;
+select throws_ok($$select public.admin_delete_team('45000000-0000-4000-8000-000000000001')$$,
+ 'P0001','event_not_available','archived team without submissions cannot be deleted by admin');
 select throws_ok(
   $$insert into public.canvas_templates(event_id,name,created_by) values ('42000000-0000-4000-8000-000000000001','Bloqueado','41000000-0000-4000-8000-000000000001')$$,
   '42501', null, 'global admin cannot create Canvas templates on archived events'
@@ -97,7 +108,11 @@ select is((select count(*) from public.canvas_templates where event_id=(select i
 select is((select count(*) from public.canvas_activities where event_id=(select id from wizard_result where kind='copy')),
  (select count(*) from public.canvas_activities where event_id='42000000-0000-4000-8000-000000000001'),'activities copied without extra seeded defaults');
 select is((select count(*) from public.canvas_activities where event_id in(select id from wizard_result) and published),0::bigint,'all new activities unpublished including defaults');
-select is((select b.prompt from public.canvas_blocks b join public.canvas_activities a on a.id=b.activity_id where a.event_id=(select id from wizard_result where kind='copy') and a.title='Atividade origem'),'Bloco personalizado','activity block overrides preserved');
+select is((select b.prompt from public.canvas_blocks b join public.canvas_activities a on a.id=b.activity_id where a.event_id=(select id from wizard_result where kind='copy') and a.title='Atividade origem' and b.key='teste'),'Bloco personalizado','activity block overrides preserved');
+select results_eq(
+ $$select b.key,b.position from public.canvas_blocks b join public.canvas_activities a on a.id=b.activity_id where a.event_id=(select id from wizard_result where kind='copy') and a.title='Atividade origem' order by b.position$$,
+ $$values ('renamed'::text,1),('teste'::text,2)$$,
+ 'activity block set exactly preserves renames and reordered positions');
 select ok((select a.template_id<> '43000000-0000-4000-8000-000000000001'::uuid and t.event_id=a.event_id from public.canvas_activities a join public.canvas_templates t on t.id=a.template_id where a.event_id=(select id from wizard_result where kind='copy') and a.title='Atividade origem'),'template references remapped');
 select is((select count(*) from public.criterion_weights where event_id=(select id from wizard_result where kind='copy') and category='junior' and weight=3.5),5::bigint,'non-default weights preserved without defaults collision');
 select is((select count(*) from public.event_schedule_items where event_id=(select id from wizard_result where kind='copy')),1::bigint,'schedule copied');

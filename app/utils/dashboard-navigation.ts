@@ -27,6 +27,8 @@ const navigationByRole: Record<ActiveRole, NavigationDefinition[]> = {
   professor: [
     { label: 'Equipes', to: 'admin/equipes', eventRelative: true },
     { label: 'Atividades', to: 'admin/canvas', eventRelative: true },
+    { label: 'Oficinas', to: 'admin/oficinas', eventRelative: true },
+    { label: 'Presença', to: 'admin/presenca', eventRelative: true },
     { label: 'Revisar envios', to: 'revisoes', eventRelative: true },
     { label: 'Configurar avaliação', to: 'admin/avaliacao', eventRelative: true },
     { label: 'Conteúdo do evento', to: 'admin/conteudo-publico', eventRelative: true },
@@ -42,6 +44,8 @@ const navigationByRole: Record<ActiveRole, NavigationDefinition[]> = {
   student: [
     { label: 'Minha equipe', to: 'equipe', eventRelative: true },
     { label: 'Atividades', to: 'atividades', eventRelative: true },
+    { label: 'Oficinas', to: 'oficinas', eventRelative: true },
+    { label: 'Presença', to: 'presenca', eventRelative: true },
   ],
 }
 

@@ -92,7 +92,7 @@ async function mountPage(component: unknown) {
       return () => h(Suspense, null, { default: () => h(component as never) })
     },
   })
-  mountedHost = mount(Host, { attachTo: document.body })
+  mountedHost = mount(Host, { attachTo: document.body, global: { stubs: { NuxtLink: { name: 'NuxtLink', props: ['to'], template: '<a :href="to"><slot /></a>' } } } })
   await flushPromises()
   await nextTick()
   return mountedHost
@@ -167,6 +167,12 @@ beforeEach(() => {
 })
 
 describe('student Canvas page', () => {
+  it('scopes the student team query to the caller active membership', async () => {
+    const ActivityPage = (await import('../../app/pages/app/evento/[eventId]/atividades/[activityId].vue')).default
+    await mountPage(ActivityPage)
+    expect(operations.find(operation => operation.table === 'teams')?.filters)
+      .toEqual(expect.arrayContaining([['membership.user_id', USER_ID], ['membership.status', 'active']]))
+  })
   it('gates submit while a block is saving and prevents duplicate submission actions', async () => {
     let resolveDecision!: (value: Result) => void
     const pendingDecision = new Promise<Result>(resolve => { resolveDecision = resolve })
@@ -346,6 +352,7 @@ describe('activity list', () => {
     expect(wrapper.text()).toContain('Encerradas')
     expect(wrapper.text()).toContain('Devolvido para ajustes')
     expect(wrapper.get('a[href$="/atividades/open"]').exists()).toBe(true)
+    expect(wrapper.findAllComponents({ name: 'NuxtLink' }).some(link => link.props('to') === `/app/evento/${EVENT_ID}/atividades/open`)).toBe(true)
   })
 })
 

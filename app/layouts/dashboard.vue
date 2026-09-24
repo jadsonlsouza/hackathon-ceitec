@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { computed, watch } from 'vue'
+import { shouldRedirectForActiveRoleView } from '../utils/active-role-view-guard'
 import DashboardNavigation from '../components/dashboard/DashboardNavigation.vue'
 import RoleViewSelector from '../components/dashboard/RoleViewSelector.vue'
 import NotificationBell from '../components/dashboard/NotificationBell.vue'
@@ -21,6 +23,20 @@ const {
 } = useDashboardEventContext()
 const roleViewMessage = useState<string | null>('active-role-view-message', () => null)
 const notifications = useNotifications(activeView, currentEventId)
+const compatiblePage = computed(() => !shouldRedirectForActiveRoleView({
+  path: route.path, activeView: activeView.value, isServer: import.meta.server,
+}))
+watch([compatiblePage, pending, contextPending], ([compatible, accessLoading, teamLoading]) => {
+  if (!compatible && !accessLoading && !teamLoading) {
+    roleViewMessage.value = 'Esta tarefa não está disponível na visualização selecionada.'
+    void navigateTo('/app')
+  }
+})
+watch(activeView, (next, previous) => {
+  if (previous && (!next || next.role !== previous.role || next.eventId !== previous.eventId)) {
+    clearNuxtData(key => key !== 'context-featured-event')
+  }
+})
 </script>
 
 <template>
@@ -64,7 +80,7 @@ const notifications = useNotifications(activeView, currentEventId)
           :set-active-view="setActiveView"
         />
       </header>
-      <slot />
+      <slot v-if="compatiblePage" />
     </div>
   </div>
 </template>

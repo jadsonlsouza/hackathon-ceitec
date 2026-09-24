@@ -129,10 +129,10 @@ describe('dashboard UI', () => {
 
   it.each([
     [{ role: 'global_admin', eventId: null }, null, ['Eventos', 'Pessoas e permissões', 'Auditoria']],
-    [{ role: 'professor', eventId: EVENT_ID }, EVENT_ID, ['Equipes', 'Atividades', 'Revisar envios', 'Configurar avaliação', 'Conteúdo do evento', 'Resultados', 'Configurações do evento']],
+    [{ role: 'professor', eventId: EVENT_ID }, EVENT_ID, ['Equipes', 'Atividades', 'Oficinas', 'Presença', 'Revisar envios', 'Configurar avaliação', 'Conteúdo do evento', 'Resultados', 'Configurações do evento']],
     [{ role: 'monitor', eventId: EVENT_ID }, EVENT_ID, ['Revisar envios']],
     [{ role: 'evaluator', eventId: EVENT_ID }, EVENT_ID, ['Avaliar projetos']],
-    [{ role: 'student', eventId: EVENT_ID }, EVENT_ID, ['Minha equipe', 'Atividades']],
+    [{ role: 'student', eventId: EVENT_ID }, EVENT_ID, ['Minha equipe', 'Atividades', 'Oficinas', 'Presença']],
   ] as const)(
     'mounts the correct navigation for the active %s view',
     async (activeView, currentEventId, labels) => {

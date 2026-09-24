@@ -100,8 +100,10 @@ const { data: pageData, pending, error } = await useAsyncData(
   async () => {
     const { data: teamData, error: teamError } = await $supabase
       .from('teams')
-      .select('*')
+      .select('*,membership:team_members!inner(user_id,status)')
       .eq('event_id', eventId.value)
+      .eq('membership.user_id', profile.value?.id ?? '00000000-0000-0000-0000-000000000000')
+      .eq('membership.status', 'active')
       .maybeSingle()
     if (teamError) throw teamError
 

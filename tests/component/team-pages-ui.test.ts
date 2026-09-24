@@ -49,16 +49,12 @@ describe('team page interactions', () => {
     const supabase = {
       rpc: testState.rpc,
       from(table: string) {
-        void table
-        return {
-      select: () => ({
-            eq: () => ({
-              maybeSingle: testState.teamFetch,
-              order: testState.queueFetch,
-              eq: () => ({ order: testState.queueFetch }),
-            }),
-          }),
+        const builder = {
+          eq: () => builder,
+          maybeSingle: testState.teamFetch,
+          order: testState.queueFetch,
         }
+        return { select: () => builder }
       },
     }
     vi.stubGlobal('computed', computed)

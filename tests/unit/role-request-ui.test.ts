@@ -11,6 +11,10 @@ import {
 } from '../../app/utils/role-request-workflow'
 
 describe('role request page access', () => {
+  it('lets a global admin decide event requests without manufacturing a professor assignment', () => {
+    expect(canManageEventRoleRequests([], 'event-1', { global_role: 'global_admin' })).toBe(true)
+    expect(canManageEventRoleRequests([], 'event-1', { global_role: 'student' })).toBe(false)
+  })
   it('allows only a global admin to manage professor requests', () => {
     expect(canManageGlobalRoleRequests({ global_role: 'global_admin' })).toBe(true)
     expect(canManageGlobalRoleRequests({ global_role: 'student' })).toBe(false)

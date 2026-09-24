@@ -19,6 +19,7 @@ interface TeamContext {
 }
 
 interface TeamContextController {
+  loadedUserId: Ref<string | null>
   data: Ref<TeamContext>
   pending: Ref<boolean>
   error: Ref<unknown>
@@ -34,6 +35,7 @@ function createTeamContextController(
   userId: ComputedRef<string | null>,
 ): TeamContextController {
   const data = ref<TeamContext>({ teamEventIds: [], teamIds: [] })
+  const loadedUserId = ref<string | null>(null)
   const pending = ref(false)
   const error = ref<unknown>(null)
   let channel: ReturnType<typeof supabase.channel> | null = null
@@ -98,13 +100,14 @@ function createTeamContextController(
       try {
         const { data: rows, error: teamError } = await supabase
           .from('teams')
-          .select('id,event_id,status')
+          .select('id,event_id,status,members:team_members(user_id,status)')
         if (teamError) throw teamError
         if (
           expectedGeneration !== generation
           || expectedUserId !== userId.value
         ) return
-        const visibleTeams = (rows ?? []).filter(team => team.status !== 'rejected')
+        const visibleTeams = (rows ?? []).filter(team => team.status !== 'rejected'
+          && (team.members ?? []).some(member => member.user_id === expectedUserId && member.status === 'active'))
         const nextData = {
           teamEventIds: [...new Set(visibleTeams.map(team => team.event_id))].sort(),
           teamIds: visibleTeams.map(team => team.id).sort(),
@@ -116,6 +119,7 @@ function createTeamContextController(
           data.value = nextData
         }
         error.value = null
+        loadedUserId.value = expectedUserId
       }
       catch (caught) {
         if (
@@ -152,6 +156,7 @@ function createTeamContextController(
       (nextUserId, previousUserId) => {
         if (nextUserId !== previousUserId) {
           generation += 1
+          loadedUserId.value = null
           reloadPromise = null
           data.value = { teamEventIds: [], teamIds: [] }
           error.value = null
@@ -180,11 +185,13 @@ function createTeamContextController(
     stopReconciliation = null
     stopChannel()
     data.value = { teamEventIds: [], teamIds: [] }
+    loadedUserId.value = null
     pending.value = false
     error.value = null
   }
 
   return {
+    loadedUserId,
     data,
     pending,
     error,
@@ -200,12 +207,12 @@ function createTeamContextController(
   }
 }
 
-export function useDashboardEventContext() {
-  const route = useRoute()
+export function useDashboardEventContext(destinationEventId?: string | null) {
+  const route = destinationEventId === undefined ? useRoute() : null
   const { $supabase } = useNuxtApp()
   const access = useCurrentAccess()
   const routeEventId = computed(() => {
-    const value = route.params.eventId
+    const value = destinationEventId === undefined ? route?.params.eventId : destinationEventId
     return typeof value === 'string' && value ? value : null
   })
 
@@ -279,6 +286,10 @@ export function useDashboardEventContext() {
   })
 
   const roleView = useActiveRoleView({
+    ready: computed(() => !access.pending.value && !access.error.value
+      && Boolean(access.profile.value)
+      && teamAccess!.loadedUserId.value === access.userId.value
+      && !teamAccess!.pending.value && !teamAccess!.error.value),
     userId: access.userId,
     globalRole: computed(() => access.profile.value?.global_role ?? null),
     eventRoles: access.eventRoles,

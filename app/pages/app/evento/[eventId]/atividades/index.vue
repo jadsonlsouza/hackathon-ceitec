@@ -17,6 +17,7 @@ interface SubmissionSummary {
 const route = useRoute()
 const eventId = computed(() => String(route.params.eventId))
 const { $supabase } = useNuxtApp()
+const { profile } = useCurrentAccess()
 
 function activitiesPageKey(targetEventId: string) {
   return `canvas-activities:${targetEventId}`
@@ -28,8 +29,10 @@ const { data: pageData, pending, error } = await useAsyncData(
   async () => {
     const { data: team, error: teamError } = await $supabase
       .from('teams')
-      .select('id')
+      .select('id,membership:team_members!inner(user_id,status)')
       .eq('event_id', eventId.value)
+      .eq('membership.user_id', profile.value?.id ?? '00000000-0000-0000-0000-000000000000')
+      .eq('membership.status', 'active')
       .maybeSingle()
     if (teamError) throw teamError
 
@@ -117,7 +120,7 @@ const sections = computed(() => [
                 <time :datetime="activity.due_at">{{ new Date(activity.due_at).toLocaleString('pt-BR') }}</time>
               </p>
             </div>
-            <a :href="`/app/evento/${eventId}/atividades/${activity.id}`">Abrir atividade</a>
+            <NuxtLink :to="`/app/evento/${eventId}/atividades/${activity.id}`">Abrir atividade</NuxtLink>
           </li>
         </ul>
       </section>

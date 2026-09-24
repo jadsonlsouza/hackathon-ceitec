@@ -1,4 +1,4 @@
-import { nextTick } from 'vue'
+import { effectScope, nextTick } from 'vue'
 import { useDashboardEventContext } from '../composables/useDashboardEventContext'
 import {
   activeRoleViewRequirementForPath,
@@ -10,15 +10,22 @@ export default defineNuxtRouteMiddleware(async (to) => {
 
   if (import.meta.server) return navigateTo('/app')
 
-  const context = useDashboardEventContext()
-  await context.refresh()
-  await nextTick()
-
-  if (!shouldRedirectForActiveRoleView({
-    path: to.path,
-    activeView: context.activeView.value,
-    isServer: false,
-  })) return
+  const scope = effectScope()
+  try {
+    const destinationEventId = typeof to.params.eventId === 'string' ? to.params.eventId : null
+    const context = scope.run(() => useDashboardEventContext(destinationEventId))!
+    await context.refresh()
+    await context.refreshTeamContext()
+    await nextTick()
+    if (!shouldRedirectForActiveRoleView({
+      path: to.path,
+      activeView: context.activeView.value,
+      isServer: false,
+    })) return
+  }
+  finally {
+    scope.stop()
+  }
 
   const message = useState<string | null>('active-role-view-message', () => null)
   message.value = 'Esta tarefa não está disponível na visualização selecionada.'

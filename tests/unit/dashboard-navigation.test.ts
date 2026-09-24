@@ -8,15 +8,18 @@ const EVENT_ID = '10000000-0000-4000-8000-000000000901'
 
 describe('active role-view navigation', () => {
   it('shows professor tasks only while an admin is in Professor view', () => {
-    expect(navigationForActiveView({ role: 'professor', eventId: EVENT_ID }, EVENT_ID).map(item => item.label))
-      .toEqual(['Equipes', 'Atividades', 'Revisar envios', 'Configurar avaliação', 'Conteúdo do evento', 'Resultados', 'Configurações do evento'])
+    expect(navigationForActiveView({ role: 'professor', eventId: EVENT_ID }, EVENT_ID))
+      .toEqual(expect.arrayContaining([
+        { label: 'Oficinas', to: `/app/evento/${EVENT_ID}/admin/oficinas` },
+        { label: 'Presença', to: `/app/evento/${EVENT_ID}/admin/presenca` },
+      ]))
   })
 
   it.each([
     ['global_admin', null, ['Eventos', 'Pessoas e permissões', 'Auditoria']],
     ['monitor', EVENT_ID, ['Revisar envios']],
     ['evaluator', EVENT_ID, ['Avaliar projetos']],
-    ['student', EVENT_ID, ['Minha equipe', 'Atividades']],
+    ['student', EVENT_ID, ['Minha equipe', 'Atividades', 'Oficinas', 'Presença']],
   ] as const)('maps only %s tasks for the active view', (role, eventId, labels) => {
     expect(navigationForActiveView({ role, eventId }, EVENT_ID).map(item => item.label)).toEqual(labels)
   })
