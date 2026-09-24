@@ -28,6 +28,11 @@ insert into public.canvas_template_blocks(template_id,key,title,prompt,position)
 values ('43000000-0000-4000-8000-000000000001','second','Segundo','Segundo',2);
 insert into public.canvas_activities(id,event_id,template_id,title,categories,opens_at,due_at,published,created_by)
 values ('44000000-0000-4000-8000-000000000001','42000000-0000-4000-8000-000000000001','43000000-0000-4000-8000-000000000001','Atividade origem','{junior}','2027-01-01','2027-01-02',true,'41000000-0000-4000-8000-000000000001');
+-- Template blocks added after an activity is created do not backfill it. The
+-- duplicate must still copy the activity's exact block set, not its expanded
+-- template's seed set.
+insert into public.canvas_template_blocks(template_id,key,title,prompt,position)
+values ('43000000-0000-4000-8000-000000000001','later-template-block','Adicionado depois','Não pertence à atividade',3);
 update public.canvas_blocks set prompt='Bloco personalizado' where activity_id='44000000-0000-4000-8000-000000000001';
 -- Swap positions without ever violating source constraints, and rename a block.
 update public.canvas_blocks set position=position+10 where activity_id='44000000-0000-4000-8000-000000000001';
@@ -105,6 +110,11 @@ select lives_ok(
   'global admin can enter the new responsible professor configuration workspace'
 );
 select is((select count(*) from public.canvas_templates where event_id=(select id from wizard_result where kind='copy')),1::bigint,'one selected template copied');
+select is((select count(*) from public.canvas_template_blocks as block
+  join public.canvas_templates as template on template.id = block.template_id
+  where template.event_id = (select id from wizard_result where kind='copy')),
+  3::bigint,
+  'template expansion remains on the separately copied template');
 select is((select count(*) from public.canvas_activities where event_id=(select id from wizard_result where kind='copy')),
  (select count(*) from public.canvas_activities where event_id='42000000-0000-4000-8000-000000000001'),'activities copied without extra seeded defaults');
 select is((select count(*) from public.canvas_activities where event_id in(select id from wizard_result) and published),0::bigint,'all new activities unpublished including defaults');
@@ -113,6 +123,12 @@ select results_eq(
  $$select b.key,b.position from public.canvas_blocks b join public.canvas_activities a on a.id=b.activity_id where a.event_id=(select id from wizard_result where kind='copy') and a.title='Atividade origem' order by b.position$$,
  $$values ('renamed'::text,1),('teste'::text,2)$$,
  'activity block set exactly preserves renames and reordered positions');
+select is((select count(*) from public.canvas_blocks as block
+  join public.canvas_activities as activity on activity.id = block.activity_id
+  where activity.event_id = (select id from wizard_result where kind='copy')
+    and activity.title = 'Atividade origem'),
+  2::bigint,
+  'template expansion after activity creation does not leave seeded surplus blocks in duplicate');
 select ok((select a.template_id<> '43000000-0000-4000-8000-000000000001'::uuid and t.event_id=a.event_id from public.canvas_activities a join public.canvas_templates t on t.id=a.template_id where a.event_id=(select id from wizard_result where kind='copy') and a.title='Atividade origem'),'template references remapped');
 select is((select count(*) from public.criterion_weights where event_id=(select id from wizard_result where kind='copy') and category='junior' and weight=3.5),5::bigint,'non-default weights preserved without defaults collision');
 select is((select count(*) from public.event_schedule_items where event_id=(select id from wizard_result where kind='copy')),1::bigint,'schedule copied');
