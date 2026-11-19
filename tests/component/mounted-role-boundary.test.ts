@@ -67,3 +67,23 @@ it('passes the authorized event context to notifications independently of the pr
   expect(wrapper.get('notification-bell-stub').attributes('eventid')).toBe('event-a')
   wrapper.unmount()
 })
+
+it('defaults to light and remembers a user-selected dark theme', async () => {
+  localStorage.removeItem('ligalab-dashboard-theme')
+  state.context = { activeView: ref(null), profile: ref(null), eventRoles: ref([]), pending: ref(false), error: ref(null), teamEventIds: ref([]), contextPending: ref(false), contextError: ref(null), currentEventId: ref(null), availableViews: ref([]) }
+  vi.stubGlobal('useRoute', () => ({ path: '/app' }))
+  vi.stubGlobal('useState', () => ref(null))
+  const Layout = (await import('../../app/layouts/dashboard.vue')).default
+  const options = { global: { stubs: { NuxtLink: true, BrandLogo: true, NotificationBell: true, DashboardNavigation: true } } }
+  const wrapper = mount(Layout, options)
+  expect(wrapper.get('.dashboard-shell').attributes('data-theme')).toBe('light')
+  await wrapper.get('.dashboard-theme-toggle').trigger('click')
+  expect(wrapper.get('.dashboard-shell').attributes('data-theme')).toBe('dark')
+  expect(localStorage.getItem('ligalab-dashboard-theme')).toBe('dark')
+  wrapper.unmount()
+  const restored = mount(Layout, options)
+  await nextTick()
+  expect(restored.get('.dashboard-shell').attributes('data-theme')).toBe('dark')
+  restored.unmount()
+  localStorage.removeItem('ligalab-dashboard-theme')
+})

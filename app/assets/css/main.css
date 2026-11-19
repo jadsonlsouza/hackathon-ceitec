@@ -661,6 +661,8 @@ button, input, select, textarea { font: inherit; }
 .dashboard-logout-btn { align-items: center; background: transparent; border: 1px solid #334155; border-radius: .55rem; color: #94a3b8; cursor: pointer; display: flex; font-size: .9rem; font-weight: 700; gap: .5rem; min-height: 44px; padding: .7rem .8rem; text-align: left; transition: background .15s, color .15s, border-color .15s; width: 100%; }
 .dashboard-logout-btn:hover { background: #2d1111; border-color: #7f1d1d; color: #fca5a5; }
 .dashboard-content { min-width: 0; }
+.dashboard-theme-toggle { align-items: center; background: #111827; border: 1px solid #475569; border-radius: .55rem; color: #e2e8f0; cursor: pointer; display: inline-flex; gap: .5rem; min-height: 44px; padding: .65rem .8rem; }
+.dashboard-theme-toggle:hover { border-color: #38bdf8; }
 .dashboard-layout-header { align-items: center; border-bottom: 1px solid #1e293b; display: flex; gap: .75rem; justify-content: flex-end; min-height: 5rem; padding: .75rem clamp(1rem, 3vw, 2rem); }
 .dashboard-role-view-message { color: #fcd34d; margin: 0; }
 .dashboard-content main { overflow-wrap: anywhere; }
@@ -713,6 +715,28 @@ button, input, select, textarea { font: inherit; }
 @media (prefers-reduced-motion: reduce) {
   .dashboard-shell *, .ligalab-home * { scroll-behavior: auto !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
 }
+
+/* Light dashboard: the preference affects presentation only, never access. */
+.dashboard-shell[data-theme="light"] { background: #f3f7f9; color: #102337; color-scheme: light; }
+.dashboard-shell[data-theme="light"] .dashboard-sidebar { background: #fff; border-color: #dce6eb; }
+.dashboard-shell[data-theme="light"] .dashboard-brand img { filter: brightness(0) saturate(100%) invert(26%) sepia(89%) saturate(1582%) hue-rotate(188deg) brightness(92%) contrast(101%); }
+.dashboard-shell[data-theme="light"] .dashboard-layout-header { background: #fff; border-color: #dce6eb; }
+.dashboard-shell[data-theme="light"] :is(.dashboard-menu-toggle,.dashboard-theme-toggle,.role-view-trigger,.role-view-option,.dashboard-logout-btn) { background: #fff; border-color: #c9d9e2; color: #17354b; }
+.dashboard-shell[data-theme="light"] :is(.dashboard-menu-toggle,.dashboard-theme-toggle,.role-view-trigger,.role-view-option,.dashboard-logout-btn):hover { background: #eaf6fb; border-color: #0284c7; }
+.dashboard-shell[data-theme="light"] .role-view-listbox { background: #fff; border-color: #c9d9e2; box-shadow: 0 12px 30px #14364b24; }
+.dashboard-shell[data-theme="light"] .dashboard-nav-list a { color: #385267; }
+.dashboard-shell[data-theme="light"] .dashboard-nav-list a:hover { background: #eef7fb; color: #075985; }
+.dashboard-shell[data-theme="light"] .dashboard-nav-list a[aria-current="page"] { background: #e0f3fb; border-left-color: #0284c7; color: #075985; }
+.dashboard-shell[data-theme="light"] :is(.dashboard-nav-empty,.dashboard-access-state,.intro,.field-help,.team-meta,.member-card p,.team-details,.block-prompt,.snapshot-answer p,.activity-card p,.status-card-copy) { color: #526a7b; }
+.dashboard-shell[data-theme="light"] :is(.status-card,.request-status,.request-card,.team-panel,.canvas-block,.canvas-submit-bar,.activity-group,.activity-card,.builder-form,.builder-block,.submission-review,.snapshot-answer,.evaluation-category,.presentation-summary,.evaluation-form,.evaluation-config-section,.category-workflow-card,.evaluation-progress,.result-category,.result-progress,.private-ranking,.publication-panel,.public-content-form,.modal-panel) { background: #fff; border-color: #d7e3e9; box-shadow: 0 8px 25px #183d5110; color: #102337; }
+.dashboard-shell[data-theme="light"] :is(.result-progress li,.private-ranking li) { background: #f4f8fa; border-color: #d7e3e9; color: #102337; }
+.dashboard-shell[data-theme="light"] :is(input:not([type="checkbox"]):not([type="radio"]),select,textarea) { background: #fff; border-color: #9fb6c2; color: #102337; }
+.dashboard-shell[data-theme="light"] :is(.status-card h2,.audit-table td,.canvas-meta,.autosave-state) { color: #385267; }
+.dashboard-shell[data-theme="light"] :is(.status-card-value,.status-card a,.link-button,.team-position,.eyebrow) { color: #0279a9; }
+.dashboard-shell[data-theme="light"] :is(.form-error,.dashboard-access-error) { color: #b42318; }
+.dashboard-shell[data-theme="light"] .form-success { color: #16713a; }
+.dashboard-shell[data-theme="light"] .dashboard-nav-footer { border-color: #dce6eb; }
+@media (max-width: 48rem) { .dashboard-shell[data-theme="light"] .dashboard-nav-list { background: #fff; border-color: #dce6eb; } }
 
 /* ── Modal ─────────────────────────────────────────────────────────────────── */
 .modal-overlay { align-items: flex-start; background: rgba(0,0,0,.7); bottom: 0; display: flex; justify-content: center; left: 0; overflow-y: auto; padding: 2rem 1rem; position: fixed; right: 0; top: 0; z-index: 100; }
@@ -801,6 +825,42 @@ button, input, select, textarea { font: inherit; }
 .canvas-activity-chips { display: flex; flex-wrap: wrap; gap: .5rem; }
 .canvas-activity-chip { align-items: center; background: #0f172a; border: 1px solid #1e293b; border-radius: .5rem; display: flex; gap: .5rem; padding: .35rem .75rem; }
 .canvas-activity-name { color: #cbd5e1; font-size: .8rem; font-weight: 500; max-width: 10rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* Shared light surfaces for pages with their own component styles. */
+.dashboard-shell[data-theme="light"] :is(.event-panel,.archive-dialog,.professors-section,.add-professor-section,.form-section,.list-section,.checkin-section,.workshop-card,.no-workshops,.sd-section) { background: #fff; border: 1px solid #d7e3e9; box-shadow: 0 8px 25px #183d5110; color: #102337; }
+.dashboard-shell[data-theme="light"] :is(.professor-card,.session-card,.history-card,.history-section .empty-state,.leader-panel,.workshop-card .member-list li,.sd-slot-card,.sd-canvas-card) { background: #f5f9fb; border-color: #d7e3e9; color: #102337; }
+.dashboard-shell[data-theme="light"] :is(.professors-admin-page h1,.professors-admin-page h2,.professor-info strong,.form-section h2,.list-section h2,.checkin-section h2,.session-header h3,.history-date strong,.workshop-info h3,.leader-panel h4,.member-name,.activity-card-header h3) { color: #102337; }
+.dashboard-shell[data-theme="light"] :is(.event-notice,.event-card p,.professors-admin-page .intro,.section-desc,.professor-email,.field label,.workshop-desc,.submission-table th,.submission-table td,.history-section h2,.sd-section-title,.sd-review-body,.sd-next-queue) { color: #526a7b; }
+.dashboard-shell[data-theme="light"] :is(.event-card,.submission-table th,.submission-table td,.submission-viewer,.history-section h2,.sd-review-block,.audit-table th,.audit-table td) { border-color: #d7e3e9; }
+.dashboard-shell[data-theme="light"] :is(.secondary-button,.action-button.secondary,.modal-close,.modal-footer button:not([type="submit"]),.edit-btn,.cancel-btn) { background: #f5f9fb !important; border-color: #aac2ce !important; color: #17435b !important; }
+.dashboard-shell[data-theme="light"] :is(.secondary-button,.action-button.secondary,.modal-close,.modal-footer button:not([type="submit"]),.edit-btn,.cancel-btn):hover { background: #e6f4fa !important; }
+.dashboard-shell[data-theme="light"] :is(.workshop-time,.locked-structure,.sd-canvas-link,.session-word strong) { color: #0279a9; }
+.dashboard-shell[data-theme="light"] .session-word { background: #e6f4fa; color: #385267; }
+.dashboard-shell[data-theme="light"] .sd-team-banner { background: #e4f4fb; border-color: #b9deed; color: #102337; }
+.dashboard-shell[data-theme="light"] .sd-team-meta { color: #526a7b; }
+.dashboard-shell[data-theme="light"] .sd-progress-bar { background: #dbe8ee; }
+.dashboard-shell[data-theme="light"] .sd-review-toggle { color: #526a7b; }
+.dashboard-shell[data-theme="light"] .sd-review-toggle:hover { color: #075985; }
+.dashboard-shell[data-theme="light"] .audit-table { background: #fff; border: 1px solid #d7e3e9; border-collapse: separate; border-radius: .75rem; border-spacing: 0; overflow: hidden; }
+.dashboard-shell[data-theme="light"] .audit-table th { background: #edf4f7; color: #496577; }
+.dashboard-shell[data-theme="light"] .table-scroll { border-radius: .75rem; }
+.dashboard-shell[data-theme="light"] .professor-avatar { background: #087eab; }
+.dashboard-shell[data-theme="light"] .you-badge { background: #e0f3fb; border-color: #b9deed; color: #075985; }
+.dashboard-shell[data-theme="light"] .professors-admin-page button:not(.danger-button) { background: #036b98; }
+.dashboard-shell[data-theme="light"] .professors-admin-page button:focus-visible { outline: 3px solid #0284c7; outline-offset: 3px; }
+.dashboard-shell[data-theme="light"] :is(.score-criterion,.copy-checklist,.add-member-panel) { border-color: #c9d9e2; }
+.dashboard-shell[data-theme="light"] :is(.score-description,.copy-checklist .field-help) { color: #526a7b; }
+.dashboard-shell[data-theme="light"] .score-option { background: #f5f9fb; border-color: #a9c0cc; color: #17354b; }
+.dashboard-shell[data-theme="light"] .score-option.is-selected { background: #036b98; border-color: #036b98; color: #fff; }
+.dashboard-shell[data-theme="light"] :is(.add-member-toggle,.new-member-form) { background: #f3fafe; border-color: #9dcddd; color: #075985; }
+.dashboard-shell[data-theme="light"] .new-member-header strong { color: #075985; }
+.dashboard-shell[data-theme="light"] .cancel-add-btn:hover { color: #102337; }
+@media (max-width: 42rem) {
+  .dashboard-shell :is(.event-admin-page,.professors-admin-page) { padding-left: 1rem; padding-right: 1rem; }
+  .dashboard-shell :is(.event-panel,.professors-section,.add-professor-section,.checkin-section,.form-section,.list-section) { padding: 1rem; }
+  .dashboard-shell :is(.input-row,.session-card) { align-items: stretch; flex-direction: column; }
+  .dashboard-shell .input-row input { min-width: 0; }
+}
 
 /* ── Admin Results Tie Audit ────────────────────────────────────────────────── */
 .tie-audit { background: #0f172a; border: 1px solid #1e293b; border-radius: .75rem; padding: 1.5rem; }

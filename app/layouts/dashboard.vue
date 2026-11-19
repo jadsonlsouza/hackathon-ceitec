@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, watch } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { shouldRedirectForActiveRoleView } from '../utils/active-role-view-guard'
 import DashboardNavigation from '../components/dashboard/DashboardNavigation.vue'
 import RoleViewSelector from '../components/dashboard/RoleViewSelector.vue'
@@ -8,6 +8,18 @@ import { useNotifications } from '../composables/useNotifications'
 import { useDashboardEventContext } from '../composables/useDashboardEventContext'
 
 const route = useRoute()
+const theme = ref<'light' | 'dark'>('light')
+onMounted(() => {
+  try {
+    theme.value = localStorage.getItem('ligalab-dashboard-theme') === 'dark' ? 'dark' : 'light'
+  }
+  catch { /* The default remains available when storage is disabled. */ }
+})
+function toggleTheme() {
+  theme.value = theme.value === 'light' ? 'dark' : 'light'
+  try { localStorage.setItem('ligalab-dashboard-theme', theme.value) }
+  catch { /* Theme selection still works for this session. */ }
+}
 const {
   profile,
   eventRoles,
@@ -35,7 +47,7 @@ watch([compatiblePage, pending, contextPending], ([compatible, accessLoading, te
 </script>
 
 <template>
-  <div class="dashboard-shell">
+  <div class="dashboard-shell" :data-theme="theme">
     <aside class="dashboard-sidebar">
       <NuxtLink to="/app" class="dashboard-brand" aria-label="Painel ligalab">
         <BrandLogo variant="dark" />
@@ -55,6 +67,10 @@ watch([compatiblePage, pending, contextPending], ([compatible, accessLoading, te
     </aside>
     <div class="dashboard-content">
       <header class="dashboard-layout-header">
+        <button type="button" class="dashboard-theme-toggle" :aria-label="theme === 'light' ? 'Ativar tema escuro' : 'Ativar tema claro'" @click="toggleTheme">
+          <span aria-hidden="true">{{ theme === 'light' ? '☾' : '☀' }}</span>
+          <span>{{ theme === 'light' ? 'Escuro' : 'Claro' }}</span>
+        </button>
         <NotificationBell
           :items="notifications.items.value"
           :pending="notifications.pending.value"

@@ -341,6 +341,23 @@ async function send() {
 .notification-composer textarea { min-height: 5.5rem; resize: vertical; }
 .notification-composer button[type="submit"] { background: #0369a1; border: 0; border-radius: .55rem; color: #fff; cursor: pointer; font-weight: 800; min-height: 2.75rem; padding: .65rem .9rem; }
 .notification-composer button:disabled { cursor: wait; opacity: .55; }
+:global(.dashboard-shell[data-theme="light"]) .notification-trigger { background: #fff; border-color: #c9d9e2; color: #17354b; }
+:global(.dashboard-shell[data-theme="light"]) .notification-trigger:hover { background: #eaf6fb; border-color: #0284c7; }
+:global(.dashboard-shell[data-theme="light"]) .notification-panel { background: #fff; border-color: #c9d9e2; box-shadow: 0 20px 50px #14364b30; color: #102337; }
+:global(.dashboard-shell[data-theme="light"]) .notification-panel__header { background: #f6fafc; border-color: #dce6eb; }
+:global(.dashboard-shell[data-theme="light"]) :is(.notification-panel h2,.notification-group h3,.notification-state strong,.notification-item__action strong) { color: #102337; }
+:global(.dashboard-shell[data-theme="light"]) :is(.notification-state p,.notification-group__header p,.notification-item__action span,.notification-toolbar,.notification-composer__header span,.notification-composer__hint) { color: #526a7b; }
+:global(.dashboard-shell[data-theme="light"]) :is(.notification-item,.notification-group + .notification-group,.notification-toolbar,.notification-composer,.notification-state--empty) { border-color: #dce6eb; }
+:global(.dashboard-shell[data-theme="light"]) .notification-item__action { background: #f6fafc; color: #102337; }
+:global(.dashboard-shell[data-theme="light"]) .notification-item__action:hover { background: #eaf6fb; }
+:global(.dashboard-shell[data-theme="light"]) .notification-close { border-color: #c9d9e2; color: #385267; }
+:global(.dashboard-shell[data-theme="light"]) .notification-state--error { background: #fff2f0; border-color: #f2b8b2; color: #8d261d; }
+:global(.dashboard-shell[data-theme="light"]) .notification-state--error p { color: #8d261d; }
+:global(.dashboard-shell[data-theme="light"]) .notification-count { background: #eaf4f8; border-color: #c9d9e2; color: #385267; }
+:global(.dashboard-shell[data-theme="light"]) .notification-toolbar button { color: #075985; }
+:global(.dashboard-shell[data-theme="light"]) .notification-item__action small { color: #08739b; }
+:global(.dashboard-shell[data-theme="light"]) .notification-composer label { color: #17354b; }
+:global(.dashboard-shell[data-theme="light"]) :is(.notification-composer input,.notification-composer select,.notification-composer textarea) { background: #fff; border-color: #9fb6c2; color: #102337; }
 @keyframes notification-pulse { 0%, 100% { opacity: .35; transform: scale(.85); } 50% { opacity: 1; transform: scale(1); } }
 @media (max-width: 36rem) {
   .notification-panel { position: fixed; right: 1rem; top: 4.75rem; width: calc(100vw - 2rem); }
