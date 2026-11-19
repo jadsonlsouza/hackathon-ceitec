@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import LigalabHome from '~/components/landing/LigalabHome.vue'
 
-useHead({ title: 'Ligalab — desafios que conectam pessoas e possibilidades', meta: [{ name: 'description', content: 'Uma plataforma para transformar desafios em aprendizagem.' }] })
+useHead({ title: 'Ligalab — plataforma para hackathons e aprendizagem', meta: [{ name: 'description', content: 'Organize hackathons, acompanhe equipes e atividades e publique os resultados em um só lugar.' }] })
 </script>
 
 <template><LigalabHome /></template>
