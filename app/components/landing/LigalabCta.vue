@@ -6,13 +6,13 @@
     <div class="ligalab-cta-card">
       <div class="ligalab-cta-glow" aria-hidden="true" />
       <div class="ligalab-cta-content">
-        <span class="eyebrow">Faça parte da transformação</span>
-        <h2 id="cta-banner-title">Pronto para acelerar ideias e liderar a inovação?</h2>
+        <span class="eyebrow">Participe</span>
+        <h2 id="cta-banner-title">Encontre seu próximo evento</h2>
         <p class="section-copy">
-          Descubra os desafios abertos no catálogo do Ligalab, monte sua equipe e vivencie a experiência de criar soluções reais com a metodologia da Liga de Inovação.
+          Consulte os eventos disponíveis e acesse sua conta para participar com sua equipe.
         </p>
         <div class="hero-actions">
-          <NuxtLink class="primary-cta" to="/eventos">Explorar eventos abertos</NuxtLink>
+          <NuxtLink class="primary-cta" to="/eventos">Ver eventos</NuxtLink>
           <NuxtLink class="secondary-cta" to="/login">Acessar minha conta</NuxtLink>
         </div>
       </div>

@@ -8,7 +8,7 @@ vi.mock('../../app/composables/useNotifications', () => ({ useNotifications: () 
   markRead: vi.fn(), refresh: vi.fn(), createManual: vi.fn(),
 }) }))
 afterEach(() => vi.unstubAllGlobals())
-it('unmounts an already-open administration page and clears its data when narrowing', async () => {
+it('keeps an authorized administration page mounted without clearing loaded page data when only the presentation view changes', async () => {
   const activeView = ref({ role: 'global_admin', eventId: null } as any)
   state.context = { activeView, profile: ref({ global_role: 'global_admin' }), eventRoles: ref([]), pending: ref(false), error: ref(null), teamEventIds: ref([]), contextPending: ref(false), contextError: ref(null), currentEventId: ref('event-a'), availableViews: ref([]) }
   const navigate = vi.fn(), clear = vi.fn(), mutate = vi.fn()
@@ -24,9 +24,46 @@ it('unmounts an already-open administration page and clears its data when narrow
   expect(wrapper.findComponent(Child).exists()).toBe(true)
   activeView.value = { role: 'student', eventId: 'event-a' }
   await nextTick()
-  expect(wrapper.findComponent(Child).exists()).toBe(false)
-  expect(navigate).toHaveBeenCalledWith('/app')
-  expect(clear).toHaveBeenCalled()
+  expect(wrapper.findComponent(Child).exists()).toBe(true)
+  expect(navigate).not.toHaveBeenCalled()
+  expect(clear).not.toHaveBeenCalled()
   expect(mutate).not.toHaveBeenCalled()
+  wrapper.unmount()
+})
+
+it('passes the authorized event context to notifications independently of the presentation view', async () => {
+  const activeView = ref({ role: 'student', eventId: 'event-a' } as any)
+  state.context = {
+    activeView,
+    profile: ref({ global_role: 'global_admin' }),
+    eventRoles: ref([]),
+    pending: ref(false),
+    error: ref(null),
+    teamEventIds: ref([]),
+    contextPending: ref(false),
+    contextError: ref(null),
+    currentEventId: ref('event-a'),
+    availableViews: ref([]),
+  }
+  vi.stubGlobal('useRoute', () => ({ path: '/app' }))
+  vi.stubGlobal('useState', () => ref(null))
+  vi.stubGlobal('navigateTo', vi.fn())
+  vi.stubGlobal('clearNuxtData', vi.fn())
+  vi.stubGlobal('computed', computed)
+  vi.stubGlobal('watch', watch)
+
+  const Layout = (await import('../../app/layouts/dashboard.vue')).default
+  const wrapper = mount(Layout, {
+    global: {
+      stubs: {
+        NuxtLink: true,
+        BrandLogo: true,
+        NotificationBell: true,
+        DashboardNavigation: true,
+      },
+    },
+  })
+
+  expect(wrapper.get('notification-bell-stub').attributes('eventid')).toBe('event-a')
   wrapper.unmount()
 })

@@ -24,6 +24,19 @@ const summaryData = ref({
 })
 const summaryPending = ref(false)
 const summaryError = ref<unknown>(null)
+const notificationRpc = vi.fn()
+const notificationFrom = vi.fn()
+
+function supabaseQueryResult(data: unknown[] = [], error: unknown = null) {
+  const result = { data, error }
+  const builder: Record<string, unknown> = {}
+  for (const method of ['select', 'eq', 'in', 'order']) {
+    builder[method] = vi.fn(() => builder)
+  }
+  builder.then = (resolve: (value: typeof result) => unknown, reject?: (reason: unknown) => unknown) =>
+    Promise.resolve(result).then(resolve, reject)
+  return builder
+}
 
 const NuxtLink = {
   inheritAttrs: false,
@@ -53,6 +66,8 @@ describe('dashboard UI', () => {
   let ErrorPage: unknown
   let DashboardContextProbe: unknown
   let NotificationBell: unknown
+  let NotificationComposeProbe: unknown
+  let NotificationErrorProbe: unknown
 
   beforeAll(async () => {
     vi.stubGlobal('computed', computed)
@@ -77,11 +92,10 @@ describe('dashboard UI', () => {
     }
     vi.stubGlobal('useNuxtApp', () => ({
       $supabase: {
+        rpc: notificationRpc,
         channel: vi.fn(() => channel),
         removeChannel: vi.fn(),
-        from: vi.fn(() => ({
-          select: vi.fn(async () => ({ data: [], error: null })),
-        })),
+        from: notificationFrom,
       },
     }))
     vi.stubGlobal('useAsyncData', (key: string) => (
@@ -96,12 +110,43 @@ describe('dashboard UI', () => {
     DashboardPage = (await import('../../app/pages/app/index.vue')).default
     ErrorPage = (await import('../../app/error.vue')).default
     const { useDashboardEventContext } = await import('../../app/composables/useDashboardEventContext')
+    const { useNotifications } = await import('../../app/composables/useNotifications')
     DashboardContextProbe = defineComponent({
       setup() {
         const context = useDashboardEventContext()
         return () => h('output', {
           'data-active-role-view': context.activeView.value?.role ?? '',
           'data-current-event-id': context.currentEventId.value ?? '',
+        })
+      },
+    })
+    NotificationComposeProbe = defineComponent({
+      props: {
+        activeView: { type: Object, required: true },
+        eventId: { type: String, default: null },
+      },
+      setup(props) {
+        const activeView = computed(() => props.activeView as never)
+        const eventId = computed(() => props.eventId)
+        const notifications = useNotifications(activeView, eventId)
+        return () => h('output', {
+          'data-can-compose': String(notifications.canCompose.value),
+        })
+      },
+    })
+    NotificationErrorProbe = defineComponent({
+      props: {
+        activeView: { type: Object, required: true },
+        eventId: { type: String, default: null },
+      },
+      setup(props) {
+        const activeView = computed(() => props.activeView as never)
+        const eventId = computed(() => props.eventId)
+        const notifications = useNotifications(activeView, eventId)
+        return () => h('output', {
+          'data-error-message': notifications.error.value instanceof Error
+            ? notifications.error.value.message
+            : '',
         })
       },
     })
@@ -124,6 +169,10 @@ describe('dashboard UI', () => {
     summaryData.value = { events: 0, teams: 0, reviews: 0, evaluations: 0, activities: 0 }
     summaryPending.value = false
     summaryError.value = null
+    notificationRpc.mockReset()
+    notificationRpc.mockResolvedValue({ data: [], error: null })
+    notificationFrom.mockReset()
+    notificationFrom.mockImplementation(() => supabaseQueryResult())
     vi.mocked(clearError).mockReset()
   })
 
@@ -162,8 +211,13 @@ describe('dashboard UI', () => {
       },
       global: { stubs: { NuxtLink } },
     })
-    expect(wrapper.get('[data-notification-trigger]').text()).toContain('2')
+    const trigger = wrapper.get('[data-notification-trigger]')
+    expect(trigger.text()).toContain('1')
+    expect(trigger.attributes('aria-label')).toContain('1 aviso não lido')
+    expect(trigger.find('[data-notification-icon]').exists()).toBe(true)
     await wrapper.get('[data-notification-trigger]').trigger('click')
+    expect(wrapper.get('[data-notification-pending]').text()).toContain('Pendências')
+    expect(wrapper.get('[data-notification-notices]').text()).toContain('Avisos')
     await wrapper.get('[data-notification-item="manual-1"]').trigger('click')
     expect(markRead).toHaveBeenCalledWith(['manual-1'])
     expect(wrapper.get('[data-notification-item="automatic:1"]').attributes('href')).toBe('/app/evento/event-a/revisoes')
@@ -216,6 +270,118 @@ describe('dashboard UI', () => {
     await wrapper.get('[name="role"]').setValue('monitor')
     await wrapper.get('form').trigger('submit')
     expect(createManual).toHaveBeenCalledWith({ title: 'Aviso importante', body: 'Mensagem da organização', event_id: EVENT_ID, audience: { type: 'event_role', role: 'monitor' } })
+    wrapper.unmount()
+  })
+
+  it('uses readable approved-team and event-participant selectors for manual notifications', async () => {
+    const TEAM_ID = '20000000-0000-4000-8000-000000000901'
+    const MONITOR_ID = '30000000-0000-4000-8000-000000000901'
+    const STUDENT_ID = '40000000-0000-4000-8000-000000000901'
+    notificationFrom.mockImplementation((table: string) => {
+      if (table === 'teams') return supabaseQueryResult([{ id: TEAM_ID, name: 'Equipe Aurora' }])
+      if (table === 'event_roles') {
+        return supabaseQueryResult([{
+          user_id: MONITOR_ID,
+          profile: { display_name: 'Maria Monitor', email: 'maria@example.com' },
+        }])
+      }
+      if (table === 'team_members') {
+        return supabaseQueryResult([{
+          user_id: STUDENT_ID,
+          name: 'João Aluno',
+          email: 'joao@example.com',
+        }])
+      }
+      return supabaseQueryResult()
+    })
+
+    const Bell = (await import('../../app/components/dashboard/NotificationBell.vue')).default
+    const createManual = vi.fn().mockResolvedValue(undefined)
+    const wrapper = mount(Bell, { global: { stubs: { NuxtLink } }, props: {
+      items: [], pending: false, error: null, canCompose: true, eventId: EVENT_ID,
+      markRead: vi.fn(), refresh: vi.fn(), createManual,
+    } })
+
+    await wrapper.get('[data-notification-trigger]').trigger('click')
+    await wrapper.get('[data-notification-compose]').trigger('click')
+    await flushPromises()
+
+    expect(wrapper.find('[name="event"]').exists()).toBe(false)
+    expect(notificationFrom).toHaveBeenCalledWith('teams')
+    expect(notificationFrom).toHaveBeenCalledWith('event_roles')
+    expect(notificationFrom).toHaveBeenCalledWith('team_members')
+
+    await wrapper.get('[name="title"]').setValue('Aviso de equipe')
+    await wrapper.get('[name="body"]').setValue('Mensagem para a equipe')
+    await wrapper.get('[name="audience"]').setValue('team')
+    expect(wrapper.get('[name="team"]').text()).toContain('Equipe Aurora')
+    await wrapper.get('[name="team"]').setValue(TEAM_ID)
+    await wrapper.get('form').trigger('submit')
+    await flushPromises()
+    expect(createManual).toHaveBeenCalledWith({
+      title: 'Aviso de equipe',
+      body: 'Mensagem para a equipe',
+      event_id: EVENT_ID,
+      audience: { type: 'team', team_id: TEAM_ID },
+    })
+
+    await wrapper.get('[data-notification-compose]').trigger('click')
+    await wrapper.get('[name="title"]').setValue('Aviso individual')
+    await wrapper.get('[name="body"]').setValue('Mensagem para pessoas')
+    await wrapper.get('[name="audience"]').setValue('users')
+    const people = wrapper.get('[name="users"]')
+    expect(people.text()).toContain('Maria Monitor')
+    expect(people.text()).toContain('maria@example.com')
+    expect(people.text()).toContain('João Aluno')
+    expect(people.text()).toContain('joao@example.com')
+    await people.setValue([MONITOR_ID, STUDENT_ID])
+    await wrapper.get('form').trigger('submit')
+    await flushPromises()
+    expect(createManual).toHaveBeenLastCalledWith({
+      title: 'Aviso individual',
+      body: 'Mensagem para pessoas',
+      event_id: EVENT_ID,
+      audience: { type: 'users', user_ids: [STUDENT_ID, MONITOR_ID] },
+    })
+    wrapper.unmount()
+  })
+
+  it('keeps notification authoring authorized for a global admin regardless of the selected presentation view', async () => {
+    profile.value = { global_role: 'global_admin' }
+    eventRoles.value = []
+
+    const wrapper = await mountSuspended(NotificationComposeProbe, {
+      activeView: { role: 'student', eventId: EVENT_ID },
+      eventId: EVENT_ID,
+    })
+
+    expect(wrapper.get('output').attributes('data-can-compose')).toBe('true')
+    wrapper.unmount()
+  })
+
+  it('keeps notification authoring authorized by the real professor role when another presentation view is selected', async () => {
+    profile.value = { global_role: 'student' }
+    eventRoles.value = [{ event_id: EVENT_ID, role: 'professor' }]
+
+    const wrapper = await mountSuspended(NotificationComposeProbe, {
+      activeView: { role: 'monitor', eventId: EVENT_ID },
+      eventId: EVENT_ID,
+    })
+
+    expect(wrapper.get('output').attributes('data-can-compose')).toBe('true')
+    wrapper.unmount()
+  })
+
+  it('preserves the backend failure internally while the bell can keep its public error copy generic', async () => {
+    const rpcFailure = new Error('rpc diagnostics for operators')
+    notificationRpc.mockRejectedValueOnce(rpcFailure)
+
+    const wrapper = await mountSuspended(NotificationErrorProbe, {
+      activeView: { role: 'student', eventId: EVENT_ID },
+      eventId: EVENT_ID,
+    })
+
+    expect(wrapper.get('output').attributes('data-error-message')).toBe(rpcFailure.message)
     wrapper.unmount()
   })
 

@@ -21,12 +21,12 @@ import LigalabCta from './LigalabCta.vue'
       <section class="ligalab-home__hero">
         <div class="ligalab-home__copy">
           <p class="eyebrow">Liga de Empreendedorismo e Inovação</p>
-          <h1>Uma plataforma para transformar desafios em aprendizagem.</h1>
+          <h1>Hackathons organizados para quem aprende e ensina.</h1>
           <p class="ligalab-home__lead">
-            O Ligalab é o ecossistema tecnológico completo para planejar, gerenciar e avaliar maratonas de ideação e hackathons. Unindo metodologias ativas ao rigor acadêmico, conectamos estudantes, mentores e jurados em uma experiência ágil e transformadora.
+            Organize eventos, acompanhe equipes e atividades, avalie projetos e publique resultados em um só lugar.
           </p>
           <div class="hero-actions">
-            <NuxtLink class="primary-cta" to="/eventos">Explorar eventos</NuxtLink>
+            <NuxtLink class="primary-cta" to="/eventos">Ver eventos</NuxtLink>
             <a class="secondary-cta" href="#como-funciona">Como funciona a plataforma</a>
           </div>
         </div>
@@ -40,24 +40,24 @@ import LigalabCta from './LigalabCta.vue'
           <div class="hero-cockpit" aria-hidden="true">
             <div class="cockpit-header">
               <span class="cockpit-dot" />
-              <span class="cockpit-title">LIGALAB TELEMETRY // LIVE</span>
+              <span class="cockpit-title">RECURSOS DA PLATAFORMA</span>
             </div>
             <div class="cockpit-grid">
               <div class="cockpit-tile">
                 <span class="cockpit-label">Gestão de Equipes</span>
-                <span class="cockpit-value">100% Ágil</span>
+                <span class="cockpit-value">Organização por evento</span>
               </div>
               <div class="cockpit-tile">
                 <span class="cockpit-label">Canvas Colaborativo</span>
-                <span class="cockpit-value">Autosave Ativo</span>
+                <span class="cockpit-value">Atividades e envios</span>
               </div>
               <div class="cockpit-tile">
-                <span class="cockpit-label">Fila de Mentoria</span>
-                <span class="cockpit-value">Zero Gargalos</span>
+                <span class="cockpit-label">Acompanhamento</span>
+                <span class="cockpit-value">Revisão e feedback</span>
               </div>
               <div class="cockpit-tile">
                 <span class="cockpit-label">Critérios de Avaliação</span>
-                <span class="cockpit-value">Notas Auditadas</span>
+                <span class="cockpit-value">Critérios e pesos</span>
               </div>
             </div>
           </div>

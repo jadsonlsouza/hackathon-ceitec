@@ -8,7 +8,7 @@ import {
 export default defineNuxtRouteMiddleware(async (to) => {
   if (!activeRoleViewRequirementForPath(to.path)) return
 
-  if (import.meta.server) return navigateTo('/app')
+  if (import.meta.server) return
 
   const scope = effectScope()
   try {

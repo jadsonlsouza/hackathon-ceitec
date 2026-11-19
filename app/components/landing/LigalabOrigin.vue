@@ -66,7 +66,7 @@ const pillars = [
       <p class="section-index">Nossa Origem & Propósito</p>
       <h2 id="origin-title">Nascido da Liga de Empreendedorismo e Inovação</h2>
       <p class="section-copy">
-        O Ligalab não é um software genérico. Ele nasceu na vivência diária de estudantes e facilitadores universitários, unindo metodologia ativa e tecnologia para transformar o ecossistema de maratonas de inovação.
+        O Ligalab reúne tecnologia e metodologias de aprendizagem para apoiar maratonas de inovação.
       </p>
     </div>
 
@@ -79,7 +79,7 @@ const pillars = [
           A <strong>Liga de Empreendedorismo e Inovação</strong> é um projeto de extensão universitária do <strong>Instituto Metrópole Digital (IMD)</strong> da <strong>Universidade Federal do Rio Grande do Norte (UFRN)</strong>. Formada por alunos dedicados a transformar o aprendizado em ação, a Liga atua na capacitação de novos líderes e na organização de maratonas de ideação.
         </p>
         <p class="origin-story-text">
-          Ao coordenar eventos com dezenas de equipes simultâneas, nossa equipe sentiu na pele as maiores dores do setor: planilhas frágeis que se perdiam, filas caóticas para chamar mentores e processos manuais de apuração. Para solucionar essas dores de forma definitiva, desenhamos e desenvolvemos o <strong>Ligalab</strong>: um sistema completo, fluido e centrado nas pessoas.
+          O <strong>Ligalab</strong> reúne em uma plataforma a organização de eventos, o trabalho das equipes e o acompanhamento das avaliações.
         </p>
 
         <!-- Pilares do DNA da Liga -->

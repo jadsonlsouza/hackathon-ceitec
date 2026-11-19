@@ -12,12 +12,12 @@ type TeamWithMembers = Team & { members: TeamMember[] }
 const route = useRoute()
 const eventId = computed(() => String(route.params.eventId))
 const { $supabase } = useNuxtApp()
-const { eventRoles, pending: accessPending, error: accessError } = useCurrentAccess()
+const { profile, eventRoles, pending: accessPending, error: accessError } = useCurrentAccess()
 const processingId = ref<string | null>(null)
 const decisionError = ref<string | null>(null)
 const successMessage = ref<string | null>(null)
 const isAuthorized = computed(() => (
-  canManageEventRoleRequests(eventRoles.value, eventId.value)
+  canManageEventRoleRequests(eventRoles.value, eventId.value, profile.value)
 ))
 
 function pendingTeamsKey(targetEventId: string) {

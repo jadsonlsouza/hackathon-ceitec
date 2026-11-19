@@ -32,11 +32,6 @@ watch([compatiblePage, pending, contextPending], ([compatible, accessLoading, te
     void navigateTo('/app')
   }
 })
-watch(activeView, (next, previous) => {
-  if (previous && (!next || next.role !== previous.role || next.eventId !== previous.eventId)) {
-    clearNuxtData(key => key !== 'context-featured-event')
-  }
-})
 </script>
 
 <template>
@@ -65,7 +60,7 @@ watch(activeView, (next, previous) => {
           :pending="notifications.pending.value"
           :error="notifications.error.value"
           :can-compose="notifications.canCompose.value"
-          :event-id="activeView?.role === 'professor' ? activeView.eventId : null"
+          :event-id="currentEventId"
           :mark-read="notifications.markRead"
           :refresh="notifications.refresh"
           :create-manual="notifications.createManual"

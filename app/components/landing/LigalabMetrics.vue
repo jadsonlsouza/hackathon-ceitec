@@ -6,14 +6,14 @@ const metrics = [
     detail: 'Formar, Organizar, Realizar, Multiplicar e Apoiar',
   },
   {
-    value: '100%',
-    label: 'Protagonismo Estudantil',
-    detail: 'Metodologias ativas e formação de agentes multiplicadores',
+    value: 'Equipes',
+    label: 'Projetos colaborativos',
+    detail: 'Participantes organizam suas entregas em conjunto',
   },
   {
-    value: 'Tempo Real',
-    label: 'Automação & Sincronia',
-    detail: 'Canvas dinâmico, chamados de mentoria e bancas auditáveis',
+    value: 'Canvas',
+    label: 'Atividades e feedback',
+    detail: 'Envios acompanhados por professores e monitores',
   },
   {
     value: 'Extensão Universitária',

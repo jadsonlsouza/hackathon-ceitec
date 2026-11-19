@@ -41,11 +41,12 @@ export function useNotifications(activeView: Ref<ActiveRoleView | null>, eventId
     return kinds[view.role].includes(item.kind)
   }))
   const canCompose = computed(() => {
-    const view = activeView.value
     const admin = access.profile.value?.global_role === 'global_admin'
-    return (view?.role === 'global_admin' && admin) || (view?.role === 'professor' && (
-      admin || access.eventRoles.value.some(role => role.event_id === view.eventId && role.role === 'professor')
-    ))
+    if (admin) return true
+    const scopedEventId = eventId.value
+    return !!scopedEventId && access.eventRoles.value.some(
+      role => role.event_id === scopedEventId && role.role === 'professor',
+    )
   })
   async function refresh() {
     const request = ++generation
@@ -59,8 +60,8 @@ export function useNotifications(activeView: Ref<ActiveRoleView | null>, eventId
       if (result.error) throw result.error
       rows.value = (result.data ?? []) as NotificationInboxItem[]
     }
-    catch {
-      if (request === generation && alive) { rows.value = []; error.value = true }
+    catch (caught) {
+      if (request === generation && alive) { rows.value = []; error.value = caught }
     }
     finally { if (request === generation && alive) pending.value = false }
   }

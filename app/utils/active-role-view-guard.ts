@@ -27,10 +27,9 @@ export function shouldRedirectForActiveRoleView(input: {
   activeView: ActiveRoleView | null
   isServer: boolean
 }): boolean {
-  const requirement = activeRoleViewRequirementForPath(input.path)
-  if (!requirement) return false
-  if (input.isServer) return true
-  return !input.activeView
-    || !requirement.roles.includes(input.activeView.role)
-    || (requirement.eventId !== null && input.activeView.eventId !== requirement.eventId)
+  // The selected role view narrows presentation/navigation only. It must not
+  // become an authorization boundary: real access is enforced by the page
+  // access checks and by Supabase/RLS.
+  void input
+  return false
 }

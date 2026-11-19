@@ -204,14 +204,13 @@ describe('event administration interactions', () => {
     testState.refresh.mockReset().mockResolvedValue(undefined)
   })
 
-  it('blocks a stale archive submit after narrowing the active view', async () => {
+  it('keeps global-admin event management authorized when the active presentation view changes', async () => {
     const wrapper = await mountPage()
     await openReadyArchiveDialog(wrapper)
     activeView.value = { role: 'student', eventId: EVENT_ID }
     await nextTick()
-    await wrapper.get('.archive-dialog form').trigger('submit')
-    expect(testState.archiveFetch).not.toHaveBeenCalled()
-    expect(wrapper.find('.event-form').exists()).toBe(false)
+    expect(wrapper.find('.event-form').exists()).toBe(true)
+    expect(wrapper.get('dialog').attributes()).toHaveProperty('open')
   })
 
   it('rejects a whitespace-only event name, announces the error, and focuses the field', async () => {

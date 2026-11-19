@@ -24,13 +24,11 @@ const {
   pending: accessPending,
   error: accessError,
 } = useCurrentAccess()
-const { activeView } = useDashboardEventContext()
 const processingId = ref<string | null>(null)
 const decisionError = ref<string | null>(null)
 const requestsKey = computed(() => eventRoleRequestsKey(eventId.value))
 const isAuthorized = computed(() => (
-  activeView.value?.role === 'professor' && activeView.value.eventId === eventId.value
-  && canManageEventRoleRequests(eventRoles.value, eventId.value, profile.value)
+  canManageEventRoleRequests(eventRoles.value, eventId.value, profile.value)
 ))
 
 const { data: requests, pending, error } = await useAsyncData(

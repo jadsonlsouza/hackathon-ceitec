@@ -11,9 +11,8 @@ const EVENTS_KEY = 'admin-events'
 const { $supabase } = useNuxtApp()
 const { profile, pending: accessPending, error: accessError } =
   useCurrentAccess()
-const { activeView } = useDashboardEventContext()
 const isAuthorized = computed(
-  () => profile.value?.global_role === 'global_admin' && activeView.value?.role === 'global_admin',
+  () => profile.value?.global_role === 'global_admin',
 )
 
 const creating = ref(false)

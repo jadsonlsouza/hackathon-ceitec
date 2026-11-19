@@ -10,37 +10,37 @@ const features = [
   {
     icon: '⚖️',
     tag: 'Avaliação & Rigor',
-    title: 'Bancas Julgadoras & Algoritmo de Desempate',
+    title: 'Avaliação com critérios e pesos',
     description: 'Defina critérios com notas e pesos personalizados. Coleta de avaliações em fluxo congelado, cálculo de médias ponderadas sem erros manuais e resolução transparente de empates com auditoria completa.',
     highlight: 'Zero planilhas manuais',
   },
   {
     icon: '🤝',
-    tag: 'Facilitação Ágil',
-    title: 'Fila Inteligente de Mentoria',
-    description: 'Elimine os gargalos durante a maratona. As equipes abrem chamados com descrição da dúvida e os mentores disponíveis atendem em ordem de prioridade, com histórico de checkpoints registrado.',
-    highlight: 'Helpdesk sem filas',
+    tag: 'Acompanhamento',
+    title: 'Revisão de envios',
+    description: 'Professores e monitores acompanham as entregas das equipes, aprovam envios e podem deixar feedback.',
+    highlight: 'Status para a equipe',
   },
   {
     icon: '👥',
     tag: 'Organização de Times',
     title: 'Gestão de Equipes & Categorias',
-    description: 'Formação flexível de equipes com link de convite rápido, atribuição de líderes, distribuição por categorias acadêmicas e validação de integrantes com limites pré-configurados.',
-    highlight: 'Convite em 1 clique',
+    description: 'Organize equipes por categoria, acompanhe integrantes e valide a participação no evento.',
+    highlight: 'Equipes por evento',
   },
   {
     icon: '⏱️',
     tag: 'Ritmo do Evento',
-    title: 'Presença & Trilhas Simultâneas',
-    description: 'Controle de frequência integrado por oficinas e palestras simultâneas (IA, prototipagem, negócios). Acompanhamento de progresso de cada participante ao longo de todos os dias da maratona.',
-    highlight: 'Check-in dinâmico',
+    title: 'Oficinas e presença',
+    description: 'Organize oficinas e acompanhe os registros de presença dos participantes.',
+    highlight: 'Oficinas e presença',
   },
   {
     icon: '🏆',
     tag: 'Transparência & Visibilidade',
-    title: 'Placar em Tempo Real & Vitrine Pública',
-    description: 'Publique o ranking oficial com um único clique quando as bancas encerrarem as notas. Página pública indexável com soluções geradas, notas por categoria e arquivo perpétuo do evento.',
-    highlight: 'Publicação instantânea',
+    title: 'Resultados por categoria',
+    description: 'Acompanhe a avaliação e publique os resultados oficiais de cada categoria.',
+    highlight: 'Resultados públicos',
   },
 ]
 </script>
@@ -49,9 +49,9 @@ const features = [
   <section id="recursos" class="landing-section ligalab-features" aria-labelledby="features-title">
     <div class="ligalab-section-header">
       <p class="section-index">Recursos Tecnológicos</p>
-      <h2 id="features-title">Tecnologia desenhada para orquestrar o caos criativo</h2>
+      <h2 id="features-title">Recursos para organizar o evento</h2>
       <p class="section-copy">
-        Do primeiro rascunho de ideia à apuração final das notas, o Ligalab oferece todas as ferramentas para organizar, executar e auditar maratonas de inovação de forma profissional.
+        Da formação das equipes à publicação dos resultados, acompanhe as etapas do hackathon.
       </p>
     </div>
 

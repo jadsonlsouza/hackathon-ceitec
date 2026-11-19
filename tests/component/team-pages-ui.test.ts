@@ -257,6 +257,22 @@ describe('team page interactions', () => {
     expect(wrapper.get('[role="status"]').text()).toContain('Equipe aprovada')
   })
 
+  it('allows a global administrator to manage the team queue without a professor event role', async () => {
+    profile.value = {
+      id: USER_ID, email: 'admin@example.test', display_name: 'Admin', global_role: 'global_admin',
+      created_at: '2026-07-23T00:00:00.000Z', updated_at: '2026-07-23T00:00:00.000Z',
+    }
+    eventRoles.value = []
+    testState.queueFetch.mockResolvedValueOnce({
+      data: [{ id: 'team-1', event_id: EVENT_ID, name: 'Equipe Átomo', category: 'senior', status: 'pending', leader_id: USER_ID, created_at: '2026-07-23T00:00:00.000Z', decided_at: null, decided_by: null, members: [] }], error: null,
+    })
+
+    const wrapper = await mountPage(QueuePage)
+
+    expect(wrapper.text()).toContain('Equipe Átomo')
+    expect(wrapper.find('[role="alert"]').exists()).toBe(false)
+  })
+
   it('announces professor decision failures without exposing database details', async () => {
     eventRoles.value = [{ event_id: EVENT_ID, role: 'professor' }]
     testState.queueFetch.mockResolvedValueOnce({

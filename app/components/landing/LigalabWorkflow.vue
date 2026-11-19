@@ -18,17 +18,17 @@ const steps: WorkflowStep[] = [
     phase: 'Fase 01 — Antes do Início',
     title: 'Setup & Configuração Ágil do Evento',
     subtitle: 'Tudo pronto em minutos, sem complicação',
-    description: 'Configure o evento definindo categorias (Júnior, Universitário, Aberto), trilhas temáticas, formulários customizados de inscrição, pesos de critérios para bancas e limites de integrantes por equipe. O sistema gera automaticamente os links de divulgação e controle de vagas.',
+    description: 'Configure os dados do evento, as categorias e os critérios de avaliação.',
     icon: '⚙️',
     deliverables: [
       'Página pública e links de inscrição prontos',
       'Configuração de rubricas e pesos para jurados',
-      'Definição de trilhas (ex: IA, Saúde, Cidades Inteligentes)',
-      'Regulamento integrado e termo de consentimento',
+      'Organização das categorias do evento',
+      'Gestão de professores responsáveis',
     ],
     previewMetrics: [
-      { label: 'Tempo médio de setup', value: '15 min' },
-      { label: 'Formulários dinâmicos', value: '100% Flexíveis' },
+      { label: 'Organização', value: 'Por evento' },
+      { label: 'Avaliação', value: 'Critérios e pesos' },
     ],
   },
   {
@@ -36,53 +36,53 @@ const steps: WorkflowStep[] = [
     phase: 'Fase 02 — Durante a Maratona',
     title: 'Formação de Equipes & Canvas Colaborativo',
     subtitle: 'Ambiente estruturado para ideação com salvamento contínuo',
-    description: 'Os participantes credenciam-se pelo e-mail ou Google OAuth, montam equipes por link de convite e trabalham diretamente no Canvas de Ideação. Cada bloco (Problema, Validação, Proposta de Valor, Viabilidade e Pitch) conta com salvamento em tempo real, eliminando qualquer risco de perda de conteúdo.',
+    description: 'Os participantes criam suas equipes e trabalham nas atividades disponibilizadas pela organização.',
     icon: '🧩',
     deliverables: [
       'Formação rápida de equipes com liderança definida',
       'Canvas em tempo real com autosave instantâneo',
-      'Acompanhamento de entregáveis por marcos temporais',
-      'Histórico seguro de edições e versões da solução',
+      'Acompanhamento do status dos envios',
+      'Atividades configuradas pela organização',
     ],
     previewMetrics: [
       { label: 'Autosave', value: 'Em tempo real' },
-      { label: 'Risco de perda', value: '0%' },
+      { label: 'Entrega', value: 'Por equipe' },
     ],
   },
   {
     id: 'mentoria',
     phase: 'Fase 03 — Aceleração das Ideias',
-    title: 'Fila Inteligente de Mentoria & Suporte',
-    subtitle: 'Helpdesk organizado para mentores e facilitadores',
-    description: 'Acabe com o caos de equipes levantando a mão ou mentores vagando sem saber quem precisa de auxílio. Os times solicitam mentoria selecionando a área (Tecnologia, Negócios, Design, Pitch) e o sistema organiza a fila em tempo real, registrando anotações e feedback de cada atendimento.',
+    title: 'Revisão de entregas',
+    subtitle: 'Acompanhamento por professores e monitores',
+    description: 'A organização revisa os envios das equipes, aprova entregas e pode deixar feedback.',
     icon: '💡',
     deliverables: [
-      'Chamados categorizados por especialidade do mentor',
-      'Fila transparente com status: Aguardando / Em Atendimento',
-      'Registro de checkpoints e recomendações aos alunos',
-      'Métricas de tempo de resposta para a coordenação',
+      'Consulta aos envios das equipes',
+      'Validação das entregas',
+      'Feedback opcional para os alunos',
+      'Status disponível para a equipe',
     ],
     previewMetrics: [
-      { label: 'Gargalos físicos', value: 'Zero filas' },
-      { label: 'Histórico de mentorias', value: 'Auditado' },
+      { label: 'Responsáveis', value: 'Professores e monitores' },
+      { label: 'Retorno', value: 'Status e feedback' },
     ],
   },
   {
     id: 'bancas-placar',
     phase: 'Fase 04 — O Grande Final',
-    title: 'Bancas Julgadoras & Placar Instantâneo',
+    title: 'Avaliação e resultados',
     subtitle: 'Avaliação sem planilhas e com desempate transparente',
-    description: 'Durante as apresentações (pitches), os jurados acessam sua tela protegida para atribuir notas critério a critério. O Ligalab calcula as médias ponderadas automaticamente, aplica os critérios de desempate pré-definidos no regulamento e permite publicar o placar final oficial com um único clique.',
+    description: 'Os avaliadores atribuem notas conforme os critérios do evento. A organização acompanha a apuração e registra as decisões de desempate.',
     icon: '🏆',
     deliverables: [
       'Interface limpa de pontuação para bancas avaliadoras',
-      'Cálculo de médias ponderadas sem risco de erro humano',
-      'Algoritmo de desempate auditável conforme o edital',
-      'Publicação imediata do placar e vitrine pública de projetos',
+      'Cálculo de médias ponderadas',
+      'Registro das decisões de desempate',
+      'Publicação dos resultados por categoria',
     ],
     previewMetrics: [
-      { label: 'Erros de cálculo', value: 'Zero' },
-      { label: 'Publicação do ranking', value: '1 clique' },
+      { label: 'Notas', value: 'Por critério' },
+      { label: 'Resultados', value: 'Por categoria' },
     ],
   },
 ]
@@ -167,7 +167,7 @@ const activeStep = computed(() => steps[activeStepIndex.value] ?? steps[0])
             </div>
           </div>
           <div class="telemetry-card__notice">
-            <p>Acompanhamento automatizado em tempo real por organizadores e participantes.</p>
+            <p>As informações ficam organizadas no evento.</p>
           </div>
         </div>
       </div>

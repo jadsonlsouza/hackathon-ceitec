@@ -9,7 +9,7 @@ interface FaqItem {
 const faqs: FaqItem[] = [
   {
     question: 'O que é o Ligalab?',
-    answer: 'O Ligalab é a plataforma de gestão de hackathons e maratonas de inovação criada pela Liga de Empreendedorismo e Inovação. O sistema automatiza todas as etapas do evento: credenciamento, formação de equipes, ideação estruturada em canvas, fila de mentoria em tempo real, avaliação de bancas e publicação auditada de resultados.',
+    answer: 'O Ligalab é uma plataforma para organizar hackathons e maratonas de inovação, com equipes, atividades, revisão de envios, avaliação e resultados.',
   },
   {
     question: 'O que é a Liga de Empreendedorismo e Inovação?',
@@ -17,7 +17,7 @@ const faqs: FaqItem[] = [
   },
   {
     question: 'Como o Framework FORMA funciona dentro da plataforma?',
-    answer: 'O Framework FORMA (Formar, Organizar, Realizar, Multiplicar, Apoiar) orienta os módulos da ferramenta: na etapa Formar, a plataforma gerencia trilhas e oficinas; em Organizar, calibra cronogramas e bancas; em Realizar, viabiliza o canvas com autosave e a mentoria; em Multiplicar, divulga o placar público de resultados; e em Apoiar, fornece governança e auditoria completas.',
+    answer: 'O Framework FORMA reúne as etapas Formar, Organizar, Realizar, Multiplicar e Apoiar. O Ligalab oferece recursos para organizar eventos e acompanhar atividades e resultados.',
   },
   {
     question: 'Como posso explorar ou me inscrever nos eventos disponíveis?',
@@ -25,7 +25,7 @@ const faqs: FaqItem[] = [
   },
   {
     question: 'Como os jurados avaliam as equipes no Ligalab?',
-    answer: 'Os avaliadores acessam uma interface focada que apresenta os critérios com pesos pré-definidos pelos organizadores. As notas são registradas em tempo real com algoritmo de desempate automático e controle de concorrência, eliminando a necessidade de planilhas manuais propensas a erros.',
+    answer: 'Os avaliadores registram notas conforme os critérios e pesos definidos para o evento. Quando houver empate, a organização registra a decisão de desempate.',
   },
 ]
 

@@ -13,46 +13,46 @@ interface RoleItem {
 const roles: RoleItem[] = [
   {
     id: 'estudantes',
-    label: 'Estudantes & Hackers',
+    label: 'Alunos',
     icon: '🚀',
     tagline: 'Protagonismo real para transformar ideias em projetos validados',
-    description: 'Interface intuitiva focada na experiência de desenvolvimento. As equipes montam o canvas em tempo real, recebem feedback de mentores e acompanham a agenda sem se perderem.',
+    description: 'As equipes realizam atividades, acompanham seus envios e recebem o retorno de professores e monitores.',
     benefits: [
       'Canvas colaborativo com salvamento contínuo',
-      'Abertura de chamados diretos para mentores',
-      'Acompanhamento de trilhas de IA e oficinas',
-      'Portfólio com vitrine pública dos projetos',
+      'Acompanhamento dos envios e feedbacks',
+      'Consulta a oficinas e presença',
+      'Participação em equipes do evento',
     ],
   },
   {
     id: 'organizadores',
-    label: 'Organizadores & Ligas',
+    label: 'Professores e administradores',
     icon: '⚡',
     tagline: 'Controle total da maratona sem planilhas ou desencontros',
-    description: 'Painel completo de controle. Configure o cronograma, divida categorias, gerencie presenças, acompanhe a fila de solicitações e visualize o status de submissão de cada equipe em tempo real.',
+    description: 'Configure eventos, acompanhe equipes e envios e organize os critérios de avaliação.',
     benefits: [
       'Monitoramento ao vivo de todas as equipes',
       'Configuração rápida de rubricas e critérios',
       'Auditoria de desempate e segurança de notas',
-      'Publicação com 1 clique do placar final',
+      'Publicação dos resultados do evento',
     ],
   },
   {
     id: 'mentores',
-    label: 'Mentores & Facilitadores',
+    label: 'Monitores',
     icon: '💡',
-    tagline: 'Facilitação guiada com histórico de atendimentos e feedbacks',
-    description: 'Fila dinâmica de auxílio. Os mentores visualizam quem precisa de ajuda, quais blocos do canvas estão sendo trabalhados e oferecem orientações precisas sem sobreposição de atendimentos.',
+    tagline: 'Acompanhe entregas e apoie as equipes',
+    description: 'Monitores acompanham os envios das equipes, validam entregas e podem enviar feedback.',
     benefits: [
-      'Fila organizada por ordem de chegada ou urgência',
-      'Acesso direto aos blocos do canvas da equipe',
-      'Histórico de feedbacks de checkpoints anteriores',
-      'Conexão ágil entre teoria e prática de mercado',
+      'Consulta aos envios do evento',
+      'Validação das entregas',
+      'Feedback opcional para as equipes',
+      'Acompanhamento do status de revisão',
     ],
   },
   {
     id: 'jurados',
-    label: 'Avaliadores & Jurados',
+    label: 'Avaliadores',
     icon: '🎖️',
     tagline: 'Avaliação sem estresse com critérios congelados e cálculo automático',
     description: 'Interface limpa e rápida para bancas finais. Os jurados pontuam cada equipe conforme a ordem de apresentação, consultam o resumo da solução e registram comentários de forma protegida.',
@@ -73,9 +73,9 @@ const activeRole = computed(() => roles.find(r => r.id === activeRoleId.value) ?
   <section class="landing-section ligalab-roles" aria-labelledby="roles-title">
     <div class="ligalab-section-header">
       <p class="section-index">Experiência Multi-Papel</p>
-      <h2 id="roles-title">Uma experiência pensada para cada ator da maratona</h2>
+      <h2 id="roles-title">Uma visão para cada perfil</h2>
       <p class="section-copy">
-        Hackathons de sucesso dependem da sinergia entre organizadores, participantes, mentores e jurados. O Ligalab oferece interfaces dedicadas para cada função.
+        Alunos, professores, monitores, avaliadores e administradores encontram as tarefas do seu papel em cada evento.
       </p>
     </div>
 
