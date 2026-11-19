@@ -849,6 +849,15 @@ button, input, select, textarea { font: inherit; }
 .dashboard-shell[data-theme="light"] .professors-admin-page button:not(.danger-button) { background: #036b98; }
 .dashboard-shell[data-theme="light"] .professors-admin-page button:focus-visible { outline: 3px solid #0284c7; outline-offset: 3px; }
 .dashboard-shell[data-theme="light"] :is(.score-criterion,.copy-checklist,.add-member-panel) { border-color: #c9d9e2; }
+.dashboard-shell[data-theme="light"] :is(.criteria-list li,.presentation-list li,.tie-team-list li) { background: #f5f9fb; border-color: #d7e3e9; color: #102337; }
+.dashboard-shell[data-theme="light"] :is(.criteria-list label span,.private-ranking b,.tie-position) { color: #076b93; }
+.dashboard-shell[data-theme="light"] .current-team { background: #e4f4fb; border-color: #a9d7e9; color: #102337; }
+.dashboard-shell[data-theme="light"] .current-team a { background: #036b98; color: #fff; }
+.dashboard-shell[data-theme="light"] .presentation-list li.submitted { background: #edf9f1; border-color: #80bd96; color: #176437; }
+.dashboard-shell[data-theme="light"] :is(.next-team p,.presentation-summary p) { color: #526a7b; }
+.dashboard-shell[data-theme="light"] .tie-resolution { background: #eaf6fb; border-color: #a9d7e9; color: #102337; }
+.dashboard-shell[data-theme="light"] .complete-label { color: #176437; }
+.dashboard-shell[data-theme="light"] .missing-label { color: #8a5700; }
 .dashboard-shell[data-theme="light"] :is(.score-description,.copy-checklist .field-help) { color: #526a7b; }
 .dashboard-shell[data-theme="light"] .score-option { background: #f5f9fb; border-color: #a9c0cc; color: #17354b; }
 .dashboard-shell[data-theme="light"] .score-option.is-selected { background: #036b98; border-color: #036b98; color: #fff; }
@@ -869,4 +878,16 @@ button, input, select, textarea { font: inherit; }
 .tie-audit ol { color: #cbd5e1; font-size: .9rem; margin: 0 0 1rem; padding-left: 1.5rem; }
 .tie-audit li { margin-bottom: .25rem; }
 .tie-audit-meta { color: #64748b !important; font-size: .8rem !important; margin: 0 !important; }
+
+/* Light-theme details shared by reviews, activities, teams and results. */
+.dashboard-shell[data-theme="light"] :is(.tie-audit,.canvas-activity-chip) { background: #f5f9fb; border-color: #d7e3e9; color: #102337; }
+.dashboard-shell[data-theme="light"] :is(.tie-audit h4,.canvas-activity-name) { color: #17354b; }
+.dashboard-shell[data-theme="light"] :is(.tie-audit p,.tie-audit ol,.tie-audit-meta) { color: #526a7b; }
+.dashboard-shell[data-theme="light"] .review-feedback { background: #eaf6fb; border-color: #a9d7e9; color: #102337; }
+.dashboard-shell[data-theme="light"] .review-feedback p { color: #385267; }
+.dashboard-shell[data-theme="light"] .locked-structure { color: #805500 !important; }
+.dashboard-shell[data-theme="light"] .block-actions button:not(.danger-button) { background: #f5f9fb; border-color: #aac2ce; color: #17435b; }
+.dashboard-shell[data-theme="light"] .block-actions .danger-button { border-color: #c4473c; color: #a4261c; }
+.dashboard-shell[data-theme="light"] :is(.table-link,.member-status) { color: #076b93 !important; }
+.dashboard-shell[data-theme="light"] .team-canvas-progress { border-color: #d7e3e9; }
 .publication-actions { display: flex; flex-wrap: wrap; gap: 1rem; margin-top: 1.5rem; }
